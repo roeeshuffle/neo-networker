@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_users: {
+        Row: {
+          authenticated_at: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string
+          is_authenticated: boolean | null
+          telegram_id: number
+          telegram_username: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          authenticated_at?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          is_authenticated?: boolean | null
+          telegram_id: number
+          telegram_username?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          authenticated_at?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          is_authenticated?: boolean | null
+          telegram_id?: number
+          telegram_username?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -22,6 +22,79 @@ serve(async (req) => {
   const path = url.pathname;
 
   try {
+    // Telegram authentication endpoints
+    if (path === '/telegram/auth' && req.method === 'POST') {
+      const { telegram_id, password, telegram_username, first_name } = await req.json();
+      
+      if (password === '121212') {
+        try {
+          const { error } = await supabase
+            .from('telegram_users')
+            .upsert({
+              telegram_id: telegram_id,
+              telegram_username: telegram_username || null,
+              first_name: first_name || null,
+              is_authenticated: true,
+              authenticated_at: new Date().toISOString()
+            }, {
+              onConflict: 'telegram_id'
+            });
+
+          if (error) throw error;
+
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: 'Authentication successful'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch (error: any) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            message: error.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } else {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: 'Invalid password' 
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Check telegram authentication
+    if (path === '/telegram/check' && req.method === 'POST') {
+      const { telegram_id } = await req.json();
+      
+      try {
+        const { data, error } = await supabase
+          .from('telegram_users')
+          .select('is_authenticated')
+          .eq('telegram_id', telegram_id)
+          .eq('is_authenticated', true)
+          .single();
+
+        return new Response(JSON.stringify({ 
+          authenticated: !error && data?.is_authenticated === true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ 
+          authenticated: false,
+          error: error.message 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Authentication endpoint - simple hardcoded admin login
     if (path === '/login' && req.method === 'POST') {
       const { username, password } = await req.json();

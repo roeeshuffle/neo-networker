@@ -29,12 +29,13 @@ interface TelegramUpdate {
 }
 
 interface UserSession {
-  state: 'idle' | 'adding_person' | 'searching';
+  state: 'idle' | 'adding_person' | 'searching' | 'authenticating';
   step?: string;
   data?: any;
 }
 
 const userSessions = new Map<number, UserSession>();
+const AUTH_PASSWORD = "121212";
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -61,16 +62,33 @@ serve(async (req) => {
     let session = userSessions.get(userId) || { state: 'idle' };
 
     if (text === '/start') {
-      session = { state: 'idle' };
-      userSessions.set(userId, session);
-      await sendMessage(chatId, 
-        "Welcome to VC Search Engine Bot! 🚀\n\n" +
-        "Commands:\n" +
-        "🔍 /search - Search people in database\n" +
-        "➕ /add - Add a new person\n" +
-        "❓ /help - Show this help message"
-      );
+      // Check if user is already authenticated
+      const isAuth = await checkUserAuthentication(userId);
+      if (isAuth) {
+        session = { state: 'idle' };
+        userSessions.set(userId, session);
+        await setCommands(chatId);
+        await sendMessage(chatId, 
+          "Welcome back to VC Search Engine Bot! 🚀\n\n" +
+          "You are authenticated and ready to use the bot.\n\n" +
+          "Commands:\n" +
+          "🔍 /search - Search people in database\n" +
+          "➕ /add - Add a new person\n" +
+          "❓ /help - Show this help message"
+        );
+      } else {
+        session = { state: 'authenticating' };
+        userSessions.set(userId, session);
+        await sendMessage(chatId, 
+          "Welcome to VC Search Engine Bot! 🚀\n\n" +
+          "🔐 Please enter the password to access the system:"
+        );
+      }
     } else if (text === '/help') {
+      if (!await checkUserAuthentication(userId)) {
+        await sendMessage(chatId, "🔐 Please authenticate first using /start");
+        return new Response('OK', { headers: corsHeaders });
+      }
       await sendMessage(chatId,
         "VC Search Engine Bot Commands:\n\n" +
         "🔍 /search - Search for people by name, company, hashtags, or specialties\n" +
@@ -79,10 +97,18 @@ serve(async (req) => {
         "Simply type your search query after /search, or follow the prompts after /add!"
       );
     } else if (text === '/search') {
+      if (!await checkUserAuthentication(userId)) {
+        await sendMessage(chatId, "🔐 Please authenticate first using /start");
+        return new Response('OK', { headers: corsHeaders });
+      }
       session = { state: 'searching' };
       userSessions.set(userId, session);
       await sendMessage(chatId, "🔍 What would you like to search for? (name, company, hashtag, or specialty)");
     } else if (text === '/add') {
+      if (!await checkUserAuthentication(userId)) {
+        await sendMessage(chatId, "🔐 Please authenticate first using /start");
+        return new Response('OK', { headers: corsHeaders });
+      }
       session = { 
         state: 'adding_person', 
         step: 'name',
@@ -96,11 +122,23 @@ serve(async (req) => {
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
     } else {
       // Handle conversation flows
-      if (session.state === 'searching') {
+      if (session.state === 'authenticating') {
+        await handleAuthentication(chatId, text, userId, message.from);
+        session = { state: 'idle' };
+        userSessions.set(userId, session);
+      } else if (session.state === 'searching') {
+        if (!await checkUserAuthentication(userId)) {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          return new Response('OK', { headers: corsHeaders });
+        }
         await handleSearch(chatId, text);
         session = { state: 'idle' };
         userSessions.set(userId, session);
       } else if (session.state === 'adding_person') {
+        if (!await checkUserAuthentication(userId)) {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          return new Response('OK', { headers: corsHeaders });
+        }
         await handleAddPerson(chatId, text, session);
         userSessions.set(userId, session);
       } else {
@@ -135,6 +173,92 @@ async function sendMessage(chatId: number, text: string) {
     });
   } catch (error) {
     console.error('Error sending message:', error);
+  }
+}
+
+async function setCommands(chatId: number) {
+  if (!TELEGRAM_API_KEY) {
+    console.error('TELEGRAM_API_KEY not set');
+    return;
+  }
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_API_KEY}/setMyCommands`;
+  
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commands: [
+          { command: 'start', description: 'Start the bot and authenticate' },
+          { command: 'search', description: 'Search for people in database' },
+          { command: 'add', description: 'Add a new person to database' },
+          { command: 'help', description: 'Show help information' },
+          { command: 'cancel', description: 'Cancel current operation' }
+        ]
+      })
+    });
+  } catch (error) {
+    console.error('Error setting commands:', error);
+  }
+}
+
+async function checkUserAuthentication(telegramId: number): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('telegram_users')
+      .select('is_authenticated')
+      .eq('telegram_id', telegramId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (error || !data) {
+      return false;
+    }
+
+    return data.is_authenticated;
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
+  }
+}
+
+async function handleAuthentication(chatId: number, password: string, telegramId: number, userInfo: any) {
+  if (password === AUTH_PASSWORD) {
+    try {
+      // Insert or update user in telegram_users table
+      const { error } = await supabase
+        .from('telegram_users')
+        .upsert({
+          telegram_id: telegramId,
+          telegram_username: userInfo.username || null,
+          first_name: userInfo.first_name || null,
+          is_authenticated: true,
+          authenticated_at: new Date().toISOString()
+        }, {
+          onConflict: 'telegram_id'
+        });
+
+      if (error) {
+        console.error('Authentication error:', error);
+        await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
+        return;
+      }
+
+      await setCommands(chatId);
+      await sendMessage(chatId, 
+        "✅ Authentication successful! Welcome to VC Search Engine!\n\n" +
+        "You can now use:\n" +
+        "🔍 /search - Search people in database\n" +
+        "➕ /add - Add a new person\n" +
+        "❓ /help - Show help message"
+      );
+    } catch (error) {
+      console.error('Database error:', error);
+      await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
+    }
+  } else {
+    await sendMessage(chatId, "❌ Incorrect password. Please try again or use /start to restart.");
   }
 }
 
