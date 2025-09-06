@@ -81,6 +81,7 @@ serve(async (req) => {
         await sendMessage(chatId, 
           "Welcome back to VC Search Engine Bot! 🚀\n\n" +
           "You are authenticated and ready to use the bot.\n\n" +
+          "💡 Just type anything to search the database!\n\n" +
           "Commands:\n" +
           "🔍 /search - Search people in database\n" +
           "➕ /add - Add a new person\n" +
@@ -100,10 +101,12 @@ serve(async (req) => {
       }
       await sendMessage(chatId,
         "VC Search Engine Bot Commands:\n\n" +
-        "🔍 /search - Search for people by name, company, hashtags, or specialties\n" +
+        "💡 <b>Quick Search:</b> Just type anything to search!\n" +
+        "Example: 'fintech', 'Sarah', 'Sequoia'\n\n" +
+        "🔍 /search - Search for people (same as typing directly)\n" +
         "➕ /add - Add a new person to the database\n" +
         "❌ /cancel - Cancel current operation\n\n" +
-        "Simply type your search query after /search, or follow the prompts after /add!"
+        "Simply type your search query or use commands!"
       );
     } else if (text === '/search') {
       if (!await checkUserAuthentication(userId)) {
@@ -122,30 +125,35 @@ serve(async (req) => {
     } else if (text === '/cancel') {
       await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
-    } else {
-      // Handle conversation flows
-      console.log(`Current session state: ${session.state}`);
-      if (session.state === 'authenticating') {
-        console.log(`User ${userId} attempting authentication with: ${text}`);
-        await handleAuthentication(chatId, text, userId, message.from);
-        await updateUserState(userId, 'idle', {});
-      } else if (session.state === 'searching') {
-        if (!await checkUserAuthentication(userId)) {
-          await sendMessage(chatId, "🔐 Please authenticate first using /start");
-          return new Response('OK', { headers: corsHeaders });
-        }
-        await handleSearch(chatId, text);
-        await updateUserState(userId, 'idle', {});
-      } else if (session.state === 'adding_person') {
-        if (!await checkUserAuthentication(userId)) {
-          await sendMessage(chatId, "🔐 Please authenticate first using /start");
-          return new Response('OK', { headers: corsHeaders });
-        }
-        await handleAddPerson(chatId, text, session, userId);
       } else {
-        await sendMessage(chatId, "I don't understand. Type /help to see available commands.");
+        // Handle conversation flows and regular messages
+        console.log(`Current session state: ${session.state}`);
+        if (session.state === 'authenticating') {
+          console.log(`User ${userId} attempting authentication with: ${text}`);
+          await handleAuthentication(chatId, text, userId, message.from);
+          await updateUserState(userId, 'idle', {});
+        } else if (session.state === 'searching') {
+          if (!await checkUserAuthentication(userId)) {
+            await sendMessage(chatId, "🔐 Please authenticate first using /start");
+            return new Response('OK', { headers: corsHeaders });
+          }
+          await handleSearch(chatId, text);
+          await updateUserState(userId, 'idle', {});
+        } else if (session.state === 'adding_person') {
+          if (!await checkUserAuthentication(userId)) {
+            await sendMessage(chatId, "🔐 Please authenticate first using /start");
+            return new Response('OK', { headers: corsHeaders });
+          }
+          await handleAddPerson(chatId, text, session, userId);
+        } else {
+          // For authenticated users, treat any regular message as a search
+          if (await checkUserAuthentication(userId)) {
+            await handleSearch(chatId, text);
+          } else {
+            await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          }
+        }
       }
-    }
 
     return new Response('OK', { headers: corsHeaders });
   } catch (error) {
@@ -273,13 +281,15 @@ async function handleAuthentication(chatId: number, password: string, telegramId
       }
 
       await setCommands(chatId);
-      await sendMessage(chatId, 
-        "✅ Authentication successful! Welcome to VC Search Engine!\n\n" +
-        "You can now use:\n" +
-        "🔍 /search - Search people in database\n" +
-        "➕ /add - Add a new person\n" +
-        "❓ /help - Show help message"
-      );
+        await sendMessage(chatId, 
+          "✅ Authentication successful! Welcome to VC Search Engine!\n\n" +
+          "💡 <b>You can now just type anything to search!</b>\n" +
+          "Example: 'ai engineer', 'Google', 'fintech'\n\n" +
+          "Commands:\n" +
+          "🔍 /search - Search people (optional)\n" +
+          "➕ /add - Add a new person\n" +
+          "❓ /help - Show help message"
+        );
     } catch (error) {
       console.error('Database error:', error);
       await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
