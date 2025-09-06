@@ -1,1 +1,7 @@
-project_id = "ufekkcirsznhrvqwwsyf"
+project_id = "velocityx"
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.people-api] 
+verify_jwt = false
