@@ -1,0 +1,216 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { User, Session } from '@supabase/supabase-js';
+import { SearchBar } from "@/components/SearchBar";
+import { PeopleTable } from "@/components/PeopleTable";
+import { PersonForm } from "@/components/PersonForm";
+import { LogOut, Plus } from "lucide-react";
+
+export interface Person {
+  id: string;
+  full_name: string;
+  company: string | null;
+  career_history: string | null;
+  professional_specialties: string[] | null;
+  hashtags: string[] | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const Dashboard = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (!session?.user) {
+          navigate("/auth");
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchPeople();
+    }
+  }, [user]);
+
+  const fetchPeople = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('people')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPeople(data || []);
+      setFilteredPeople(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    if (!query.trim()) {
+      setFilteredPeople(people);
+      return;
+    }
+
+    const searchTerm = query.toLowerCase();
+    const filtered = people.filter(person => 
+      person.full_name.toLowerCase().includes(searchTerm) ||
+      person.company?.toLowerCase().includes(searchTerm) ||
+      person.career_history?.toLowerCase().includes(searchTerm) ||
+      person.hashtags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+      person.professional_specialties?.some(spec => spec.toLowerCase().includes(searchTerm))
+    );
+
+    setFilteredPeople(filtered);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const handleEdit = (person: Person) => {
+    setEditingPerson(person);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('people')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Person deleted successfully",
+      });
+
+      fetchPeople();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting person",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingPerson(null);
+    fetchPeople();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">VC Search Engine</h1>
+              <p className="text-muted-foreground">Manage your people database</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Welcome, {user?.email}
+              </span>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <SearchBar onSearch={handleSearch} />
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Person
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>People Database ({filteredPeople.length} entries)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PeopleTable 
+              people={filteredPeople}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </CardContent>
+        </Card>
+
+        {showForm && (
+          <PersonForm
+            person={editingPerson}
+            onClose={handleFormClose}
+          />
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;
