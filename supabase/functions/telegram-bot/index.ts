@@ -33,8 +33,6 @@ interface UserSession {
   step?: string;
   data?: any;
 }
-
-const userSessions = new Map<number, UserSession>();
 const AUTH_PASSWORD = "121212";
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -58,15 +56,24 @@ serve(async (req) => {
     const text = message.text.trim();
     const userId = message.from.id;
 
-    // Get or create user session
-    let session = userSessions.get(userId) || { state: 'idle' };
+    // Get user session from database
+    const { data: user } = await supabase
+      .from('telegram_users')
+      .select('current_state, state_data')
+      .eq('telegram_id', userId)
+      .single();
+
+    let session = {
+      state: user?.current_state || 'idle',
+      step: user?.state_data?.step,
+      data: user?.state_data?.data || {}
+    };
 
     if (text === '/start') {
       // Check if user is already authenticated
       const isAuth = await checkUserAuthentication(userId);
       if (isAuth) {
-        session = { state: 'idle' };
-        userSessions.set(userId, session);
+        await updateUserState(userId, 'idle', {});
         await setCommands(chatId);
         await sendMessage(chatId, 
           "Welcome back to VC Search Engine Bot! 🚀\n\n" +
@@ -77,12 +84,12 @@ serve(async (req) => {
           "❓ /help - Show this help message"
         );
       } else {
-        session = { state: 'authenticating' };
-        userSessions.set(userId, session);
+        await updateUserState(userId, 'authenticating', {});
         await sendMessage(chatId, 
           "Welcome to VC Search Engine Bot! 🚀\n\n" +
           "🔐 Please enter the password to access the system:"
         );
+      }
       }
     } else if (text === '/help') {
       if (!await checkUserAuthentication(userId)) {
@@ -101,46 +108,36 @@ serve(async (req) => {
         await sendMessage(chatId, "🔐 Please authenticate first using /start");
         return new Response('OK', { headers: corsHeaders });
       }
-      session = { state: 'searching' };
-      userSessions.set(userId, session);
+      await updateUserState(userId, 'searching', {});
       await sendMessage(chatId, "🔍 What would you like to search for? (name, company, hashtag, or specialty)");
     } else if (text === '/add') {
       if (!await checkUserAuthentication(userId)) {
         await sendMessage(chatId, "🔐 Please authenticate first using /start");
         return new Response('OK', { headers: corsHeaders });
       }
-      session = { 
-        state: 'adding_person', 
-        step: 'name',
-        data: {}
-      };
-      userSessions.set(userId, session);
+      await updateUserState(userId, 'adding_person', { step: 'name', data: {} });
       await sendMessage(chatId, "➕ Let's add a new person! What's their full name?");
     } else if (text === '/cancel') {
-      session = { state: 'idle' };
-      userSessions.set(userId, session);
+      await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
     } else {
       // Handle conversation flows
       if (session.state === 'authenticating') {
         await handleAuthentication(chatId, text, userId, message.from);
-        session = { state: 'idle' };
-        userSessions.set(userId, session);
+        await updateUserState(userId, 'idle', {});
       } else if (session.state === 'searching') {
         if (!await checkUserAuthentication(userId)) {
           await sendMessage(chatId, "🔐 Please authenticate first using /start");
           return new Response('OK', { headers: corsHeaders });
         }
         await handleSearch(chatId, text);
-        session = { state: 'idle' };
-        userSessions.set(userId, session);
+        await updateUserState(userId, 'idle', {});
       } else if (session.state === 'adding_person') {
         if (!await checkUserAuthentication(userId)) {
           await sendMessage(chatId, "🔐 Please authenticate first using /start");
           return new Response('OK', { headers: corsHeaders });
         }
-        await handleAddPerson(chatId, text, session);
-        userSessions.set(userId, session);
+        await handleAddPerson(chatId, text, session, userId);
       } else {
         await sendMessage(chatId, "I don't understand. Type /help to see available commands.");
       }
@@ -220,6 +217,22 @@ async function checkUserAuthentication(telegramId: number): Promise<boolean> {
   } catch (error) {
     console.error('Error checking authentication:', error);
     return false;
+  }
+}
+
+async function updateUserState(telegramId: number, state: string, stateData: any) {
+  try {
+    await supabase
+      .from('telegram_users')
+      .upsert({
+        telegram_id: telegramId,
+        current_state: state,
+        state_data: stateData
+      }, {
+        onConflict: 'telegram_id'
+      });
+  } catch (error) {
+    console.error('Error updating user state:', error);
   }
 }
 
@@ -304,25 +317,28 @@ async function handleSearch(chatId: number, query: string) {
   }
 }
 
-async function handleAddPerson(chatId: number, text: string, session: UserSession) {
+async function handleAddPerson(chatId: number, text: string, session: any, userId: number) {
   if (!session.data) session.data = {};
 
   switch (session.step) {
     case 'name':
       session.data.full_name = text;
       session.step = 'company';
+      await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "👔 What company do they work for? (or type 'skip')");
       break;
 
     case 'company':
       session.data.company = text.toLowerCase() === 'skip' ? null : text;
       session.step = 'career';
+      await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "📈 Tell me about their career history: (or type 'skip')");
       break;
 
     case 'career':
       session.data.career_history = text.toLowerCase() === 'skip' ? null : text;
       session.step = 'specialties';
+      await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "🎯 What are their professional specialties? (comma-separated, or type 'skip')");
       break;
 
@@ -331,6 +347,7 @@ async function handleAddPerson(chatId: number, text: string, session: UserSessio
         session.data.professional_specialties = text.split(',').map((s: string) => s.trim());
       }
       session.step = 'hashtags';
+      await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "🏷️ What hashtags describe them? (comma-separated, or type 'skip')");
       break;
 
@@ -339,6 +356,7 @@ async function handleAddPerson(chatId: number, text: string, session: UserSessio
         session.data.hashtags = text.split(',').map((h: string) => h.trim().replace(/^#/, ''));
       }
       session.step = 'notes';
+      await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "📝 Any additional notes? (or type 'skip')");
       break;
 
@@ -366,13 +384,11 @@ async function handleAddPerson(chatId: number, text: string, session: UserSessio
       }
 
       // Reset session
-      session.state = 'idle';
-      session.step = undefined;
-      session.data = {};
+      await updateUserState(userId, 'idle', {});
       break;
 
     default:
-      session.state = 'idle';
+      await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Something went wrong. Type /help to see available commands.");
   }
 }

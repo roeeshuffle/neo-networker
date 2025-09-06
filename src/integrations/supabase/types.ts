@@ -57,9 +57,11 @@ export type Database = {
         Row: {
           authenticated_at: string | null
           created_at: string | null
+          current_state: string | null
           first_name: string | null
           id: string
           is_authenticated: boolean | null
+          state_data: Json | null
           telegram_id: number
           telegram_username: string | null
           updated_at: string | null
@@ -67,9 +69,11 @@ export type Database = {
         Insert: {
           authenticated_at?: string | null
           created_at?: string | null
+          current_state?: string | null
           first_name?: string | null
           id?: string
           is_authenticated?: boolean | null
+          state_data?: Json | null
           telegram_id: number
           telegram_username?: string | null
           updated_at?: string | null
@@ -77,9 +81,11 @@ export type Database = {
         Update: {
           authenticated_at?: string | null
           created_at?: string | null
+          current_state?: string | null
           first_name?: string | null
           id?: string
           is_authenticated?: boolean | null
+          state_data?: Json | null
           telegram_id?: number
           telegram_username?: string | null
           updated_at?: string | null
