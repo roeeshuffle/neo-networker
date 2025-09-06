@@ -90,7 +90,6 @@ serve(async (req) => {
           "🔐 Please enter the password to access the system:"
         );
       }
-      }
     } else if (text === '/help') {
       if (!await checkUserAuthentication(userId)) {
         await sendMessage(chatId, "🔐 Please authenticate first using /start");
