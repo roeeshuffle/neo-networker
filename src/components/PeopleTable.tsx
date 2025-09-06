@@ -1,15 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Eye } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
 interface PeopleTableProps {
   people: Person[];
   onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
+  onView: (person: Person) => void;
 }
 
-export const PeopleTable = ({ people, onEdit, onDelete }: PeopleTableProps) => {
+export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTableProps) => {
   if (people.length === 0) {
     return (
       <div className="text-center py-8">
@@ -80,7 +81,16 @@ export const PeopleTable = ({ people, onEdit, onDelete }: PeopleTableProps) => {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => onView(person)}
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => onEdit(person)}
+                    title="Edit"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -88,6 +98,7 @@ export const PeopleTable = ({ people, onEdit, onDelete }: PeopleTableProps) => {
                     size="sm"
                     variant="outline"
                     onClick={() => onDelete(person.id)}
+                    title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

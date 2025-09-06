@@ -16,37 +16,46 @@ export type Database = {
     Tables: {
       people: {
         Row: {
+          age: number | null
           career_history: string | null
           company: string | null
           created_at: string | null
           created_by: string | null
           full_name: string
+          gender: string | null
           hashtags: string[] | null
           id: string
+          linkedin_profile: string | null
           notes: string | null
           professional_specialties: string[] | null
           updated_at: string | null
         }
         Insert: {
+          age?: number | null
           career_history?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
           full_name: string
+          gender?: string | null
           hashtags?: string[] | null
           id?: string
+          linkedin_profile?: string | null
           notes?: string | null
           professional_specialties?: string[] | null
           updated_at?: string | null
         }
         Update: {
+          age?: number | null
           career_history?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
           full_name?: string
+          gender?: string | null
           hashtags?: string[] | null
           id?: string
+          linkedin_profile?: string | null
           notes?: string | null
           professional_specialties?: string[] | null
           updated_at?: string | null

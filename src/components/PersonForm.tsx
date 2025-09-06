@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
@@ -22,6 +23,9 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
     professional_specialties: "",
     hashtags: "",
     notes: "",
+    gender: "",
+    age: "",
+    linkedin_profile: "",
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -35,6 +39,9 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
         professional_specialties: person.professional_specialties?.join(", ") || "",
         hashtags: person.hashtags?.join(", ") || "",
         notes: person.notes || "",
+        gender: person.gender || "",
+        age: person.age?.toString() || "",
+        linkedin_profile: person.linkedin_profile || "",
       });
     }
   }, [person]);
@@ -55,6 +62,9 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
           ? formData.hashtags.split(",").map(h => h.trim().replace(/^#/, "")).filter(h => h)
           : null,
         notes: formData.notes.trim() || null,
+        gender: formData.gender.trim() || null,
+        age: formData.age ? parseInt(formData.age) : null,
+        linkedin_profile: formData.linkedin_profile.trim() || null,
       };
 
       if (person) {
@@ -112,26 +122,67 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name *</Label>
-              <Input
-                id="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                required
-                placeholder="John Doe"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  required
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  placeholder="Acme Corp"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Non-binary">Non-binary</SelectItem>
+                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="age">Age</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={formData.age}
+                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  placeholder="30"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="linkedin_profile">LinkedIn Profile</Label>
               <Input
-                id="company"
-                type="text"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                placeholder="Acme Corp"
+                id="linkedin_profile"
+                type="url"
+                value={formData.linkedin_profile}
+                onChange={(e) => setFormData({ ...formData, linkedin_profile: e.target.value })}
+                placeholder="https://linkedin.com/in/johndoe"
               />
             </div>
 

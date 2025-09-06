@@ -57,12 +57,15 @@ serve(async (req) => {
     const userId = message.from.id;
 
     // Get user session from database
+    console.log(`Processing message from user ${userId}: "${text}"`);
     const { data: user } = await supabase
       .from('telegram_users')
-      .select('current_state, state_data')
+      .select('current_state, state_data, is_authenticated')
       .eq('telegram_id', userId)
       .single();
 
+    console.log(`User state from DB:`, user);
+    
     let session = {
       state: user?.current_state || 'idle',
       step: user?.state_data?.step,
@@ -121,7 +124,9 @@ serve(async (req) => {
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
     } else {
       // Handle conversation flows
+      console.log(`Current session state: ${session.state}`);
       if (session.state === 'authenticating') {
+        console.log(`User ${userId} attempting authentication with: ${text}`);
         await handleAuthentication(chatId, text, userId, message.from);
         await updateUserState(userId, 'idle', {});
       } else if (session.state === 'searching') {
@@ -226,10 +231,12 @@ async function updateUserState(telegramId: number, state: string, stateData: any
       .upsert({
         telegram_id: telegramId,
         current_state: state,
-        state_data: stateData
+        state_data: stateData,
+        is_authenticated: false // Ensure we track auth status
       }, {
         onConflict: 'telegram_id'
       });
+    console.log(`Updated user ${telegramId} state to: ${state}`);
   } catch (error) {
     console.error('Error updating user state:', error);
   }

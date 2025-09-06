@@ -9,6 +9,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
+import { PersonDetailsModal } from "@/components/PersonDetailsModal";
 import { LogOut, Plus } from "lucide-react";
 
 export interface Person {
@@ -19,6 +20,9 @@ export interface Person {
   professional_specialties: string[] | null;
   hashtags: string[] | null;
   notes: string | null;
+  gender: string | null;
+  age: number | null;
+  linkedin_profile: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +35,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -115,6 +120,10 @@ const Dashboard = () => {
   const handleEdit = (person: Person) => {
     setEditingPerson(person);
     setShowForm(true);
+  };
+
+  const handleView = (person: Person) => {
+    setViewingPerson(person);
   };
 
   const handleDelete = async (id: string) => {
@@ -205,6 +214,7 @@ const Dashboard = () => {
               people={filteredPeople}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onView={handleView}
             />
           </CardContent>
         </Card>
@@ -215,6 +225,12 @@ const Dashboard = () => {
             onClose={handleFormClose}
           />
         )}
+
+        <PersonDetailsModal
+          person={viewingPerson}
+          isOpen={!!viewingPerson}
+          onClose={() => setViewingPerson(null)}
+        />
       </main>
     </div>
   );
