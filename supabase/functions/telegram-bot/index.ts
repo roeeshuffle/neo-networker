@@ -226,17 +226,25 @@ async function checkUserAuthentication(telegramId: number): Promise<boolean> {
 
 async function updateUserState(telegramId: number, state: string, stateData: any) {
   try {
+    // First get the current user to preserve authentication status
+    const { data: currentUser } = await supabase
+      .from('telegram_users')
+      .select('is_authenticated')
+      .eq('telegram_id', telegramId)
+      .single();
+
     await supabase
       .from('telegram_users')
       .upsert({
         telegram_id: telegramId,
         current_state: state,
         state_data: stateData,
-        is_authenticated: false // Ensure we track auth status
+        // Preserve existing authentication status
+        is_authenticated: currentUser?.is_authenticated || false
       }, {
         onConflict: 'telegram_id'
       });
-    console.log(`Updated user ${telegramId} state to: ${state}`);
+    console.log(`Updated user ${telegramId} state to: ${state}, auth status preserved`);
   } catch (error) {
     console.error('Error updating user state:', error);
   }
