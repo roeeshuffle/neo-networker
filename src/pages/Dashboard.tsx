@@ -163,9 +163,16 @@ const Dashboard = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">VC Search Engine</h1>
-              <p className="text-muted-foreground">Manage your people database</p>
+            <div className="flex items-center gap-4">
+              <img 
+                src="/lovable-uploads/756c1423-2a04-4806-8117-719d07336118.png" 
+                alt="VCrm Logo" 
+                className="h-12 w-12"
+              />
+              <div>
+                <h1 className="text-2xl font-bold">VCrm</h1>
+                <p className="text-muted-foreground">Manage your data</p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
@@ -191,7 +198,7 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>People Database ({filteredPeople.length} entries)</CardTitle>
+            <CardTitle>Data ({filteredPeople.length} entries)</CardTitle>
           </CardHeader>
           <CardContent>
             <PeopleTable 
