@@ -11,6 +11,7 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { LogOut, Plus } from "lucide-react";
+import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
   id: string;
@@ -208,11 +209,11 @@ const Dashboard = () => {
         <div className="container mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-5">
-              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
                 <img 
-                  src="/lovable-uploads/756c1423-2a04-4806-8117-719d07336118.png" 
+                  src={vcrmLogo} 
                   alt="VCrm Logo" 
-                  className="h-8 w-8 brightness-0 invert"
+                  className="h-10 w-10 object-contain"
                 />
               </div>
               <div>
