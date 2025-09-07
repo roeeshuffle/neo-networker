@@ -49,11 +49,42 @@ const AdminDashboard = () => {
         navigate("/auth");
       } else {
         checkAdminAccess(session.user.email);
+        setupRealtimeSubscription();
+      setupRealtimeSubscription();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      // Clean up realtime subscription if it exists
+      if (typeof window !== 'undefined') {
+        supabase.removeAllChannels();
+      }
+    };
   }, [navigate]);
+
+  const setupRealtimeSubscription = () => {
+    console.log("Setting up realtime subscription for profiles");
+    
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profiles table changed:', payload);
+          // Refresh the user list when profiles change
+          fetchPendingUsers();
+        }
+      )
+      .subscribe();
+
+    return channel;
+  };
 
   const checkAdminAccess = (email: string | undefined) => {
     if (email !== 'guy@wershuffle.com') {
@@ -71,15 +102,20 @@ const AdminDashboard = () => {
   const fetchPendingUsers = async () => {
     try {
       setLoading(true);
+      console.log("Fetching users as admin:", user?.email);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
+      console.log("Fetch result:", { data, error });
+
       if (error) throw error;
 
       setPendingUsers(data || []);
     } catch (error: any) {
+      console.error("Error details:", error);
       toast({
         title: "Error fetching users",
         description: error.message,
