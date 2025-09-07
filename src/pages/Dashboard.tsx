@@ -15,14 +15,18 @@ import { LogOut, Plus } from "lucide-react";
 export interface Person {
   id: string;
   full_name: string;
-  company: string | null;
-  career_history: string | null;
-  professional_specialties: string[] | null;
-  hashtags: string[] | null;
-  notes: string | null;
-  gender: string | null;
-  age: number | null;
-  linkedin_profile: string | null;
+  categories?: string;
+  email?: string;
+  newsletter?: boolean;
+  company?: string;
+  status?: string;
+  linkedin_profile?: string;
+  poc_in_apex?: string;
+  who_warm_intro?: string;
+  agenda?: string;
+  meeting_notes?: string;
+  should_avishag_meet?: boolean;
+  more_info?: string;
   created_at: string;
   updated_at: string;
 }
@@ -104,9 +108,10 @@ const Dashboard = () => {
     const filtered = people.filter(person => 
       person.full_name.toLowerCase().includes(searchTerm) ||
       person.company?.toLowerCase().includes(searchTerm) ||
-      person.career_history?.toLowerCase().includes(searchTerm) ||
-      person.hashtags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-      person.professional_specialties?.some(spec => spec.toLowerCase().includes(searchTerm))
+      person.categories?.toLowerCase().includes(searchTerm) ||
+      person.email?.toLowerCase().includes(searchTerm) ||
+      person.status?.toLowerCase().includes(searchTerm) ||
+      person.more_info?.toLowerCase().includes(searchTerm)
     );
 
     setFilteredPeople(filtered);

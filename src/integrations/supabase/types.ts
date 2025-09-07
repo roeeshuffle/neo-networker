@@ -16,49 +16,61 @@ export type Database = {
     Tables: {
       people: {
         Row: {
-          age: number | null
-          career_history: string | null
+          agenda: string | null
+          categories: string | null
           company: string | null
           created_at: string | null
           created_by: string | null
+          email: string | null
           full_name: string
-          gender: string | null
-          hashtags: string[] | null
           id: string
           linkedin_profile: string | null
-          notes: string | null
-          professional_specialties: string[] | null
+          meeting_notes: string | null
+          more_info: string | null
+          newsletter: boolean | null
+          poc_in_apex: string | null
+          should_avishag_meet: boolean | null
+          status: string | null
           updated_at: string | null
+          who_warm_intro: string | null
         }
         Insert: {
-          age?: number | null
-          career_history?: string | null
+          agenda?: string | null
+          categories?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
+          email?: string | null
           full_name: string
-          gender?: string | null
-          hashtags?: string[] | null
           id?: string
           linkedin_profile?: string | null
-          notes?: string | null
-          professional_specialties?: string[] | null
+          meeting_notes?: string | null
+          more_info?: string | null
+          newsletter?: boolean | null
+          poc_in_apex?: string | null
+          should_avishag_meet?: boolean | null
+          status?: string | null
           updated_at?: string | null
+          who_warm_intro?: string | null
         }
         Update: {
-          age?: number | null
-          career_history?: string | null
+          agenda?: string | null
+          categories?: string | null
           company?: string | null
           created_at?: string | null
           created_by?: string | null
+          email?: string | null
           full_name?: string
-          gender?: string | null
-          hashtags?: string[] | null
           id?: string
           linkedin_profile?: string | null
-          notes?: string | null
-          professional_specialties?: string[] | null
+          meeting_notes?: string | null
+          more_info?: string | null
+          newsletter?: boolean | null
+          poc_in_apex?: string | null
+          should_avishag_meet?: boolean | null
+          status?: string | null
           updated_at?: string | null
+          who_warm_intro?: string | null
         }
         Relationships: []
       }

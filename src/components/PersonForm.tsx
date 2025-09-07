@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
 interface PersonFormProps {
@@ -16,232 +14,196 @@ interface PersonFormProps {
 }
 
 export const PersonForm = ({ person, onClose }: PersonFormProps) => {
-  const [formData, setFormData] = useState({
-    full_name: "",
-    company: "",
-    career_history: "",
-    professional_specialties: "",
-    hashtags: "",
-    notes: "",
-    gender: "",
-    age: "",
-    linkedin_profile: "",
-  });
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (person) {
-      setFormData({
-        full_name: person.full_name,
-        company: person.company || "",
-        career_history: person.career_history || "",
-        professional_specialties: person.professional_specialties?.join(", ") || "",
-        hashtags: person.hashtags?.join(", ") || "",
-        notes: person.notes || "",
-        gender: person.gender || "",
-        age: person.age?.toString() || "",
-        linkedin_profile: person.linkedin_profile || "",
-      });
-    }
-  }, [person]);
+  
+  const [formData, setFormData] = useState({
+    full_name: person?.full_name || "",
+    categories: person?.categories || "",
+    email: person?.email || "",
+    newsletter: person?.newsletter || false,
+    company: person?.company || "",
+    status: person?.status || "",
+    linkedin_profile: person?.linkedin_profile || "",
+    poc_in_apex: person?.poc_in_apex || "",
+    who_warm_intro: person?.who_warm_intro || "",
+    agenda: person?.agenda || "",
+    meeting_notes: person?.meeting_notes || "",
+    should_avishag_meet: person?.should_avishag_meet || false,
+    more_info: person?.more_info || "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      const processedData = {
-        full_name: formData.full_name.trim(),
-        company: formData.company.trim() || null,
-        career_history: formData.career_history.trim() || null,
-        professional_specialties: formData.professional_specialties
-          ? formData.professional_specialties.split(",").map(s => s.trim()).filter(s => s)
-          : null,
-        hashtags: formData.hashtags
-          ? formData.hashtags.split(",").map(h => h.trim().replace(/^#/, "")).filter(h => h)
-          : null,
-        notes: formData.notes.trim() || null,
-        gender: formData.gender.trim() || null,
-        age: formData.age ? parseInt(formData.age) : null,
-        linkedin_profile: formData.linkedin_profile.trim() || null,
-      };
-
       if (person) {
-        // Update existing person
         const { error } = await supabase
-          .from('people')
-          .update(processedData)
-          .eq('id', person.id);
+          .from("people")
+          .update(formData)
+          .eq("id", person.id);
 
         if (error) throw error;
-
         toast({
           title: "Success",
           description: "Person updated successfully",
         });
       } else {
-        // Create new person
         const { error } = await supabase
-          .from('people')
-          .insert([{
-            ...processedData,
-            created_by: (await supabase.auth.getUser()).data.user?.id
-          }]);
+          .from("people")
+          .insert([formData]);
 
         if (error) throw error;
-
         toast({
           title: "Success",
           description: "Person added successfully",
         });
       }
-
       onClose();
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to save person",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
-            {person ? "Edit Person" : "Add New Person"}
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+        <CardHeader>
+          <CardTitle>{person ? "Edit Person" : "Add New Person"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Full Name *</label>
                 <Input
-                  id="full_name"
-                  type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
-                  placeholder="John Doe"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
+              <div>
+                <label className="block text-sm font-medium mb-1">Company</label>
                 <Input
-                  id="company"
-                  type="text"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  placeholder="Acme Corp"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender</Label>
-                <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Non-binary">Non-binary</SelectItem>
-                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="age">Age</Label>
+              <div>
+                <label className="block text-sm font-medium mb-1">Categories</label>
                 <Input
-                  id="age"
-                  type="number"
-                  min="0"
-                  max="120"
-                  value={formData.age}
-                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                  placeholder="30"
+                  value={formData.categories}
+                  onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Status</label>
+                <Input
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">LinkedIn Profile</label>
+                <Input
+                  type="url"
+                  value={formData.linkedin_profile}
+                  onChange={(e) => setFormData({ ...formData, linkedin_profile: e.target.value })}
+                  placeholder="https://linkedin.com/in/..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">POC in APEX</label>
+                <Input
+                  value={formData.poc_in_apex}
+                  onChange={(e) => setFormData({ ...formData, poc_in_apex: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Who Warm Intro</label>
+                <Input
+                  value={formData.who_warm_intro}
+                  onChange={(e) => setFormData({ ...formData, who_warm_intro: e.target.value })}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="linkedin_profile">LinkedIn Profile</Label>
-              <Input
-                id="linkedin_profile"
-                type="url"
-                value={formData.linkedin_profile}
-                onChange={(e) => setFormData({ ...formData, linkedin_profile: e.target.value })}
-                placeholder="https://linkedin.com/in/johndoe"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="career_history">Career History</Label>
+            <div>
+              <label className="block text-sm font-medium mb-1">Agenda</label>
               <Textarea
-                id="career_history"
-                value={formData.career_history}
-                onChange={(e) => setFormData({ ...formData, career_history: e.target.value })}
-                placeholder="Previous roles, achievements, and career progression..."
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="professional_specialties">Professional Specialties</Label>
-              <Input
-                id="professional_specialties"
-                type="text"
-                value={formData.professional_specialties}
-                onChange={(e) => setFormData({ ...formData, professional_specialties: e.target.value })}
-                placeholder="Software Engineering, Data Science, Product Management (comma-separated)"
-              />
-              <p className="text-sm text-muted-foreground">
-                Separate multiple specialties with commas
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hashtags">Hashtags</Label>
-              <Input
-                id="hashtags"
-                type="text"
-                value={formData.hashtags}
-                onChange={(e) => setFormData({ ...formData, hashtags: e.target.value })}
-                placeholder="tech, startup, ai, fintech (comma-separated, # optional)"
-              />
-              <p className="text-sm text-muted-foreground">
-                Separate multiple hashtags with commas. The # symbol is optional.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes, contacts, or relevant information..."
+                value={formData.agenda}
+                onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
                 rows={3}
               />
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? "Saving..." : (person ? "Update Person" : "Add Person")}
-              </Button>
+            <div>
+              <label className="block text-sm font-medium mb-1">Meeting Notes</label>
+              <Textarea
+                value={formData.meeting_notes}
+                onChange={(e) => setFormData({ ...formData, meeting_notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">More Information</label>
+              <Textarea
+                value={formData.more_info}
+                onChange={(e) => setFormData({ ...formData, more_info: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="newsletter"
+                  checked={formData.newsletter}
+                  onCheckedChange={(checked) => setFormData({ ...formData, newsletter: checked as boolean })}
+                />
+                <label htmlFor="newsletter" className="text-sm font-medium">
+                  Newsletter Subscription
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="should_avishag_meet"
+                  checked={formData.should_avishag_meet}
+                  onCheckedChange={(checked) => setFormData({ ...formData, should_avishag_meet: checked as boolean })}
+                />
+                <label htmlFor="should_avishag_meet" className="text-sm font-medium">
+                  Should Avishag Meet?
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                Close
+              </Button>
+              <Button type="submit">
+                {person ? "Update Person" : "Add Person"}
               </Button>
             </div>
           </form>

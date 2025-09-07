@@ -25,9 +25,11 @@ export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTablePro
         <thead>
           <tr className="border-b">
             <th className="text-left p-4 font-medium">Name</th>
+            <th className="text-left p-4 font-medium">Email</th>
             <th className="text-left p-4 font-medium">Company</th>
-            <th className="text-left p-4 font-medium">Specialties</th>
-            <th className="text-left p-4 font-medium">Hashtags</th>
+            <th className="text-left p-4 font-medium">Categories</th>
+            <th className="text-left p-4 font-medium">Status</th>
+            <th className="text-left p-4 font-medium">Newsletter</th>
             <th className="text-left p-4 font-medium">Actions</th>
           </tr>
         </thead>
@@ -35,46 +37,49 @@ export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTablePro
           {people.map((person) => (
             <tr key={person.id} className="border-b hover:bg-muted/50">
               <td className="p-4">
-                <div>
-                  <div className="font-medium">{person.full_name}</div>
-                  {person.career_history && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {person.career_history.substring(0, 100)}
-                      {person.career_history.length > 100 && "..."}
-                    </div>
-                  )}
-                </div>
+                <div className="font-medium">{person.full_name}</div>
+                {person.linkedin_profile && (
+                  <a 
+                    href={person.linkedin_profile} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    LinkedIn
+                  </a>
+                )}
+              </td>
+              <td className="p-4">
+                {person.email ? (
+                  <a 
+                    href={`mailto:${person.email}`}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    {person.email}
+                  </a>
+                ) : (
+                  <span className="text-sm text-muted-foreground">N/A</span>
+                )}
               </td>
               <td className="p-4">
                 <span className="text-sm">{person.company || "N/A"}</span>
               </td>
               <td className="p-4">
-                <div className="flex flex-wrap gap-1">
-                  {person.professional_specialties?.slice(0, 3).map((specialty, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {specialty}
-                    </Badge>
-                  ))}
-                  {person.professional_specialties && person.professional_specialties.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{person.professional_specialties.length - 3}
-                    </Badge>
-                  )}
-                </div>
+                {person.categories ? (
+                  <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                    {person.categories}
+                  </Badge>
+                ) : (
+                  <span className="text-sm text-muted-foreground">N/A</span>
+                )}
               </td>
               <td className="p-4">
-                <div className="flex flex-wrap gap-1">
-                  {person.hashtags?.slice(0, 3).map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      #{tag}
-                    </Badge>
-                  ))}
-                  {person.hashtags && person.hashtags.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{person.hashtags.length - 3}
-                    </Badge>
-                  )}
-                </div>
+                <span className="text-sm">{person.status || "N/A"}</span>
+              </td>
+              <td className="p-4">
+                <span className={`text-sm ${person.newsletter ? 'text-green-600' : 'text-red-600'}`}>
+                  {person.newsletter ? 'Yes' : 'No'}
+                </span>
               </td>
               <td className="p-4">
                 <div className="flex gap-2">

@@ -306,7 +306,7 @@ async function handleSearch(chatId: number, query: string) {
     const { data: people, error } = await supabase
       .from('people')
       .select('*')
-      .or(`full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,career_history.ilike.%${searchTerm}%`)
+      .or(`full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,categories.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
       .limit(10);
 
     if (error) {
@@ -325,12 +325,10 @@ async function handleSearch(chatId: number, query: string) {
     people.forEach((person, index) => {
       response += `${index + 1}. <b>${person.full_name}</b>\n`;
       if (person.company) response += `   🏢 ${person.company}\n`;
-      if (person.hashtags && person.hashtags.length) {
-        response += `   🏷️ ${person.hashtags.map((tag: string) => `#${tag}`).join(' ')}\n`;
-      }
-      if (person.professional_specialties && person.professional_specialties.length) {
-        response += `   💼 ${person.professional_specialties.join(', ')}\n`;
-      }
+      if (person.email) response += `   📧 ${person.email}\n`;
+      if (person.categories) response += `   🏷️ ${person.categories}\n`;
+      if (person.status) response += `   📊 Status: ${person.status}\n`;
+      if (person.newsletter) response += `   📰 Newsletter: ✅\n`;
       response += '\n';
     });
 

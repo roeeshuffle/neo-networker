@@ -1,10 +1,9 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ExternalLink, Calendar, User, Briefcase, Mail, FileText, Users, Target } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
-import { ExternalLink, User, Building, Calendar, Globe } from "lucide-react";
 
 interface PersonDetailsModalProps {
   person: Person | null;
@@ -12,150 +11,184 @@ interface PersonDetailsModalProps {
   onClose: () => void;
 }
 
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
 export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsModalProps) => {
   if (!person) return null;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{person.full_name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            {person.full_name}
+          </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Basic Info Card */}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+                <User className="h-4 w-4" />
                 Basic Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {person.company && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Company</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      <span>{person.company}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {person.gender && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Gender</label>
-                    <p className="mt-1">{person.gender}</p>
-                  </div>
-                )}
-                
-                {person.age && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Age</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>{person.age} years old</span>
-                    </div>
-                  </div>
-                )}
-                
-                {person.linkedin_profile && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">LinkedIn</label>
-                    <div className="mt-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => window.open(person.linkedin_profile!, '_blank')}
-                        className="flex items-center gap-2"
-                      >
-                        <Globe className="h-4 w-4" />
-                        View Profile
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+            <CardContent className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Full Name</label>
+                <p className="text-sm">{person.full_name}</p>
+              </div>
+              {person.email && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-blue-600"
+                    onClick={() => window.open(`mailto:${person.email}`, '_self')}
+                  >
+                    <Mail className="h-3 w-3 mr-1" />
+                    {person.email}
+                  </Button>
+                </div>
+              )}
+              {person.company && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Company</label>
+                  <p className="text-sm">{person.company}</p>
+                </div>
+              )}
+              {person.categories && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Categories</label>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 mt-1">
+                    {person.categories}
+                  </Badge>
+                </div>
+              )}
+              {person.status && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <p className="text-sm">{person.status}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Newsletter</label>
+                <p className={`text-sm ${person.newsletter ? 'text-green-600' : 'text-red-600'}`}>
+                  {person.newsletter ? 'Subscribed' : 'Not Subscribed'}
+                </p>
+              </div>
+              {person.linkedin_profile && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">LinkedIn Profile</label>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-blue-600"
+                    onClick={() => window.open(person.linkedin_profile, '_blank')}
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    View Profile
+                  </Button>
+                </div>
+              )}
+              {person.created_at && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Created</label>
+                  <p className="text-sm">{formatDate(person.created_at)}</p>
+                </div>
+              )}
+              {person.updated_at && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                  <p className="text-sm">{formatDate(person.updated_at)}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Business Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Business Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {person.poc_in_apex && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">POC in APEX</label>
+                  <p className="text-sm">{person.poc_in_apex}</p>
+                </div>
+              )}
+              {person.who_warm_intro && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Who Warm Intro</label>
+                  <p className="text-sm">{person.who_warm_intro}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Should Avishag Meet?</label>
+                <p className={`text-sm ${person.should_avishag_meet ? 'text-green-600' : 'text-red-600'}`}>
+                  {person.should_avishag_meet ? 'Yes' : 'No'}
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Career History */}
-          {person.career_history && (
+          {/* Agenda */}
+          {person.agenda && (
             <Card>
               <CardHeader>
-                <CardTitle>Career History</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Agenda
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed">{person.career_history}</p>
+                <p className="text-sm whitespace-pre-wrap">{person.agenda}</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Professional Specialties */}
-          {person.professional_specialties && person.professional_specialties.length > 0 && (
+          {/* Meeting Notes */}
+          {person.meeting_notes && (
             <Card>
               <CardHeader>
-                <CardTitle>Professional Specialties</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Meeting Notes
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {person.professional_specialties.map((specialty, index) => (
-                    <Badge key={index} variant="secondary">
-                      {specialty}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-sm whitespace-pre-wrap">{person.meeting_notes}</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Hashtags */}
-          {person.hashtags && person.hashtags.length > 0 && (
-            <Card>
+          {/* More Info */}
+          {person.more_info && (
+            <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle>Hashtags</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  More Information
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {person.hashtags.map((tag, index) => (
-                    <Badge key={index} variant="outline">
-                      #{tag}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-sm whitespace-pre-wrap">{person.more_info}</p>
               </CardContent>
             </Card>
           )}
-
-          {/* Notes */}
-          {person.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-relaxed">{person.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <Separator />
-
-          {/* Metadata */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>Created: {formatDate(person.created_at)}</p>
-            <p>Updated: {formatDate(person.updated_at)}</p>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
