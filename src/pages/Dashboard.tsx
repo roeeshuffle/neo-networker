@@ -266,8 +266,8 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-primary-foreground/80">Total Contacts</p>
-                  <p className="text-2xl font-bold text-primary-foreground">{filteredPeople.length}</p>
+                  <p className="text-sm font-medium text-foreground/80">Total Contacts</p>
+                  <p className="text-2xl font-bold text-foreground">{filteredPeople.length}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
                   <Plus className="h-6 w-6 text-primary" />
@@ -280,8 +280,8 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-secondary-foreground/80">This Month</p>
-                  <p className="text-2xl font-bold text-secondary-foreground">
+                  <p className="text-sm font-medium text-foreground/80">This Month</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {people.filter(p => new Date(p.created_at) >= new Date(new Date().setDate(1))).length}
                   </p>
                 </div>
@@ -296,8 +296,8 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-accent-foreground/80">With Notes</p>
-                  <p className="text-2xl font-bold text-accent-foreground">
+                  <p className="text-sm font-medium text-foreground/80">With Notes</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {people.filter(p => p.meeting_notes?.trim()).length}
                   </p>
                 </div>

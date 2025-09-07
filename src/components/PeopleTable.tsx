@@ -96,8 +96,8 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
 
   return (
     <div className="overflow-hidden rounded-lg">
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto resize-x min-w-full max-w-full" style={{ resize: 'horizontal' }}>
+        <table className="w-full min-w-[800px]">
           <thead>
             <tr className="border-b border-border-soft bg-muted/30">
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
@@ -254,7 +254,9 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
            {filteredPeople.map((person, index) => (
             <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
               <td className="px-6 py-4">
-                <div className="font-semibold text-foreground">{person.full_name}</div>
+                <div className="font-semibold text-foreground" title={person.full_name}>
+                  {person.full_name.length > 20 ? `${person.full_name.substring(0, 20)}...` : person.full_name}
+                </div>
                 {person.linkedin_profile && (
                   <a 
                     href={person.linkedin_profile} 
