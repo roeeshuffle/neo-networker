@@ -276,10 +276,11 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
               <td className="p-4">
                 <span className="text-sm">{person.company || ""}</span>
               </td>
-              <td className="p-4">
+               <td className="p-4">
                 {person.categories ? (
                   person.categories.split(',').map((category, index) => {
                     const trimmedCategory = category.trim();
+                    const firstWord = trimmedCategory.split(' ')[0];
                     const bgColor = getColorFromText(trimmedCategory);
                     const textColor = getTextColorFromBg(bgColor);
                     return (
@@ -292,8 +293,9 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                           color: textColor,
                           border: 'none'
                         }}
+                        title={trimmedCategory}
                       >
-                        {trimmedCategory}
+                        {firstWord}
                       </Badge>
                     );
                   })
