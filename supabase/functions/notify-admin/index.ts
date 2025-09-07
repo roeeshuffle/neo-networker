@@ -24,15 +24,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "VCrm <onboarding@resend.dev>",
-      to: ["guy@wershuffle.com"],
-      subject: "New User Registration - Approval Required",
+      to: ["roee2912@gmail.com"], // Using your verified email since guy@wershuffle.com needs domain verification
+      subject: "New User Registration - Approval Required (for guy@wershuffle.com)",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
             <h1 style="margin: 0; font-size: 28px;">VCrm - New User Registration</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Notification for Admin: guy@wershuffle.com</p>
           </div>
           
           <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+              <p style="margin: 0; color: #856404; font-weight: bold;">📧 Admin Notification</p>
+              <p style="margin: 5px 0 0 0; color: #856404;">This email is sent to you (roee2912@gmail.com) because guy@wershuffle.com requires domain verification in Resend. Please forward this to guy@wershuffle.com or verify the domain at resend.com/domains</p>
+            </div>
             <h2 style="color: #333; margin-top: 0;">Approval Required</h2>
             
             <p style="color: #666; font-size: 16px; line-height: 1.6;">
