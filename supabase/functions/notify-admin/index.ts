@@ -41,12 +41,13 @@ const handler = async (req: Request): Promise<Response> => {
             <h2 style="color: #333; margin-top: 0;">Approval Required</h2>
             
             <p style="color: #666; font-size: 16px; line-height: 1.6;">
-              A new user has registered and is waiting for your approval:
+              A new user has registered and is waiting for approval from guy@wershuffle.com:
             </p>
             
             <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;">
               <p style="margin: 5px 0;"><strong>Name:</strong> ${userName}</p>
               <p style="margin: 5px 0;"><strong>Email:</strong> ${userEmail}</p>
+              <p style="margin: 5px 0;"><strong>Admin to approve:</strong> guy@wershuffle.com</p>
             </div>
             
             <p style="color: #666; font-size: 16px; line-height: 1.6;">
