@@ -53,6 +53,11 @@ const Dashboard = () => {
         
         if (!session?.user) {
           navigate("/auth");
+        } else {
+          // Check if user is approved when they sign in
+          setTimeout(() => {
+            checkUserApproval(session.user.id);
+          }, 0);
         }
       }
     );
@@ -64,11 +69,39 @@ const Dashboard = () => {
       
       if (!session?.user) {
         navigate("/auth");
+      } else {
+        checkUserApproval(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const checkUserApproval = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_approved')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (!profile?.is_approved) {
+        await supabase.auth.signOut();
+        navigate("/auth");
+        toast({
+          title: "Account Not Approved",
+          description: "Your account is pending admin approval.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error checking user approval:', error);
+      await supabase.auth.signOut();
+      navigate("/auth");
+    }
+  };
 
   useEffect(() => {
     if (user) {
