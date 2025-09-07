@@ -106,22 +106,9 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
-      // Send notification email to user
-      try {
-        await supabase.functions.invoke('notify-user', {
-          body: { 
-            userEmail,
-            userName,
-            approved
-          }
-        });
-      } catch (emailError) {
-        console.error('Failed to send user notification:', emailError);
-      }
-
       toast({
         title: approved ? "User Approved" : "User Denied",
-        description: `${userName} has been ${approved ? 'approved' : 'denied'}. They will receive an email notification.`,
+        description: `${userName} has been ${approved ? 'approved' : 'denied'}.`,
       });
 
       // Refresh the list

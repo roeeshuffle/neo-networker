@@ -149,21 +149,9 @@ const Auth = () => {
 
         if (error) throw error;
 
-        // Send notification email to admin
-        try {
-          await supabase.functions.invoke('notify-admin', {
-            body: { 
-              userEmail: email,
-              userName: fullName 
-            }
-          });
-        } catch (emailError) {
-          console.error('Failed to send admin notification:', emailError);
-        }
-
         toast({
           title: "Registration Submitted",
-          description: "Your registration has been submitted for admin approval. You will receive an email once approved.",
+          description: "Your registration has been submitted for admin approval. Please wait for approval.",
         });
         
         setIsLogin(true);
@@ -294,7 +282,7 @@ const Auth = () => {
             {!isLogin && (
               <div className="mt-4 p-3 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground text-center">
-                  New accounts require admin approval. You will receive an email notification once your account is approved by guy@wershuffle.com
+                  New accounts require admin approval. Please wait for approval from the administrator.
                 </p>
               </div>
             )}
