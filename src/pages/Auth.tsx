@@ -28,10 +28,39 @@ const Auth = () => {
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // Check if it's an invalid credentials error
+          if (error.message.includes("Invalid login credentials")) {
+            // Check if user exists but is not approved
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('is_approved')
+              .eq('email', email)
+              .single();
+
+            if (profile) {
+              if (!profile.is_approved) {
+                toast({
+                  title: "Account Pending Approval",
+                  description: "Your account is waiting for admin approval. You will receive an email once approved.",
+                  variant: "destructive",
+                });
+                return;
+              }
+            } else {
+              toast({
+                title: "User Not Found",
+                description: "No account found with this email address. Please sign up first.",
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+          throw error;
+        }
 
         if (data.user) {
-          // Check if user is approved
+          // Double-check approval status after successful auth
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('is_approved')
@@ -69,6 +98,18 @@ const Auth = () => {
         });
 
         if (error) throw error;
+
+        // Send notification email to admin
+        try {
+          await supabase.functions.invoke('notify-admin', {
+            body: { 
+              userEmail: email,
+              userName: fullName 
+            }
+          });
+        } catch (emailError) {
+          console.error('Failed to send admin notification:', emailError);
+        }
 
         toast({
           title: "Registration Submitted",
