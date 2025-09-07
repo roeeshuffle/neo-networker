@@ -2,41 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Copper.com inspired pastel design system 
+Beautiful, calming colors with modern aesthetics
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Soft background gradients */
+    --background: 18 50% 98%;
+    --background-soft: linear-gradient(135deg, hsl(18 50% 98%) 0%, hsl(200 40% 99%) 100%);
+    --foreground: 222 20% 15%;
 
+    /* Clean card system with soft shadows */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 20% 15%;
+    --card-shadow: 0 4px 20px -8px hsl(220 20% 50% / 0.08);
+    --card-shadow-hover: 0 8px 30px -8px hsl(220 20% 50% / 0.12);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 20% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Pastel primary - soft peach */
+    --primary: 20 70% 75%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 20 70% 88%;
+    --primary-hover: 20 70% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Mint green secondary */
+    --secondary: 140 45% 85%;
+    --secondary-foreground: 140 30% 25%;
+    --secondary-soft: 140 45% 92%;
+    --secondary-hover: 140 45% 80%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Lavender accent */
+    --accent: 260 50% 85%;
+    --accent-foreground: 260 30% 25%;
+    --accent-soft: 260 50% 92%;
+    --accent-hover: 260 50% 80%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Baby blue for info/highlights */
+    --info: 200 70% 85%;
+    --info-foreground: 200 30% 25%;
+    --info-soft: 200 70% 92%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Light yellow for warnings */
+    --warning: 45 80% 85%;
+    --warning-foreground: 45 40% 25%;
+    --warning-soft: 45 80% 92%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Soft muted colors */
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 15% 45%;
+    --muted-soft: 210 25% 97%;
 
-    --radius: 0.5rem;
+    /* Soft destructive */
+    --destructive: 0 65% 78%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 65% 90%;
+
+    /* Subtle borders and inputs */
+    --border: 220 20% 88%;
+    --border-soft: 220 20% 92%;
+    --input: 220 20% 96%;
+    --input-focus: 220 30% 94%;
+    --ring: 20 70% 75%;
+
+    /* Modern radius */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,33 +91,56 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark mode with softer pastels */
+    --background: 222 30% 8%;
+    --background-soft: linear-gradient(135deg, hsl(222 30% 8%) 0%, hsl(200 30% 10%) 100%);
+    --foreground: 210 30% 92%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 25% 12%;
+    --card-foreground: 210 30% 92%;
+    --card-shadow: 0 4px 20px -8px hsl(0 0% 0% / 0.3);
+    --card-shadow-hover: 0 8px 30px -8px hsl(0 0% 0% / 0.4);
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 25% 12%;
+    --popover-foreground: 210 30% 92%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Dark mode pastels */
+    --primary: 20 60% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 20 40% 25%;
+    --primary-hover: 20 60% 65%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 140 35% 35%;
+    --secondary-foreground: 140 60% 90%;
+    --secondary-soft: 140 25% 20%;
+    --secondary-hover: 140 35% 40%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 260 40% 45%;
+    --accent-foreground: 260 60% 90%;
+    --accent-soft: 260 30% 20%;
+    --accent-hover: 260 40% 50%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --info: 200 50% 45%;
+    --info-foreground: 200 60% 90%;
+    --info-soft: 200 30% 20%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --warning: 45 60% 50%;
+    --warning-foreground: 45 80% 90%;
+    --warning-soft: 45 40% 20%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --muted: 217 25% 18%;
+    --muted-foreground: 215 15% 65%;
+    --muted-soft: 217 25% 15%;
+
+    --destructive: 0 55% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 40% 20%;
+
+    --border: 217 25% 20%;
+    --border-soft: 217 20% 25%;
+    --input: 217 25% 18%;
+    --input-focus: 217 30% 22%;
+    --ring: 20 60% 60%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -100,6 +158,70 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-medium;
+    background: var(--background-soft);
+    min-height: 100vh;
+  }
+
+  /* Smooth transitions for all interactive elements */
+  button, a, input, textarea, select {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Copper-inspired glass morphism effect */
+  .glass {
+    @apply backdrop-blur-sm bg-white/80 border border-white/20;
+  }
+
+  .glass-dark {
+    @apply backdrop-blur-sm bg-black/10 border border-white/10;
+  }
+
+  /* Floating card effect */
+  .floating-card {
+    box-shadow: var(--card-shadow);
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .floating-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    @apply -translate-y-1;
+  }
+
+  /* Pastel gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-soft)) 100%);
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--secondary-soft)) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--accent-soft)) 100%);
+  }
+
+  /* Smooth focus states */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring/20 focus:ring-offset-2 focus:ring-offset-background;
   }
 }

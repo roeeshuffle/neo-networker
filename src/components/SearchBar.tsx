@@ -137,45 +137,47 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
   };
 
   return (
-    <div className="relative max-w-md">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+    <div className="relative max-w-sm">
+      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
       <Input
         ref={inputRef}
         type="text"
-        placeholder="Search by name, company, hashtags, or specialties..."
+        placeholder="Search contacts..."
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
         onFocus={() => query && setShowSuggestions(true)}
         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        className="pl-10 pr-10 w-full"
+        className="pl-11 pr-11 h-11 rounded-lg border-border-soft bg-muted/30 focus:bg-card transition-colors shadow-sm"
       />
       {query && (
         <button
           onClick={clearSearch}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground z-10"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors z-10"
         >
           <X className="h-4 w-4" />
         </button>
       )}
       
       {showSuggestions && suggestions.length > 0 && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-80 overflow-y-auto">
-          <div className="p-2">
+        <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-80 overflow-y-auto backdrop-blur-md">
+          <div className="p-3">
             {suggestions.map((suggestion, index) => (
               <div
                 key={`${suggestion.type}-${suggestion.value}-${index}`}
-                className="flex items-center justify-between p-2 hover:bg-muted/50 cursor-pointer rounded-sm"
+                className="flex items-center justify-between p-3 hover:bg-primary-soft/30 cursor-pointer rounded-lg transition-colors"
                 onClick={() => handleSuggestionClick(suggestion)}
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-sm">{getTypeIcon(suggestion.type)}</span>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-primary-soft/50 flex items-center justify-center">
+                    <span className="text-sm">{getTypeIcon(suggestion.type)}</span>
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{suggestion.value}</div>
-                    <div className="text-xs text-muted-foreground">{getTypeLabel(suggestion.type)}</div>
+                    <div className="text-sm font-semibold truncate text-foreground">{suggestion.value}</div>
+                    <div className="text-xs text-muted-foreground font-medium">{getTypeLabel(suggestion.type)}</div>
                   </div>
                 </div>
                 {suggestion.count > 1 && (
-                  <span className="text-xs bg-muted px-2 py-1 rounded-full ml-2">
+                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full ml-2 font-medium">
                     {suggestion.count}
                   </span>
                 )}

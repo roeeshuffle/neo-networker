@@ -84,18 +84,23 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
 
   if (people.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No people found. Add some entries to get started.</p>
+      <div className="text-center py-16">
+        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+          <Eye className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground font-medium mb-2">No contacts found</p>
+        <p className="text-sm text-muted-foreground">Add some entries to get started with your CRM</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left p-4 font-medium">
+    <div className="overflow-hidden rounded-lg">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border-soft bg-muted/30">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Name
                 <Button
@@ -129,7 +134,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left p-4 font-medium">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Email
                 <Popover>
@@ -155,7 +160,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left p-4 font-medium">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Company
                 <Popover>
@@ -181,7 +186,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left p-4 font-medium">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Categories
                 <Popover>
@@ -207,7 +212,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left p-4 font-medium">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Status
                 <Button
@@ -241,77 +246,80 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left p-4 font-medium">Newsletter</th>
-            <th className="text-left p-4 font-medium">Actions</th>
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Newsletter</th>
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredPeople.map((person) => (
-            <tr key={person.id} className="border-b hover:bg-muted/50">
-              <td className="p-4">
-                <div className="font-medium">{person.full_name}</div>
+           {filteredPeople.map((person, index) => (
+            <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
+              <td className="px-6 py-4">
+                <div className="font-semibold text-foreground">{person.full_name}</div>
                 {person.linkedin_profile && (
                   <a 
                     href={person.linkedin_profile} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-primary hover:text-primary-hover transition-colors font-medium"
                   >
-                    LinkedIn
+                    LinkedIn Profile →
                   </a>
                 )}
               </td>
-              <td className="p-4">
+              <td className="px-6 py-4">
                 {person.email ? (
                   <a 
                     href={`mailto:${person.email}`}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-primary hover:text-primary-hover transition-colors font-medium"
                   >
                     {person.email}
                   </a>
                 ) : (
-                  <span className="text-sm"></span>
+                  <span className="text-sm text-muted-foreground">—</span>
                 )}
               </td>
-              <td className="p-4">
-                <span className="text-sm">{person.company || ""}</span>
+              <td className="px-6 py-4">
+                <span className="text-sm font-medium text-foreground">{person.company || "—"}</span>
               </td>
-               <td className="p-4">
+               <td className="px-6 py-4">
                 {person.categories ? (
                   person.categories.split(',').map((category, index) => {
                     const trimmedCategory = category.trim();
                     const firstWord = trimmedCategory.split(' ')[0];
                     const bgColor = getColorFromText(trimmedCategory);
                     const textColor = getTextColorFromBg(bgColor);
-                    return (
-                      <Badge 
-                        key={index} 
-                        variant="secondary" 
-                        className="text-xs mr-1"
-                        style={{ 
-                          backgroundColor: bgColor, 
-                          color: textColor,
-                          border: 'none'
-                        }}
-                        title={trimmedCategory}
-                      >
-                        {firstWord}
-                      </Badge>
-                    );
+                     return (
+                       <Badge 
+                         key={index} 
+                         variant="secondary" 
+                         className="text-xs mr-1 mb-1 rounded-full font-medium px-3 py-1 shadow-sm"
+                         style={{ 
+                           backgroundColor: bgColor, 
+                           color: textColor,
+                           border: 'none'
+                         }}
+                         title={trimmedCategory}
+                       >
+                         {firstWord}
+                       </Badge>
+                     );
                   })
-                ) : (
-                  <span className="text-sm"></span>
-                )}
-              </td>
-              <td className="p-4">
-                <span className="text-sm">{person.status || ""}</span>
-              </td>
-              <td className="p-4">
-                <span className={`text-sm ${person.newsletter ? 'text-green-600' : 'text-red-600'}`}>
-                  {person.newsletter ? 'Yes' : 'No'}
-                </span>
-              </td>
-              <td className="p-4">
+                 ) : (
+                   <span className="text-sm text-muted-foreground">—</span>
+                 )}
+               </td>
+               <td className="px-6 py-4">
+                 <span className="text-sm font-medium text-foreground">{person.status || "—"}</span>
+               </td>
+               <td className="px-6 py-4">
+                 <div className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${person.newsletter ? 'bg-secondary' : 'bg-muted-foreground/30'}`}></div>
+                   <span className={`text-sm font-medium ${person.newsletter ? 'text-secondary-foreground' : 'text-muted-foreground'}`}>
+                     {person.newsletter ? 'Subscribed' : 'Not subscribed'}
+                   </span>
+                 </div>
+               </td>
+               <td className="px-6 py-4">
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -335,6 +343,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 };
