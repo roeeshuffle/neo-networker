@@ -29,7 +29,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
     try {
       const { data, error } = await supabase
         .from('people')
-        .select('full_name, company, professional_specialties, hashtags');
+        .select('full_name, company, categories');
       
       if (error) throw error;
       setAllData(data || []);
@@ -68,33 +68,23 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
       suggestions.push({ type: 'company', value: company, count });
     });
 
-    // Specialties
-    const specialtyCount: Record<string, number> = {};
+    // Categories
+    const categoryCount: Record<string, number> = {};
     allData.forEach(person => {
-      person.professional_specialties?.forEach((specialty: string) => {
-        if (specialty.toLowerCase().includes(term)) {
-          specialtyCount[specialty] = (specialtyCount[specialty] || 0) + 1;
-        }
-      });
+      if (person.categories) {
+        const categories = person.categories.split(',').map(c => c.trim());
+        categories.forEach(category => {
+          if (category.toLowerCase().includes(term)) {
+            categoryCount[category] = (categoryCount[category] || 0) + 1;
+          }
+        });
+      }
     });
 
-    Object.entries(specialtyCount).forEach(([specialty, count]) => {
-      suggestions.push({ type: 'specialty', value: specialty, count });
+    Object.entries(categoryCount).forEach(([category, count]) => {
+      suggestions.push({ type: 'specialty', value: category, count });
     });
 
-    // Hashtags
-    const hashtagCount: Record<string, number> = {};
-    allData.forEach(person => {
-      person.hashtags?.forEach((hashtag: string) => {
-        if (hashtag.toLowerCase().includes(term)) {
-          hashtagCount[hashtag] = (hashtagCount[hashtag] || 0) + 1;
-        }
-      });
-    });
-
-    Object.entries(hashtagCount).forEach(([hashtag, count]) => {
-      suggestions.push({ type: 'hashtag', value: hashtag, count });
-    });
 
     return suggestions.slice(0, 8); // Limit to 8 suggestions
   };

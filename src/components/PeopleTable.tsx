@@ -1,16 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Trash2, Eye } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
 interface PeopleTableProps {
   people: Person[];
-  onEdit: (person: Person) => void;
   onDelete: (id: string) => void;
   onView: (person: Person) => void;
 }
 
-export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTableProps) => {
+export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   if (people.length === 0) {
     return (
       <div className="text-center py-8">
@@ -58,7 +57,7 @@ export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTablePro
                     {person.email}
                   </a>
                 ) : (
-                  <span className="text-sm text-muted-foreground">N/A</span>
+                  <span className="text-sm text-muted-foreground">add email</span>
                 )}
               </td>
               <td className="p-4">
@@ -66,11 +65,13 @@ export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTablePro
               </td>
               <td className="p-4">
                 {person.categories ? (
-                  <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
-                    {person.categories}
-                  </Badge>
+                  person.categories.split(',').map((category, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800 mr-1">
+                      {category.trim()}
+                    </Badge>
+                  ))
                 ) : (
-                  <span className="text-sm text-muted-foreground">N/A</span>
+                  <span className="text-sm text-muted-foreground">+add</span>
                 )}
               </td>
               <td className="p-4">
@@ -90,14 +91,6 @@ export const PeopleTable = ({ people, onEdit, onDelete, onView }: PeopleTablePro
                     title="View Details"
                   >
                     <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onEdit(person)}
-                    title="Edit"
-                  >
-                    <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"

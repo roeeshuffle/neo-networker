@@ -9,7 +9,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
-import { PersonDetailsModal } from "@/components/PersonDetailsModal";
+import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
 import { LogOut, Plus } from "lucide-react";
 
@@ -123,10 +123,6 @@ const Dashboard = () => {
     navigate("/auth");
   };
 
-  const handleEdit = (person: Person) => {
-    setEditingPerson(person);
-    setShowForm(true);
-  };
 
   const handleView = (person: Person) => {
     setViewingPerson(person);
@@ -221,7 +217,6 @@ const Dashboard = () => {
           <CardContent>
             <PeopleTable 
               people={filteredPeople}
-              onEdit={handleEdit}
               onDelete={handleDelete}
               onView={handleView}
             />
@@ -235,10 +230,11 @@ const Dashboard = () => {
           />
         )}
 
-        <PersonDetailsModal
+        <EditablePersonModal
           person={viewingPerson}
           isOpen={!!viewingPerson}
           onClose={() => setViewingPerson(null)}
+          onSave={fetchPeople}
         />
       </main>
     </div>

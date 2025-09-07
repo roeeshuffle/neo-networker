@@ -78,6 +78,21 @@ serve(async (req) => {
         if (dbColumn && values[index]) {
           let value = values[index];
           
+          // Validate full name is text
+          if (dbColumn === 'full_name' && (!value || value.trim() === '')) {
+            return; // Skip this record
+          }
+          
+          // Validate email
+          if (dbColumn === 'email' && value && !value.includes('@')) {
+            value = ''; // Clear invalid email
+          }
+          
+          // Validate LinkedIn URL
+          if (dbColumn === 'linkedin_profile' && value && !value.toLowerCase().includes('linkedin')) {
+            value = ''; // Clear invalid LinkedIn URL
+          }
+          
           // Handle boolean fields
           if (dbColumn === 'newsletter' || dbColumn === 'should_avishag_meet') {
             value = value.toLowerCase() === 'true' || value.toLowerCase() === 'yes' || value === '1';
