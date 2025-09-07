@@ -23,43 +23,87 @@ const Auth = () => {
 
     try {
       if (isLogin) {
+        console.log("Attempting login with:", email);
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
+        console.log("Login response:", { data, error });
+
         if (error) {
+          console.log("Login error:", error.message);
+          
           // Check if it's an invalid credentials error
           if (error.message.includes("Invalid login credentials")) {
-            // Check if user exists but is not approved
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('is_approved')
-              .eq('email', email)
-              .single();
+            console.log("Invalid credentials, checking if user exists...");
+            
+            try {
+              // Check if user exists but is not approved
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('is_approved, email')
+                .eq('email', email)
+                .single();
 
-            if (profile) {
-              if (!profile.is_approved) {
+              console.log("Profile check result:", { profile, profileError });
+
+              if (profile) {
+                if (!profile.is_approved) {
+                  console.log("User exists but not approved");
+                  toast({
+                    title: "Account Pending Approval",
+                    description: "Your account is waiting for admin approval. You will receive an email once approved.",
+                    variant: "destructive",
+                  });
+                  setLoading(false);
+                  return;
+                }
+                // If user is approved but still getting invalid credentials, it's a password issue
+                console.log("User is approved but wrong password");
                 toast({
-                  title: "Account Pending Approval",
-                  description: "Your account is waiting for admin approval. You will receive an email once approved.",
+                  title: "Invalid Password",
+                  description: "The password you entered is incorrect.",
                   variant: "destructive",
                 });
+                setLoading(false);
+                return;
+              } else {
+                console.log("User not found in profiles");
+                toast({
+                  title: "User Not Found",
+                  description: "No account found with this email address. Please sign up first.",
+                  variant: "destructive",
+                });
+                setLoading(false);
                 return;
               }
-            } else {
+            } catch (profileError) {
+              console.error("Error checking profile:", profileError);
+              // If we can't check the profile, show generic error
               toast({
-                title: "User Not Found",
-                description: "No account found with this email address. Please sign up first.",
+                title: "Login Failed",
+                description: "Invalid email or password.",
                 variant: "destructive",
               });
+              setLoading(false);
               return;
             }
+          } else {
+            // Other auth errors
+            console.log("Other auth error:", error.message);
+            toast({
+              title: "Login Failed",
+              description: error.message,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
           }
-          throw error;
         }
 
         if (data.user) {
+          console.log("User logged in successfully, checking approval...");
           // Double-check approval status after successful auth
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -67,18 +111,24 @@ const Auth = () => {
             .eq('id', data.user.id)
             .single();
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            console.error("Error checking approval:", profileError);
+            throw profileError;
+          }
 
           if (!profile?.is_approved) {
+            console.log("User not approved, signing out");
             await supabase.auth.signOut();
             toast({
               title: "Account Pending Approval",
               description: "Your account is pending admin approval. You will receive an email once approved.",
               variant: "destructive",
             });
+            setLoading(false);
             return;
           }
 
+          console.log("User approved, navigating to dashboard");
           toast({
             title: "Welcome back!",
             description: "Successfully signed in.",
@@ -122,6 +172,7 @@ const Auth = () => {
         setFullName("");
       }
     } catch (error: any) {
+      console.error("Catch block error:", error);
       let errorMessage = "An error occurred during authentication.";
       
       if (error.message.includes("Invalid login credentials")) {
