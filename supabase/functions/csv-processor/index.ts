@@ -22,9 +22,31 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse CSV data
+    // Parse CSV data - handle both comma and comma+space separators
     const lines = csvData.trim().split('\n');
-    const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
+    
+    // More robust CSV parsing that handles quoted values
+    const parseCSVLine = (line: string): string[] => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]).map((h: string) => h.replace(/"/g, ''));
     
     // Create mapping from CSV headers to database columns
     const columnMapping: { [key: string]: string } = {
@@ -70,12 +92,12 @@ serve(async (req) => {
     const records = [];
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+      const values = parseCSVLine(lines[i]).map((v: string) => v.replace(/"/g, ''));
       const record: any = {};
       
       headers.forEach((header: string, index: number) => {
         const dbColumn = columnMapping[header.toLowerCase()] || columnMapping[header];
-        if (dbColumn && values[index]) {
+        if (dbColumn && values[index] !== undefined) {
           let value = values[index];
           
           // Validate full name is text

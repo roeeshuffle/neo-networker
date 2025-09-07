@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,51 +27,57 @@ const formatDate = (dateString: string) => {
 };
 
 export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: EditablePersonModalProps) => {
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [formData, setFormData] = useState<Partial<Person>>({});
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const { toast } = useToast();
 
+  // Initialize form data when person changes
+  useEffect(() => {
+    if (person) {
+      setFormData({ ...person });
+    }
+  }, [person]);
+
   if (!person) return null;
 
-  const handleEdit = (field: string, currentValue: any) => {
-    setEditingField(field);
-    setEditValue(currentValue || "");
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async (field: string) => {
-    try {
-      const updateData: any = {};
-      
-      if (field === 'categories' && addingCategory) {
-        const currentCategories = person.categories ? person.categories.split(',').map(c => c.trim()) : [];
-        if (newCategory.trim() && !currentCategories.includes(newCategory.trim())) {
-          updateData.categories = [...currentCategories, newCategory.trim()].join(', ');
-        }
-        setNewCategory("");
-        setAddingCategory(false);
-      } else {
-        updateData[field] = editValue;
+  const handleAddCategory = () => {
+    if (newCategory.trim()) {
+      const currentCategories = formData.categories ? formData.categories.split(',').map(c => c.trim()) : [];
+      if (!currentCategories.includes(newCategory.trim())) {
+        const updatedCategories = [...currentCategories, newCategory.trim()].join(', ');
+        setFormData(prev => ({ ...prev, categories: updatedCategories }));
       }
+      setNewCategory("");
+      setAddingCategory(false);
+    }
+  };
 
+  const handleSaveAll = async () => {
+    if (!person) return;
+    
+    try {
       const { error } = await supabase
         .from('people')
-        .update(updateData)
+        .update(formData)
         .eq('id', person.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Field updated successfully",
+        description: "All changes saved successfully",
       });
 
-      setEditingField(null);
       onSave();
+      onClose();
     } catch (error: any) {
       toast({
-        title: "Error updating field",
+        title: "Error saving changes",
         description: error.message,
         variant: "destructive",
       });
@@ -79,69 +85,24 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
   };
 
   const handleCancel = () => {
-    setEditingField(null);
+    setFormData(person ? { ...person } : {});
     setAddingCategory(false);
     setNewCategory("");
   };
 
-  const renderEditableField = (field: string, label: string, value: any, type: 'text' | 'email' | 'textarea' | 'checkbox' = 'text') => {
-    const isEditing = editingField === field;
+  const renderEditableField = (field: string, label: string, type: 'text' | 'email' | 'textarea' | 'checkbox' = 'text') => {
+    const value = formData[field as keyof Person];
 
     if (type === 'checkbox') {
       return (
         <div>
           <label className="text-sm font-medium text-muted-foreground">{label}</label>
           <div className="flex items-center gap-2">
-            <p className={`text-sm ${value ? 'text-green-600' : 'text-red-600'}`}>
-              {value ? 'Yes' : 'No'}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(field, !value)}
-              className="h-6 w-6 p-0"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    if (isEditing) {
-      return (
-        <div>
-          <label className="text-sm font-medium text-muted-foreground">{label}</label>
-          <div className="flex items-center gap-2 mt-1">
-            {type === 'textarea' ? (
-              <Textarea
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1"
-                rows={3}
-              />
-            ) : (
-              <Input
-                type={type}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1"
-              />
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSave(field)}
-            >
-              <Save className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-            >
-              Cancel
-            </Button>
+            <Checkbox
+              checked={!!value}
+              onCheckedChange={(checked) => handleInputChange(field, !!checked)}
+            />
+            <span className="text-sm">{value ? 'Yes' : 'No'}</span>
           </div>
         </div>
       );
@@ -150,34 +111,22 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
     return (
       <div>
         <label className="text-sm font-medium text-muted-foreground">{label}</label>
-        <div className="flex items-center gap-2">
-          {value ? (
-            type === 'email' ? (
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-blue-600"
-                onClick={() => window.open(`mailto:${value}`, '_self')}
-              >
-                <Mail className="h-3 w-3 mr-1" />
-                {value}
-              </Button>
-            ) : (
-              <p className="text-sm whitespace-pre-wrap">{value}</p>
-            )
+        <div className="mt-1">
+          {type === 'textarea' ? (
+          <Textarea
+            value={String(value || '')}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            rows={3}
+            placeholder={`Enter ${label.toLowerCase()}`}
+          />
           ) : (
-            <span className="text-sm text-muted-foreground">
-              {type === 'email' ? 'add email' : `add ${label.toLowerCase()}`}
-            </span>
+            <Input
+              type={type}
+              value={String(value || '')}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              placeholder={`Enter ${label.toLowerCase()}`}
+            />
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleEdit(field, value)}
-            className="h-6 w-6 p-0"
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
         </div>
       </div>
     );
@@ -203,15 +152,15 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {renderEditableField('full_name', 'Full Name', person.full_name)}
-              {renderEditableField('email', 'Email', person.email, 'email')}
-              {renderEditableField('company', 'Company', person.company)}
+              {renderEditableField('full_name', 'Full Name')}
+              {renderEditableField('email', 'Email', 'email')}
+              {renderEditableField('company', 'Company')}
               
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Categories</label>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {person.categories ? (
-                    person.categories.split(',').map((category, index) => (
+                  {formData.categories ? (
+                    formData.categories.split(',').map((category, index) => (
                       <Badge key={index} variant="secondary" className="bg-purple-100 text-purple-800">
                         {category.trim()}
                       </Badge>
@@ -228,14 +177,14 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSave('categories')}
+                        onClick={handleAddCategory}
                       >
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleCancel}
+                        onClick={() => setAddingCategory(false)}
                       >
                         Cancel
                       </Button>
@@ -254,35 +203,9 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
                 </div>
               </div>
 
-              {renderEditableField('status', 'Status', person.status)}
-              {renderEditableField('newsletter', 'Newsletter', person.newsletter, 'checkbox')}
-              
-              {person.linkedin_profile ? (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">LinkedIn Profile</label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-blue-600"
-                      onClick={() => window.open(person.linkedin_profile, '_blank')}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      View Profile
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit('linkedin_profile', person.linkedin_profile)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                renderEditableField('linkedin_profile', 'LinkedIn Profile', person.linkedin_profile)
-              )}
+              {renderEditableField('status', 'Status')}
+              {renderEditableField('newsletter', 'Newsletter', 'checkbox')}
+              {renderEditableField('linkedin_profile', 'LinkedIn Profile')}
 
               {person.created_at && (
                 <div>
@@ -308,9 +231,9 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {renderEditableField('poc_in_apex', 'POC in APEX', person.poc_in_apex)}
-              {renderEditableField('who_warm_intro', 'Who Warm Intro', person.who_warm_intro)}
-              {renderEditableField('should_avishag_meet', 'Should Avishag Meet?', person.should_avishag_meet, 'checkbox')}
+              {renderEditableField('poc_in_apex', 'POC in APEX')}
+              {renderEditableField('who_warm_intro', 'Who Warm Intro')}
+              {renderEditableField('should_avishag_meet', 'Should Avishag Meet?', 'checkbox')}
             </CardContent>
           </Card>
 
@@ -323,7 +246,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {renderEditableField('agenda', 'Agenda', person.agenda, 'textarea')}
+              {renderEditableField('agenda', 'Agenda', 'textarea')}
             </CardContent>
           </Card>
 
@@ -336,7 +259,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {renderEditableField('meeting_notes', 'Meeting Notes', person.meeting_notes, 'textarea')}
+              {renderEditableField('meeting_notes', 'Meeting Notes', 'textarea')}
             </CardContent>
           </Card>
 
@@ -349,10 +272,20 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {renderEditableField('more_info', 'More Information', person.more_info, 'textarea')}
+              {renderEditableField('more_info', 'More Information', 'textarea')}
             </CardContent>
           </Card>
         </div>
+        
+        <DialogFooter className="flex gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveAll}>
+            <Save className="h-4 w-4 mr-2" />
+            Save All Changes
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

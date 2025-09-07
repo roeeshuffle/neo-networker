@@ -57,11 +57,11 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                     {person.email}
                   </a>
                 ) : (
-                  <span className="text-sm text-muted-foreground">add email</span>
+                  <span className="text-sm"></span>
                 )}
               </td>
               <td className="p-4">
-                <span className="text-sm">{person.company || "N/A"}</span>
+                <span className="text-sm">{person.company || ""}</span>
               </td>
               <td className="p-4">
                 {person.categories ? (
@@ -71,11 +71,11 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                     </Badge>
                   ))
                 ) : (
-                  <span className="text-sm text-muted-foreground">+add</span>
+                  <span className="text-sm"></span>
                 )}
               </td>
               <td className="p-4">
-                <span className="text-sm">{person.status || "N/A"}</span>
+                <span className="text-sm">{person.status || ""}</span>
               </td>
               <td className="p-4">
                 <span className={`text-sm ${person.newsletter ? 'text-green-600' : 'text-red-600'}`}>

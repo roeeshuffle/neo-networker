@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
-import { LogOut, Check, X, Clock, Users } from "lucide-react";
+import { LogOut, Check, X, Clock, Users, Upload, Trash2 } from "lucide-react";
+import { CsvUploader } from "@/components/CsvUploader";
 
 interface PendingUser {
   id: string;
@@ -165,6 +166,40 @@ const AdminDashboard = () => {
     navigate("/auth");
   };
 
+  const handleDeleteAllPeople = async () => {
+    if (!confirm("Are you sure you want to delete ALL people data? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('people')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "All people data has been deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDataLoaded = () => {
+    // Refresh or notify that data has been loaded
+    toast({
+      title: "Success",
+      description: "CSV data has been imported successfully.",
+    });
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -209,10 +244,17 @@ const AdminDashboard = () => {
               <span className="text-sm text-muted-foreground">
                 Admin: {user?.email}
               </span>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              <div className="flex gap-2">
+                <CsvUploader onDataLoaded={handleDataLoaded} />
+                <Button variant="destructive" onClick={handleDeleteAllPeople}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All Data
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -10,7 +10,6 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
-import { CsvUploader } from "@/components/CsvUploader";
 import { LogOut, Plus } from "lucide-react";
 
 export interface Person {
@@ -240,7 +239,6 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <SearchBar onSearch={handleSearch} />
           <div className="flex items-center gap-2">
-            <CsvUploader onDataLoaded={fetchPeople} />
             <Button onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Person

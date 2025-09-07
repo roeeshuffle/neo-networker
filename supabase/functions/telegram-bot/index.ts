@@ -306,7 +306,7 @@ async function handleSearch(chatId: number, query: string) {
     const { data: people, error } = await supabase
       .from('people')
       .select('*')
-      .or(`full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,categories.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
+      .or(`full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,categories.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,linkedin_profile.ilike.%${searchTerm}%,poc_in_apex.ilike.%${searchTerm}%,who_warm_intro.ilike.%${searchTerm}%,agenda.ilike.%${searchTerm}%,meeting_notes.ilike.%${searchTerm}%,more_info.ilike.%${searchTerm}%`)
       .limit(10);
 
     if (error) {
@@ -328,7 +328,11 @@ async function handleSearch(chatId: number, query: string) {
       if (person.email) response += `   📧 ${person.email}\n`;
       if (person.categories) response += `   🏷️ ${person.categories}\n`;
       if (person.status) response += `   📊 Status: ${person.status}\n`;
+      if (person.poc_in_apex) response += `   👥 POC in APEX: ${person.poc_in_apex}\n`;
+      if (person.who_warm_intro) response += `   🤝 Warm Intro: ${person.who_warm_intro}\n`;
+      if (person.linkedin_profile) response += `   🔗 LinkedIn: ${person.linkedin_profile}\n`;
       if (person.newsletter) response += `   📰 Newsletter: ✅\n`;
+      if (person.should_avishag_meet) response += `   👩‍💼 Should Avishag Meet: ✅\n`;
       response += '\n';
     });
 
@@ -345,6 +349,13 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
   switch (session.step) {
     case 'name':
       session.data.full_name = text;
+      session.step = 'email';
+      await updateUserState(userId, 'adding_person', { ...session });
+      await sendMessage(chatId, "📧 What's their email address? (or type 'skip')");
+      break;
+
+    case 'email':
+      session.data.email = text.toLowerCase() === 'skip' ? null : text;
       session.step = 'company';
       await updateUserState(userId, 'adding_person', { ...session });
       await sendMessage(chatId, "👔 What company do they work for? (or type 'skip')");
@@ -352,38 +363,48 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
 
     case 'company':
       session.data.company = text.toLowerCase() === 'skip' ? null : text;
-      session.step = 'career';
+      session.step = 'categories';
       await updateUserState(userId, 'adding_person', { ...session });
-      await sendMessage(chatId, "📈 Tell me about their career history: (or type 'skip')");
+      await sendMessage(chatId, "🏷️ What categories/tags describe them? (comma-separated, or type 'skip')");
       break;
 
-    case 'career':
-      session.data.career_history = text.toLowerCase() === 'skip' ? null : text;
-      session.step = 'specialties';
+    case 'categories':
+      session.data.categories = text.toLowerCase() === 'skip' ? null : text;
+      session.step = 'status';
       await updateUserState(userId, 'adding_person', { ...session });
-      await sendMessage(chatId, "🎯 What are their professional specialties? (comma-separated, or type 'skip')");
+      await sendMessage(chatId, "📊 What's their status? (or type 'skip')");
       break;
 
-    case 'specialties':
-      if (text.toLowerCase() !== 'skip') {
-        session.data.professional_specialties = text.split(',').map((s: string) => s.trim());
-      }
-      session.step = 'hashtags';
+    case 'status':
+      session.data.status = text.toLowerCase() === 'skip' ? null : text;
+      session.step = 'linkedin';
       await updateUserState(userId, 'adding_person', { ...session });
-      await sendMessage(chatId, "🏷️ What hashtags describe them? (comma-separated, or type 'skip')");
+      await sendMessage(chatId, "🔗 What's their LinkedIn profile URL? (or type 'skip')");
       break;
 
-    case 'hashtags':
-      if (text.toLowerCase() !== 'skip') {
-        session.data.hashtags = text.split(',').map((h: string) => h.trim().replace(/^#/, ''));
-      }
-      session.step = 'notes';
+    case 'linkedin':
+      session.data.linkedin_profile = text.toLowerCase() === 'skip' ? null : text;
+      session.step = 'poc_apex';
       await updateUserState(userId, 'adding_person', { ...session });
-      await sendMessage(chatId, "📝 Any additional notes? (or type 'skip')");
+      await sendMessage(chatId, "👥 Who is the POC in APEX? (or type 'skip')");
       break;
 
-    case 'notes':
-      session.data.notes = text.toLowerCase() === 'skip' ? null : text;
+    case 'poc_apex':
+      session.data.poc_in_apex = text.toLowerCase() === 'skip' ? null : text;
+      session.step = 'warm_intro';
+      await updateUserState(userId, 'adding_person', { ...session });
+      await sendMessage(chatId, "🤝 Who can provide a warm intro? (or type 'skip')");
+      break;
+
+    case 'warm_intro':
+      session.data.who_warm_intro = text.toLowerCase() === 'skip' ? null : text;
+      session.step = 'more_info';
+      await updateUserState(userId, 'adding_person', { ...session });
+      await sendMessage(chatId, "📝 Any additional information? (or type 'skip')");
+      break;
+
+    case 'more_info':
+      session.data.more_info = text.toLowerCase() === 'skip' ? null : text;
       
       // Save to database
       try {
