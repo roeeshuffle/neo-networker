@@ -50,8 +50,14 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <p style="color: #666; font-size: 16px; line-height: 1.6;">
-              To approve this user, please log into your VCrm admin dashboard and update their approval status.
+              Please forward this to guy@wershuffle.com or log into your VCrm admin dashboard to approve this user.
             </p>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404; font-size: 14px;">
+                <strong>Note:</strong> To send emails directly to guy@wershuffle.com, please verify your domain at resend.com/domains and update the email function.
+              </p>
+            </div>
             
             <div style="text-align: center; margin-top: 30px;">
               <a href="${Deno.env.get('SUPABASE_URL')}/dashboard" 
