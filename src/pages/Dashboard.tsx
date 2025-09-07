@@ -222,6 +222,11 @@ const Dashboard = () => {
               <span className="text-sm text-muted-foreground">
                 Welcome, {user?.email}
               </span>
+              {user?.email === 'guy@wershuffle.com' && (
+                <Button variant="outline" onClick={() => navigate("/admin")}>
+                  Admin Panel
+                </Button>
+              )}
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
