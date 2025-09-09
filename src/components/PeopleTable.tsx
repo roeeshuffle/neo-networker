@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 import { useState } from "react";
@@ -97,9 +98,12 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   return (
     <div className="overflow-hidden rounded-lg">
       <div className="overflow-x-auto resize-x min-w-full max-w-full" style={{ resize: 'horizontal' }}>
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="border-b border-border-soft bg-muted/30">
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider w-16">
+              Photo
+            </th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 Name
@@ -253,6 +257,14 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
         <tbody>
            {filteredPeople.map((person, index) => (
             <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
+              <td className="px-6 py-4">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src="" alt={person.full_name} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    {person.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </td>
               <td className="px-6 py-4">
                 <div className="font-semibold text-foreground" title={person.full_name}>
                   {person.full_name.length > 20 ? `${person.full_name.substring(0, 20)}...` : person.full_name}
