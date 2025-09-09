@@ -518,9 +518,14 @@ User input: "${text}"`;
     }
 
     const data = await response.json();
-    const routerResult = data.choices[0].message.content.trim();
+    let routerResult = data.choices[0].message.content.trim();
     
     console.log('Function router result:', routerResult);
+    
+    // Clean the response - remove backticks and any markdown formatting
+    routerResult = routerResult.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').replace(/^`/, '').replace(/`$/, '');
+    
+    console.log('Cleaned router result:', routerResult);
 
     try {
       const [functionNumber, parameters] = JSON.parse(routerResult);
