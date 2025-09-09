@@ -451,7 +451,7 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
 async function handleFunctionRouter(chatId: number, text: string, userId: number) {
   try {
     const routerPrompt = `You are a function router.  
-Your job: take any user request and map it to EXACTLY ONE of the following 7 functions, and return ONLY a JSON array with the function number and extracted parameters.  
+Your job: take any user request and map it to EXACTLY ONE of the following 8 functions, and return ONLY a JSON array with the function number and extracted parameters.  
 
 The functions are:
 
@@ -462,9 +462,10 @@ The functions are:
 5. show_all_tasks(period: "daily" | "weekly" | "monthly")  
 6. add_new_people(people_data: array of structured fields like Full Name, Email, LinkedIn, Company, Categories, Status, Newsletter, etc.)  
 7. show_all_meetings(period: "today" | "weekly" | "monthly")  
+8. update_person_info(identifier: string (name or email to find person), updates: object with fields to update like company, email, status, categories, etc.)
 
 ### Rules
-- Always return a JSON array: \`[function_number, parameters]\`  
+- Always return a JSON array: \`[function_number, parameters]\`
 - Do NOT explain. Do NOT add extra text. Return JSON ONLY.  
 - If multiple interpretations are possible, choose the most direct.  
 - If no parameter is needed, return \`null\` as second element.  
@@ -492,6 +493,12 @@ The functions are:
 
 **User:** "Show all meetings today"  
 **Assistant:** \`[7, "today"]\`
+
+**User:** "Add company Google to Roee Feingold"  
+**Assistant:** \`[8, {"identifier": "Roee Feingold", "updates": {"company": "Google"}}]\`
+
+**User:** "Change email of roee2912@gmail.com to roee@google.com"  
+**Assistant:** \`[8, {"identifier": "roee2912@gmail.com", "updates": {"email": "roee@google.com"}}]\`
 
 User input: "${text}"`;
 
@@ -613,6 +620,73 @@ User input: "${text}"`;
           
         case 7: // show_all_meetings
           await sendMessage(chatId, `📅 Showing meetings for ${parameters}\n\n⚠️ Note: Meeting management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        case 8: // update_person_info
+          if (parameters && parameters.identifier && parameters.updates) {
+            try {
+              const identifier = parameters.identifier.trim();
+              const updates = parameters.updates;
+              
+              // Search for person by name or email
+              const { data: people, error: searchError } = await supabase
+                .from('people')
+                .select('*')
+                .or(`full_name.ilike.%${identifier}%,email.ilike.%${identifier}%`);
+              
+              if (searchError) {
+                console.error('Search error:', searchError);
+                await sendMessage(chatId, "❌ Error searching for person. Please try again.");
+                return;
+              }
+              
+              if (!people || people.length === 0) {
+                await sendMessage(chatId, `🔍 No person found matching "${identifier}". Please check the name or email and try again.`);
+                return;
+              }
+              
+              if (people.length > 1) {
+                let response = `⚠️ Found ${people.length} people matching "${identifier}":\n\n`;
+                people.forEach((person, index) => {
+                  response += `${index + 1}. <b>${person.full_name}</b>\n`;
+                  if (person.email) response += `   📧 ${person.email}\n`;
+                  if (person.company) response += `   🏢 ${person.company}\n`;
+                  response += '\n';
+                });
+                response += "Please be more specific (use full name or exact email) to update the right person.";
+                await sendMessage(chatId, response);
+                return;
+              }
+              
+              // Update the person
+              const person = people[0];
+              const { error: updateError } = await supabase
+                .from('people')
+                .update(updates)
+                .eq('id', person.id);
+              
+              if (updateError) {
+                console.error('Update error:', updateError);
+                await sendMessage(chatId, "❌ Error updating person. Please try again.");
+                return;
+              }
+              
+              // Show success message with changes
+              let successMessage = `✅ Successfully updated <b>${person.full_name}</b>!\n\nUpdated fields:\n`;
+              Object.entries(updates).forEach(([field, value]) => {
+                const fieldDisplay = field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                successMessage += `• ${fieldDisplay}: ${value}\n`;
+              });
+              
+              await sendMessage(chatId, successMessage);
+              
+            } catch (error) {
+              console.error('Update person error:', error);
+              await sendMessage(chatId, "❌ Error updating person. Please try again.");
+            }
+          } else {
+            await sendMessage(chatId, "❓ Please specify who to update and what to change. Example: 'Add company Google to John Smith'");
+          }
           break;
           
         default:
