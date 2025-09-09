@@ -552,7 +552,58 @@ User input: "${text}"`;
           break;
           
         case 6: // add_new_people
-          await sendMessage(chatId, "➕ I understand you want to add a new person. Use /add command for the interactive person addition process.");
+          if (Array.isArray(parameters)) {
+            const personData = {};
+            
+            // Parse structured data from the array
+            parameters.forEach(item => {
+              const [key, value] = item.split(': ');
+              switch (key.toLowerCase()) {
+                case 'full name':
+                  personData.full_name = value;
+                  break;
+                case 'email':
+                  personData.email = value;
+                  break;
+                case 'company':
+                  personData.company = value;
+                  break;
+                case 'categories':
+                  personData.categories = value;
+                  break;
+                case 'status':
+                  personData.status = value;
+                  break;
+                case 'linkedin':
+                  personData.linkedin_profile = value;
+                  break;
+              }
+            });
+            
+            try {
+              const { error } = await supabase
+                .from('people')
+                .insert([personData]);
+
+              if (error) {
+                console.error('Insert person error:', error);
+                await sendMessage(chatId, "❌ Error adding person to database. Please try again.");
+              } else {
+                await sendMessage(chatId, 
+                  `✅ Successfully added <b>${personData.full_name || 'Unknown'}</b> to the database!\n\n` +
+                  `📧 Email: ${personData.email || 'N/A'}\n` +
+                  `🏢 Company: ${personData.company || 'N/A'}\n` +
+                  `🏷️ Categories: ${personData.categories || 'N/A'}\n` +
+                  `📊 Status: ${personData.status || 'N/A'}`
+                );
+              }
+            } catch (error) {
+              console.error('Save person error:', error);
+              await sendMessage(chatId, "❌ Error saving person to database. Please try again.");
+            }
+          } else {
+            await sendMessage(chatId, "➕ Please provide person details. Use /add command for interactive addition.");
+          }
           break;
           
         case 7: // show_all_meetings
