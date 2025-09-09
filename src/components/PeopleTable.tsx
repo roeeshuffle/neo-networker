@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
-import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 interface PeopleTableProps {
   people: Person[];
@@ -33,10 +34,52 @@ const getTextColorFromBg = (bgColor: string): string => {
   return `hsl(${hue}, 70%, 25%)`;
 };
 
+// Function to fetch LinkedIn profile image
+const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('linkedin-profile-image', {
+      body: { linkedin_url: linkedinUrl }
+    });
+
+    if (error) {
+      console.error('Error fetching LinkedIn profile image:', error);
+      return null;
+    }
+
+    return data?.profile_image_url || null;
+  } catch (error) {
+    console.error('Error calling LinkedIn profile image function:', error);
+    return null;
+  }
+};
+
 export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  
+  // Fetch profile images for people with LinkedIn URLs
+  useEffect(() => {
+    const fetchImages = async () => {
+      const newImages: Record<string, string> = {};
+      
+      for (const person of people) {
+        if (person.linkedin_profile && !profileImages[person.id]) {
+          const imageUrl = await fetchLinkedInProfileImage(person.linkedin_profile);
+          if (imageUrl) {
+            newImages[person.id] = imageUrl;
+          }
+        }
+      }
+      
+      if (Object.keys(newImages).length > 0) {
+        setProfileImages(prev => ({ ...prev, ...newImages }));
+      }
+    };
+
+    fetchImages();
+  }, [people]);
   
   // Apply sorting
   const sortedPeople = [...people].sort((a, b) => {
@@ -259,7 +302,14 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
             <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
               <td className="px-6 py-4">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src="" alt={person.full_name} />
+                  <AvatarImage 
+                    src={profileImages[person.id] || ""} 
+                    alt={person.full_name}
+                    onError={(e) => {
+                      // If image fails to load, hide it to show fallback
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                     {person.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                   </AvatarFallback>

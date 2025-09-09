@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.people-api] 
 verify_jwt = false
+
+[functions.linkedin-profile-image]
+verify_jwt = false
