@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
 const TELEGRAM_API_KEY = Deno.env.get('TELEGRAM_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -146,9 +147,20 @@ serve(async (req) => {
           }
           await handleAddPerson(chatId, text, session, userId);
         } else {
-          // For authenticated users, treat any regular message as a search
+          // For authenticated users, handle messages based on prefix
           if (await checkUserAuthentication(userId)) {
-            await handleSearch(chatId, text);
+            if (text.startsWith('.')) {
+              // Remove the dot and search people
+              const searchQuery = text.substring(1).trim();
+              if (searchQuery) {
+                await handleSearch(chatId, searchQuery);
+              } else {
+                await sendMessage(chatId, "❓ Please provide a search term after the dot (e.g., '.john doe')");
+              }
+            } else {
+              // Use ChatGPT function router
+              await handleFunctionRouter(chatId, text, userId);
+            }
           } else {
             await sendMessage(chatId, "🔐 Please authenticate first using /start");
           }
@@ -433,5 +445,131 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
     default:
       await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Something went wrong. Type /help to see available commands.");
+  }
+}
+
+async function handleFunctionRouter(chatId: number, text: string, userId: number) {
+  try {
+    const routerPrompt = `You are a function router.  
+Your job: take any user request and map it to EXACTLY ONE of the following 7 functions, and return ONLY a JSON array with the function number and extracted parameters.  
+
+The functions are:
+
+1. search_information(words: array of strings)  
+2. add_task(task_text: string)  
+3. remove_task(task_id: string or number)  
+4. add_alert_to_task(task_id: string or number)  
+5. show_all_tasks(period: "daily" | "weekly" | "monthly")  
+6. add_new_people(people_data: array of structured fields like Full Name, Email, LinkedIn, Company, Categories, Status, Newsletter, etc.)  
+7. show_all_meetings(period: "today" | "weekly" | "monthly")  
+
+### Rules
+- Always return a JSON array: \`[function_number, parameters]\`  
+- Do NOT explain. Do NOT add extra text. Return JSON ONLY.  
+- If multiple interpretations are possible, choose the most direct.  
+- If no parameter is needed, return \`null\` as second element.  
+- Parse user text carefully and extract structured fields when adding people.  
+
+### Examples
+
+**User:** "Find me info about AI and marketing"  
+**Assistant:** \`[1, ["AI", "marketing"]]\`
+
+**User:** "Add a task to call Jonathan tomorrow morning"  
+**Assistant:** \`[2, "call Jonathan tomorrow morning"]\`
+
+**User:** "Remove task 17"  
+**Assistant:** \`[3, 17]\`
+
+**User:** "Set an alert on task 22"  
+**Assistant:** \`[4, 22]\`
+
+**User:** "Show me my weekly tasks"  
+**Assistant:** \`[5, "weekly"]\`
+
+**User:** "Add new person: Full Name Roee Feingold, LinkedIn linkedin.roee.com, Company Google, Status Investor, Categories AI, marketing"  
+**Assistant:** \`[6, ["Full Name: Roee Feingold", "LinkedIn: linkedin.roee.com", "Company: Google", "Status: Investor", "Categories: AI, marketing"]]\`
+
+**User:** "Show all meetings today"  
+**Assistant:** \`[7, "today"]\`
+
+User input: "${text}"`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'user', content: routerPrompt }
+        ],
+        max_tokens: 150,
+        temperature: 0.1
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      await sendMessage(chatId, "❌ Error processing your request. Please try again.");
+      return;
+    }
+
+    const data = await response.json();
+    const routerResult = data.choices[0].message.content.trim();
+    
+    console.log('Function router result:', routerResult);
+
+    try {
+      const [functionNumber, parameters] = JSON.parse(routerResult);
+      
+      switch (functionNumber) {
+        case 1: // search_information
+          if (Array.isArray(parameters)) {
+            const searchQuery = parameters.join(' ');
+            await handleSearch(chatId, searchQuery);
+          } else {
+            await sendMessage(chatId, "❓ Please provide search terms.");
+          }
+          break;
+          
+        case 2: // add_task
+          await sendMessage(chatId, `📝 Task noted: "${parameters}"\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        case 3: // remove_task
+          await sendMessage(chatId, `❌ Remove task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        case 4: // add_alert_to_task
+          await sendMessage(chatId, `⏰ Alert set for task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        case 5: // show_all_tasks
+          await sendMessage(chatId, `📋 Showing ${parameters} tasks\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        case 6: // add_new_people
+          await sendMessage(chatId, "➕ I understand you want to add a new person. Use /add command for the interactive person addition process.");
+          break;
+          
+        case 7: // show_all_meetings
+          await sendMessage(chatId, `📅 Showing meetings for ${parameters}\n\n⚠️ Note: Meeting management is not yet implemented, but I've understood your request.`);
+          break;
+          
+        default:
+          await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands");
+      }
+      
+    } catch (parseError) {
+      console.error('Error parsing function router result:', parseError);
+      await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands");
+    }
+    
+  } catch (error) {
+    console.error('Function router error:', error);
+    await sendMessage(chatId, "❌ Error processing your request. Please try again.");
   }
 }
