@@ -70,11 +70,20 @@ export const TasksTable = ({ tasks, onRefresh }: TasksTableProps) => {
         toast({ title: "Success", description: "Task updated successfully" });
       } else {
         const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Error", 
+            description: "You must be logged in to create tasks",
+            variant: "destructive"
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from('tasks')
           .insert([{
             ...formData,
-            created_by: user?.id
+            created_by: user.id
           }]);
 
         if (error) throw error;
