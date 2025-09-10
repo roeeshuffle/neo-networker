@@ -1213,6 +1213,26 @@ async function handleAddPeopleFromBot(chatId: number, parameters: any, userId: n
       return;
     }
 
+    // Get the authenticated telegram user to get the owner_id
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', chatId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+      return;
+    }
+
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
+    
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      return;
+    }
+
     const results = [];
     for (const personData of parameters) {
       const person = {
@@ -1223,7 +1243,8 @@ async function handleAddPeopleFromBot(chatId: number, parameters: any, userId: n
         status: personData.status || null,
         linkedin_profile: personData.linkedin_profile || null,
         newsletter: personData.newsletter || false,
-        should_avishag_meet: personData.should_avishag_meet || false
+        should_avishag_meet: personData.should_avishag_meet || false,
+        owner_id: linkedUserId
       };
 
       if (person.full_name) {
@@ -1251,10 +1272,30 @@ async function handleShowMeetings(chatId: number, parameters: any) {
 async function handleUpdatePerson(chatId: number, parameters: any, userId: number) {
   try {
     if (!parameters || !parameters.person_id) {
-      // Get last added person by this user
+      // Get last added person by this user (need to get owner_id from telegram user)
+      const { data: telegramUser, error: telegramError } = await supabase
+        .from('telegram_users')
+        .select('*')
+        .eq('telegram_id', chatId)
+        .eq('is_authenticated', true)
+        .single();
+
+      if (telegramError || !telegramUser) {
+        await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+        return;
+      }
+
+      const linkedUserId = telegramUser.state_data?.linked_user_id;
+      
+      if (!linkedUserId) {
+        await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+        return;
+      }
+
       const { data: lastPerson } = await supabase
         .from('people')
         .select('*')
+        .eq('owner_id', linkedUserId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -1304,11 +1345,33 @@ async function handleUpdatePerson(chatId: number, parameters: any, userId: numbe
 
 async function handleSearch(chatId: number, query: string) {
   try {
+    // Get the authenticated telegram user to filter contacts by ownership
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', chatId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+      return;
+    }
+
+    // Get the linked user ID from telegram user's state_data
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
+    
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      return;
+    }
+
     const searchTerm = query.toLowerCase();
     
     const { data: people, error } = await supabase
       .from('people')
       .select('*')
+      .eq('owner_id', linkedUserId)
       .or(`full_name.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,categories.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,linkedin_profile.ilike.%${searchTerm}%,poc_in_apex.ilike.%${searchTerm}%,who_warm_intro.ilike.%${searchTerm}%,agenda.ilike.%${searchTerm}%,meeting_notes.ilike.%${searchTerm}%,more_info.ilike.%${searchTerm}%`)
       .limit(10);
 
