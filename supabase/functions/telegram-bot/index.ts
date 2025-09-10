@@ -930,17 +930,11 @@ async function handleShowTasks(chatId: number, parameters: any) {
       return;
     }
 
-    // Start with filtering by owner or shared tasks
+    // Start with filtering by owner (simplified query for now)
     let query = supabase
       .from('tasks')
-      .select(`
-        *,
-        shared_data!shared_data_record_id_fkey(
-          shared_with_user_id,
-          table_name
-        )
-      `)
-      .or(`owner_id.eq.${linkedUserId},and(shared_data.table_name.eq.tasks,shared_data.shared_with_user_id.eq.${linkedUserId})`);
+      .select('*')
+      .eq('owner_id', linkedUserId);
     
     // Apply period and advanced filters
     if (typeof parameters === 'string') {
