@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
 import { LogOut, Check, X, Clock, Users, Upload, Trash2 } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
+import { BotSetup } from "@/components/BotSetup";
 
 interface PendingUser {
   id: string;
@@ -292,6 +293,8 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        <BotSetup />
 
         <Card>
           <CardHeader>
