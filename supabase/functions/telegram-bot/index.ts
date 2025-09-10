@@ -1065,27 +1065,6 @@ async function handleUpdateTask(chatId: number, parameters: any) {
     await sendMessage(chatId, "❌ Error updating task. Please try again.");
   }
 }
-      
-      // Store pending update in user state for confirmation
-      await supabase.from('telegram_users').update({
-        current_state: 'awaiting_task_selection',
-        state_data: {
-          pending_update: { field, new_value },
-          matching_tasks: tasks
-        }
-      }).eq('telegram_id', chatId);
-
-      return;
-    }
-
-    // Invalid parameters
-    await sendMessage(chatId, "❌ I need either task ID or search words with field and new value. Try: 'Set task 5 status to done' or 'call roee done'");
-    
-  } catch (error) {
-    console.error('Update task error:', error);
-    await sendMessage(chatId, "❌ Error updating task. Please try again.");
-  }
-}
 
 // People Management Functions
 async function handleAddPeopleFromBot(chatId: number, parameters: any, userId: number) {
