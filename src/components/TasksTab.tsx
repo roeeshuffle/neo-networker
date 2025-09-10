@@ -249,7 +249,7 @@ export const TasksTab: React.FC = () => {
                   <Label htmlFor="due-date">Due Date</Label>
                   <Input
                     id="due-date"
-                    type="date"
+                    type="datetime-local"
                     value={newTask.due_date}
                     onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
                   />
@@ -340,7 +340,7 @@ export const TasksTab: React.FC = () => {
                     {task.due_date && (
                       <div className="flex items-center gap-1 text-sm">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(task.due_date), 'MMM dd, HH:mm')}
+                        {format(new Date(task.due_date), 'dd-MM-yyyy HH:mm')}
                       </div>
                     )}
                   </TableCell>
