@@ -1254,31 +1254,41 @@ async function handleAddPeopleFromBot(chatId: number, parameters: any, userId: n
     const results = [];
     for (const personData of parameters) {
       const person = {
-        full_name: personData.full_name || personData.name,
-        email: personData.email || null,
-        company: personData.company || null,
-        categories: personData.categories || null,
-        status: personData.status || null,
+        full_name: personData["Full Name"] || personData.full_name || personData.name,
+        email: personData.Email || personData.email || null,
+        company: personData.Company || personData.company || null,
+        categories: personData.Categories || personData.categories || null,
+        status: personData.Status || personData.status || null,
         linkedin_profile: personData.linkedin_profile || null,
-        newsletter: personData.newsletter || false,
+        newsletter: personData.Newsletter || personData.newsletter || false,
         should_avishag_meet: personData.should_avishag_meet || false,
-        owner_id: linkedUserId
+        owner_id: linkedUserId,
+        created_by: linkedUserId
       };
 
+      console.log('Inserting person:', JSON.stringify(person, null, 2));
+
       if (person.full_name) {
-        const { error } = await supabase.from('people').insert([person]);
-        if (!error) {
+        const { data, error } = await supabase.from('people').insert([person]).select();
+        if (error) {
+          console.error('Error inserting person:', error);
+          console.error('Person data that failed:', JSON.stringify(person, null, 2));
+        } else {
           results.push(person.full_name);
+          console.log('Successfully inserted person:', person.full_name);
         }
+      } else {
+        console.log('No full name provided for person data:', JSON.stringify(personData, null, 2));
       }
     }
 
     if (results.length > 0) {
       await sendMessage(chatId, `✅ Added ${results.length} person(s): ${results.join(', ')}`);
     } else {
-      await sendMessage(chatId, "❌ Could not add any people. Please check the details.");
+      await sendMessage(chatId, "❌ Could not add any people. Please check the details and try again. Make sure to include the person's name.");
     }
   } catch (error) {
+    console.error('Error in handleAddPeopleFromBot:', error);
     await sendMessage(chatId, "❌ Error adding people. Please try again.");
   }
 }

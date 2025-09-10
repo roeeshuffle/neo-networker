@@ -340,7 +340,7 @@ export const TasksTab: React.FC = () => {
                     {task.due_date && (
                       <div className="flex items-center gap-1 text-sm">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(task.due_date), 'MMM dd')}
+                        {format(new Date(task.due_date), 'MMM dd, HH:mm')}
                       </div>
                     )}
                   </TableCell>
