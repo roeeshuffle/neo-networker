@@ -200,25 +200,6 @@ const AdminDashboard = () => {
     });
   };
 
-  const setupTelegramWebhook = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('telegram-polling');
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Bot Started", 
-        description: "Telegram bot is now polling for messages!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start bot",
-        variant: "destructive",
-      });
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -264,9 +245,6 @@ const AdminDashboard = () => {
                 Admin: {user?.email}
               </span>
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={setupTelegramWebhook}>
-                  Start Bot
-                </Button>
                 <CsvUploader onDataLoaded={handleDataLoaded} />
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
