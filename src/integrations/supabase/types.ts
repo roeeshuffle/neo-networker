@@ -107,6 +107,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          assign_to: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          label: string | null
+          priority: string | null
+          status: string | null
+          task_id: number
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          assign_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          label?: string | null
+          priority?: string | null
+          status?: string | null
+          task_id?: number
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          assign_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          label?: string | null
+          priority?: string | null
+          status?: string | null
+          task_id?: number
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       telegram_users: {
         Row: {
           authenticated_at: string | null

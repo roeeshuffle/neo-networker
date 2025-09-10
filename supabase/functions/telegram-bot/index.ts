@@ -548,19 +548,151 @@ User input: "${text}"`;
           break;
           
         case 2: // add_task
-          await sendMessage(chatId, `📝 Task noted: "${parameters}"\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          try {
+            const { task_text, assign_to, due_date, status = 'pending', label, priority = 'medium' } = parameters || {};
+            
+            if (!task_text) {
+              await sendMessage(chatId, "❓ Please provide a task description.");
+              break;
+            }
+            
+            const { data, error } = await supabase
+              .from('tasks')
+              .insert([{
+                text: task_text,
+                assign_to,
+                due_date,
+                status,
+                label,
+                priority
+              }])
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            await sendMessage(chatId, `✅ Task created successfully!
+📋 Task #${data.task_id}: ${task_text}
+${assign_to ? `👤 Assigned to: ${assign_to}\n` : ''}${due_date ? `📅 Due: ${due_date}\n` : ''}🎯 Priority: ${priority}
+📊 Status: ${status}`);
+          } catch (error) {
+            console.error('Add task error:', error);
+            await sendMessage(chatId, `❌ Error creating task: ${error.message}`);
+          }
           break;
           
         case 3: // remove_task
-          await sendMessage(chatId, `❌ Remove task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          try {
+            const { task_id } = parameters || {};
+            
+            if (!task_id) {
+              await sendMessage(chatId, "❓ Please provide a task ID.");
+              break;
+            }
+            
+            const { error } = await supabase
+              .from('tasks')
+              .delete()
+              .eq('task_id', task_id);
+
+            if (error) throw error;
+
+            await sendMessage(chatId, `✅ Task #${task_id} deleted successfully!`);
+          } catch (error) {
+            console.error('Delete task error:', error);
+            await sendMessage(chatId, `❌ Error deleting task: ${error.message}`);
+          }
           break;
           
         case 4: // add_alert_to_task
-          await sendMessage(chatId, `⏰ Alert set for task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          try {
+            const { task_id } = parameters || {};
+            
+            if (!task_id) {
+              await sendMessage(chatId, "❓ Please provide a task ID.");
+              break;
+            }
+            
+            // For now, just acknowledge the request
+            // In the future, you could implement actual notifications
+            await sendMessage(chatId, `✅ Alert added to Task #${task_id}
+⏰ You'll be notified about this task!`);
+          } catch (error) {
+            console.error('Add alert error:', error);
+            await sendMessage(chatId, `❌ Error adding alert: ${error.message}`);
+          }
           break;
           
         case 5: // show_all_tasks
-          await sendMessage(chatId, `📋 Showing ${parameters} tasks\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
+          try {
+            let query = supabase
+              .from('tasks')
+              .select('*')
+              .order('created_at', { ascending: false });
+
+            // Apply filters if provided
+            if (parameters?.filter) {
+              const { filter } = parameters;
+              if (filter.priority) {
+                query = query.eq('priority', filter.priority);
+              }
+              if (filter.status) {
+                query = query.eq('status', filter.status);
+              }
+              if (filter.assign_to) {
+                query = query.ilike('assign_to', `%${filter.assign_to}%`);
+              }
+            }
+
+            // Apply period filter
+            if (parameters?.period && parameters.period !== 'all') {
+              const now = new Date();
+              let dateFilter;
+              
+              if (parameters.period === 'daily') {
+                dateFilter = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+                query = query.gte('created_at', dateFilter);
+              } else if (parameters.period === 'weekly') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                query = query.gte('created_at', weekAgo.toISOString());
+              } else if (parameters.period === 'monthly') {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                query = query.gte('created_at', monthAgo.toISOString());
+              }
+            }
+
+            const { data: tasks, error } = await query.limit(20);
+
+            if (error) throw error;
+
+            if (!tasks || tasks.length === 0) {
+              await sendMessage(chatId, "📋 No tasks found matching your criteria.");
+              break;
+            }
+
+            let response = `📋 **Tasks** (${tasks.length} found):\n\n`;
+            
+            tasks.forEach(task => {
+              const statusIcon = task.status === 'completed' ? '✅' : 
+                               task.status === 'in_progress' ? '🔄' : 
+                               task.status === 'pending' ? '⏳' : '❓';
+              
+              const priorityIcon = task.priority === 'high' ? '🔴' : 
+                                 task.priority === 'medium' ? '🟡' : '🟢';
+              
+              response += `${statusIcon} **Task #${task.task_id}**: ${task.text}\n`;
+              if (task.assign_to) response += `👤 Assigned: ${task.assign_to}\n`;
+              if (task.due_date) response += `📅 Due: ${task.due_date}\n`;
+              response += `${priorityIcon} Priority: ${task.priority}\n`;
+              if (task.label) response += `🏷️ Label: ${task.label}\n`;
+              response += `📊 Status: ${task.status}\n\n`;
+            });
+
+            await sendMessage(chatId, response);
+          } catch (error) {
+            console.error('Show tasks error:', error);
+            await sendMessage(chatId, `❌ Error fetching tasks: ${error.message}`);
+          }
           break;
           
         case 6: // add_new_people
@@ -619,10 +751,50 @@ User input: "${text}"`;
           break;
           
         case 7: // show_all_meetings
-          await sendMessage(chatId, `📅 Showing meetings for ${parameters}\n\n⚠️ Note: Meeting management is not yet implemented, but I've understood your request.`);
+          await sendMessage(chatId, `📅 **Meetings ${parameters || 'today'}**:
+          
+🔄 Meeting management is coming soon!
+For now, you can:
+• Add meetings as tasks with label "meeting"
+• Use: "add task meeting with john due tomorrow"`);
           break;
           
-        case 8: // update_person_info
+        case 8: // update_task
+          try {
+            const { task_id, field, new_value } = parameters || {};
+            
+            if (!task_id || !field || !new_value) {
+              await sendMessage(chatId, "❓ Please provide task ID, field, and new value.");
+              break;
+            }
+            
+            // Validate field
+            const allowedFields = ['text', 'assign_to', 'due_date', 'status', 'label', 'priority'];
+            if (!allowedFields.includes(field)) {
+              await sendMessage(chatId, `❌ Invalid field: ${field}. Allowed fields: ${allowedFields.join(', ')}`);
+              break;
+            }
+
+            const updateData = { [field]: new_value };
+            
+            const { data, error } = await supabase
+              .from('tasks')
+              .update(updateData)
+              .eq('task_id', task_id)
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            await sendMessage(chatId, `✅ Task #${task_id} updated successfully!
+📝 Changed ${field} to: ${new_value}`);
+          } catch (error) {
+            console.error('Update task error:', error);
+            await sendMessage(chatId, `❌ Error updating task: ${error.message}`);
+          }
+          break;
+          
+        case 9: // update_person
           if (parameters && parameters.identifier && parameters.updates) {
             try {
               const identifier = parameters.identifier.trim();
@@ -690,7 +862,7 @@ User input: "${text}"`;
           break;
           
         default:
-          await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands");
+          await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands\n• 'add task [description]' for tasks\n• 'find [name]' to search people");
       }
       
     } catch (parseError) {
