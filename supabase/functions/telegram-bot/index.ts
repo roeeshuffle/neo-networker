@@ -902,12 +902,13 @@ function parseNaturalDate(dateStr: string | null): string | null {
     }
   }
   
-  // Return ISO datetime format (YYYY-MM-DD HH:MM)
+  // Return ISO timestamp with timezone
   const year = targetDate.getFullYear();
   const month = (targetDate.getMonth() + 1).toString().padStart(2, '0');
   const day = targetDate.getDate().toString().padStart(2, '0');
   
-  return `${year}-${month}-${day} ${timeStr}`;
+  // Return full ISO timestamp that preserves timezone
+  return `${year}-${month}-${day}T${timeStr}:00.000Z`;
 }
 
 // Task Management Functions
@@ -996,7 +997,18 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
 
     let responseMsg = `✅ Task added: "${task.text}" (${task.priority} priority, ${task.status})`;
     if (assignTo) responseMsg += `\n👤 Assigned to: ${assignTo}`;
-    if (dueDate) responseMsg += `\n📅 Due: ${dueDate}`;
+    if (dueDate) {
+      // Format the display date better
+      const displayDate = new Date(dueDate).toLocaleString('en-GB', {
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).replace(',', '');
+      responseMsg += `\n📅 Due: ${displayDate}`;
+    }
     if (label) responseMsg += `\n🏷️ Label: ${label}`;
     if (repeat) responseMsg += `\n🔄 Repeats: ${repeat}`;
     
@@ -1164,7 +1176,17 @@ async function handleShowTasks(chatId: number, parameters: any) {
       response += `${statusEmoji} ${priorityEmoji} <b>${task.text}</b>\n`;
       response += `   ID: ${task.task_id} | Status: ${task.status} | Priority: ${task.priority}\n`;
       if (task.assign_to) response += `   👤 ${task.assign_to}\n`;
-      if (task.due_date) response += `   📅 ${task.due_date}\n`;
+      if (task.due_date) {
+        const displayDate = new Date(task.due_date).toLocaleString('en-GB', {
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).replace(',', '');
+        response += `   📅 ${displayDate}\n`;
+      }
       if (task.label) response += `   🏷️ ${task.label}\n`;
       response += '\n';
     });
