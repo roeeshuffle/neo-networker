@@ -126,7 +126,7 @@ serve(async (req) => {
     } else if (text === '/cancel') {
       await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
-      } else {
+    } else {
         // Handle conversation flows and regular messages
         console.log(`Current session state: ${session.state}`);
         if (session.state === 'authenticating') {
