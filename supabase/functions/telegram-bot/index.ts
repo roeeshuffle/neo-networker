@@ -81,27 +81,14 @@ serve(async (req) => {
     };
 
     if (text === '/start') {
-      // Check if user is already authenticated
-      const isAuth = await checkUserAuthentication(userId);
-      if (isAuth) {
-        await updateUserState(userId, 'idle', {});
-        await setCommands(chatId);
-        await sendMessage(chatId, 
-          "Welcome back to VC Search Engine Bot! 🚀\n\n" +
-          "You are authenticated and ready to use the bot.\n\n" +
-          "💡 Just type anything to search the database!\n\n" +
-          "Commands:\n" +
-          "🔍 /search - Search people in database\n" +
-          "➕ /add - Add a new person\n" +
-          "❓ /help - Show this help message"
-        );
-      } else {
-        await updateUserState(userId, 'authenticating', {});
-        await sendMessage(chatId, 
-          "Welcome to VC Search Engine Bot! 🚀\n\n" +
-          "🔐 Please enter the password to access the system:"
-        );
-      }
+      // Always reset user authentication and start fresh
+      await resetUserAuthentication(userId);
+      await updateUserState(userId, 'authenticating', {});
+      await sendMessage(chatId, 
+        "Welcome to VC Search Engine Bot! 🚀\n\n" +
+        "🔄 Starting fresh authentication process...\n\n" +
+        "🔐 Please enter the password to access the system:"
+      );
     } else if (text === '/help') {
       if (!await checkUserAuthentication(userId)) {
         await sendMessage(chatId, "🔐 Please authenticate first using /start");
@@ -373,6 +360,25 @@ async function checkUserAuthentication(telegramId: number): Promise<boolean> {
   }
 }
 
+async function resetUserAuthentication(telegramId: number) {
+  try {
+    await supabase
+      .from('telegram_users')
+      .upsert({
+        telegram_id: telegramId,
+        current_state: 'idle',
+        state_data: {},
+        is_authenticated: false,
+        authenticated_at: null
+      }, {
+        onConflict: 'telegram_id'
+      });
+    console.log(`Reset authentication for user ${telegramId}`);
+  } catch (error) {
+    console.error('Error resetting user authentication:', error);
+  }
+}
+
 async function updateUserState(telegramId: number, state: string, stateData: any) {
   try {
     // First get the current user to preserve authentication status
@@ -435,7 +441,14 @@ async function handleEmailAuthentication(chatId: number, email: string, telegram
       return;
     }
 
-    // Link telegram user to the profile
+    // Check if user already exists in telegram_users table
+    const { data: existingUser } = await supabase
+      .from('telegram_users')
+      .select('id')
+      .eq('telegram_id', telegramId)
+      .single();
+
+    // Update or insert telegram user record
     const { error } = await supabase
       .from('telegram_users')
       .upsert({
@@ -444,6 +457,7 @@ async function handleEmailAuthentication(chatId: number, email: string, telegram
         first_name: userInfo.first_name || null,
         is_authenticated: true,
         authenticated_at: new Date().toISOString(),
+        current_state: 'idle',
         // Store the linked user's profile ID in state_data for easy reference
         state_data: { linked_user_id: profile.id, linked_email: profile.email }
       }, {
@@ -456,11 +470,15 @@ async function handleEmailAuthentication(chatId: number, email: string, telegram
       return;
     }
 
-    await updateUserState(telegramId, 'idle', { linked_user_id: profile.id, linked_email: profile.email });
     await setCommands(chatId);
+    
+    // Personalized message based on whether this is a new or returning user
+    const welcomeMessage = existingUser 
+      ? `🔄 Re-authenticated successfully! Welcome back ${profile.full_name || profile.email}!\n\n🔗 Your Telegram account has been updated and re-linked to your profile.`
+      : `✅ Authentication successful! Welcome ${profile.full_name || profile.email}!\n\n🔗 Your Telegram account is now linked to your profile.`;
+
     await sendMessage(chatId, 
-      `✅ Authentication successful! Welcome ${profile.full_name || profile.email}!\n\n` +
-      "🔗 Your Telegram account is now linked to your profile.\n\n" +
+      welcomeMessage + "\n\n" +
       "💡 <b>You can now just type anything!</b>\n" +
       "Examples:\n" +
       "• 'search fintech startups'\n" +
