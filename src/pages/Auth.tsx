@@ -20,6 +20,11 @@ const Auth = () => {
 
   const handleGoogleAuth = async () => {
     setLoading(true);
+    
+    // Debug: Log the current origin to help troubleshoot
+    console.log("Current origin:", window.location.origin);
+    console.log("Full URL:", window.location.href);
+    
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -29,6 +34,7 @@ const Auth = () => {
       });
 
       if (error) {
+        console.error("Supabase OAuth error:", error);
         toast({
           title: "Error",
           description: error.message,
@@ -36,8 +42,9 @@ const Auth = () => {
         });
       }
     } catch (error: any) {
+      console.error("Google Auth error:", error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
