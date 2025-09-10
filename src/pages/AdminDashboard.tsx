@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
 import { LogOut, Check, X, Clock, Users, Upload, Trash2 } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
-import { BotSetup } from "@/components/BotSetup";
 
 interface PendingUser {
   id: string;
@@ -201,6 +200,25 @@ const AdminDashboard = () => {
     });
   };
 
+  const setupTelegramWebhook = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('set-webhook');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success", 
+        description: "Telegram webhook configured successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to setup webhook",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -246,6 +264,9 @@ const AdminDashboard = () => {
                 Admin: {user?.email}
               </span>
               <div className="flex gap-2">
+                <Button variant="secondary" onClick={setupTelegramWebhook}>
+                  Setup Bot
+                </Button>
                 <CsvUploader onDataLoaded={handleDataLoaded} />
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
@@ -293,8 +314,6 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        <BotSetup />
 
         <Card>
           <CardHeader>
