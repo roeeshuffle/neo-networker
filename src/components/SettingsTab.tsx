@@ -222,16 +222,27 @@ export const SettingsTab: React.FC = () => {
           <p className="text-muted-foreground">Manage duplicate people records</p>
         </div>
         
-        {identicalDuplicates.length > 0 && (
+        <div className="flex gap-2">
+          {identicalDuplicates.length > 0 && (
+            <Button 
+              onClick={autoMergeAll}
+              disabled={mergeLoading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Merge className="w-4 h-4 mr-2" />
+              Auto-Merge Identical ({identicalDuplicates.length})
+            </Button>
+          )}
           <Button 
             onClick={autoMergeAll}
-            disabled={mergeLoading}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={mergeLoading || duplicates.length === 0}
+            variant="outline"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
           >
             <Merge className="w-4 h-4 mr-2" />
-            Auto-Merge Identical ({identicalDuplicates.length})
+            Merge All Equals Records
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="grid gap-4">

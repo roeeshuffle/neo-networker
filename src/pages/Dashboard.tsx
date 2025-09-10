@@ -10,7 +10,9 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, Plus, CheckSquare } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TasksTab } from "@/components/TasksTab";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
@@ -309,24 +311,43 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Main data table */}
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              Contact Directory
-              <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                {filteredPeople.length} entries
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <PeopleTable 
-              people={filteredPeople}
-              onDelete={handleDelete}
-              onView={handleView}
-            />
-          </CardContent>
-        </Card>
+        {/* Main content with tabs */}
+        <Tabs defaultValue="contacts" className="space-y-6">
+          <TabsList className="grid w-fit grid-cols-2 bg-muted">
+            <TabsTrigger value="contacts" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Contacts
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Tasks
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="contacts">
+            <Card className="overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  Contact Directory
+                  <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                    {filteredPeople.length} entries
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <PeopleTable 
+                  people={filteredPeople}
+                  onDelete={handleDelete}
+                  onView={handleView}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="tasks">
+            <TasksTab />
+          </TabsContent>
+        </Tabs>
 
         {showForm && (
           <PersonForm

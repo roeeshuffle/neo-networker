@@ -427,7 +427,8 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 1. search_information(words: array of strings)
 
 2. add_task(task_text: string, assign_to?: string, due_date?: string, status?: string, label?: string, priority?: string)  
-   - Rule: If no "task" is mentioned in the user prompt, it is not this function.  
+   - Rule: If no "task" is mentioned in the user prompt, it is not this function.
+   - Example: "add task to meet roee on thursday" → [2, {"task_text": "meet roee on thursday", "due_date": "thursday"}]
 
 3. remove_task(task_id: string or number)
 
@@ -536,20 +537,42 @@ async function executeBotFunction(chatId: number, functionNumber: number, parame
 // Task Management Functions
 async function handleAddTask(chatId: number, parameters: any, userId: number) {
   try {
-    if (!parameters || typeof parameters !== 'object' || !parameters.task_text) {
+    console.log('Add task parameters received:', parameters);
+    
+    let taskText = '';
+    let assignTo = null;
+    let dueDate = null;
+    let status = 'pending';
+    let label = null;
+    let priority = 'medium';
+    
+    // Handle different parameter formats
+    if (typeof parameters === 'string') {
+      taskText = parameters;
+    } else if (parameters && typeof parameters === 'object') {
+      taskText = parameters.task_text || parameters.text || parameters.title || '';
+      assignTo = parameters.assign_to || parameters.assignTo || null;
+      dueDate = parameters.due_date || parameters.dueDate || null;
+      status = parameters.status || 'pending';
+      label = parameters.label || null;
+      priority = parameters.priority || 'medium';
+    }
+    
+    if (!taskText || taskText.trim().length === 0) {
       await sendMessage(chatId, "❌ I need task details. Try: 'Add task call John tomorrow'");
       return;
     }
 
     const task = {
-      text: parameters.task_text,
-      assign_to: parameters.assign_to || null,
-      due_date: parameters.due_date || null,
-      status: parameters.status || 'pending',
-      label: parameters.label || null,
-      priority: parameters.priority || 'medium'
+      text: taskText.trim(),
+      assign_to: assignTo,
+      due_date: dueDate,
+      status: status,
+      label: label,
+      priority: priority
     };
 
+    console.log('Inserting task:', task);
     const { error } = await supabase.from('tasks').insert([task]);
 
     if (error) {
