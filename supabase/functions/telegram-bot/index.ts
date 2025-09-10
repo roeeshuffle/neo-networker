@@ -39,14 +39,26 @@ const AUTH_PASSWORD = "121212";
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
 serve(async (req) => {
+  console.log('=== TELEGRAM BOT FUNCTION CALLED ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const update: TelegramUpdate = await req.json();
-    console.log('Received update:', JSON.stringify(update, null, 2));
+    const rawBody = await req.text();
+    console.log('Raw request body:', rawBody);
+    
+    if (!rawBody) {
+      console.log('Empty body received');
+      return new Response('OK', { headers: corsHeaders });
+    }
+    
+    const update: TelegramUpdate = JSON.parse(rawBody);
+    console.log('Parsed update:', JSON.stringify(update, null, 2));
 
     if (!update.message || !update.message.text) {
       return new Response('OK', { headers: corsHeaders });
