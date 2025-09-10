@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
+  const [totalTasks, setTotalTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -111,6 +112,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchPeople();
+      fetchTasksCount();
     }
   }, [user]);
 
@@ -134,6 +136,19 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTasksCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact' });
+
+      if (error) throw error;
+      setTotalTasks(data?.length || 0);
+    } catch (error: any) {
+      console.error('Error fetching tasks count:', error);
     }
   };
 
@@ -223,7 +238,6 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">VCrm</h1>
-                <p className="text-muted-foreground text-sm font-medium">Beautiful contact management</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -258,22 +272,9 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-6 py-12 space-y-8">
-        {/* Hero section with actions */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">Your Contacts</h2>
-            <p className="text-muted-foreground font-medium">
-              Manage and organize your professional network with ease
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <SearchBar onSearch={handleSearch} />
-            <CsvUploader onDataLoaded={() => fetchPeople()} />
-            <Button onClick={() => setShowForm(true)} className="shadow-lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Person
-            </Button>
-          </div>
+        {/* Search section */}
+        <div className="flex justify-start mb-8">
+          <SearchBar onSearch={handleSearch} />
         </div>
 
         {/* Stats cards */}
@@ -296,13 +297,13 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">This Month</p>
+                  <p className="text-sm font-medium text-foreground/80">Total Tasks</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {people.filter(p => new Date(p.created_at) >= new Date(new Date().setDate(1))).length}
+                    {totalTasks}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                  <Plus className="h-6 w-6 text-secondary" />
+                  <CheckSquare className="h-6 w-6 text-secondary" />
                 </div>
               </div>
             </CardHeader>
@@ -344,6 +345,7 @@ const Dashboard = () => {
               onDelete={handleDelete}
               onView={handleView}
               onRefresh={fetchPeople}
+              onShowForm={() => setShowForm(true)}
             />
           </TabsContent>
           

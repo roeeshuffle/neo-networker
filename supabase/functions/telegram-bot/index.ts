@@ -83,7 +83,7 @@ serve(async (req) => {
     if (text === '/start') {
       // Always reset user authentication and start fresh
       await resetUserAuthentication(userId);
-      await updateUserState(userId, 'authenticating', {});
+      // The resetUserAuthentication already sets state to 'authenticating', no need to update again
       await sendMessage(chatId, 
         "Welcome to VC Search Engine Bot! 🚀\n\n" +
         "🔄 Starting fresh authentication process...\n\n" +
@@ -441,18 +441,19 @@ async function checkUserAuthentication(telegramId: number): Promise<boolean> {
 
 async function resetUserAuthentication(telegramId: number) {
   try {
+    console.log(`Resetting authentication for user ${telegramId}`);
     await supabase
       .from('telegram_users')
       .upsert({
         telegram_id: telegramId,
-        current_state: 'idle',
+        current_state: 'authenticating', // Set to authenticating, not idle
         state_data: {},
         is_authenticated: false,
         authenticated_at: null
       }, {
         onConflict: 'telegram_id'
       });
-    console.log(`Reset authentication for user ${telegramId}`);
+    console.log(`Reset authentication for user ${telegramId} - set state to authenticating`);
   } catch (error) {
     console.error('Error resetting user authentication:', error);
   }
