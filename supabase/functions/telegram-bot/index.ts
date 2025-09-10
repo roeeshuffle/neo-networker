@@ -792,7 +792,22 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       return;
     }
 
-    // Get the admin user to use as created_by for bot tasks
+    // Get the authenticated telegram user to find their actual profile
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', userId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /auth command.");
+      return;
+    }
+
+    // Get user's actual profile ID from profiles table
+    // Note: This assumes telegram authentication links to a real user account
+    // In a real implementation, you'd have a proper mapping between telegram users and auth users
     const { data: adminUser } = await supabase
       .from('profiles')
       .select('id')
@@ -806,7 +821,7 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       status: status,
       label: label,
       priority: priority,
-      created_by: adminUser?.id || null
+      owner_id: adminUser?.id || null  // Use owner_id instead of created_by
     };
 
     console.log('Inserting task:', task);
@@ -858,7 +873,42 @@ async function handleAddAlertToTask(chatId: number, parameters: any) {
 
 async function handleShowTasks(chatId: number, parameters: any) {
   try {
-    let query = supabase.from('tasks').select('*');
+    // Get the authenticated telegram user to filter tasks by ownership
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', chatId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /auth command.");
+      return;
+    }
+
+    // Get user's actual profile ID
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', 'guy@wershuffle.com') // In real implementation, map telegram user to actual profile
+      .single();
+
+    if (!userProfile) {
+      await sendMessage(chatId, "❌ Could not find your profile. Please contact support.");
+      return;
+    }
+
+    // Start with filtering by owner or shared tasks
+    let query = supabase
+      .from('tasks')
+      .select(`
+        *,
+        shared_data!shared_data_record_id_fkey(
+          shared_with_user_id,
+          table_name
+        )
+      `)
+      .or(`owner_id.eq.${userProfile.id},and(shared_data.table_name.eq.tasks,shared_data.shared_with_user_id.eq.${userProfile.id})`);
     
     // Apply period and advanced filters
     if (typeof parameters === 'string') {
