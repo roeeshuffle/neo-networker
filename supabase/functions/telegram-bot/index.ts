@@ -70,7 +70,7 @@ serve(async (req) => {
       .from('telegram_users')
       .select('current_state, state_data, is_authenticated')
       .eq('telegram_id', userId)
-      .single();
+      .maybeSingle();
 
     console.log(`User state from DB:`, user);
     
@@ -466,7 +466,7 @@ async function updateUserState(telegramId: number, state: string, stateData: any
       .from('telegram_users')
       .select('is_authenticated')
       .eq('telegram_id', telegramId)
-      .single();
+      .maybeSingle();
 
     await supabase
       .from('telegram_users')
@@ -526,7 +526,7 @@ async function handleEmailAuthentication(chatId: number, email: string, telegram
       .from('telegram_users')
       .select('id')
       .eq('telegram_id', telegramId)
-      .single();
+      .maybeSingle();
 
     // Update or insert telegram user record
     const { error } = await supabase
@@ -728,7 +728,15 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 **User:** "Remove person with ID 42"  
 **Assistant:**  
-[10, "42"]`
+[10, "42"]
+
+**User:** "Update person guy status to ceo"  
+**Assistant:**  
+[9, {"person_id": "guy", "updates": {"status": "ceo"}}]
+
+**User:** "Change John's company to Microsoft"  
+**Assistant:**  
+[9, {"person_id": "John", "updates": {"company": "Microsoft"}}]`
           },
           { role: 'user', content: text }
         ],
@@ -1460,7 +1468,7 @@ async function handleUpdatePerson(chatId: number, parameters: any, userId: numbe
         .eq('owner_id', linkedUserId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!lastPerson) {
         await sendMessage(chatId, "❌ No person found to update. Please specify a person ID.");
@@ -1488,11 +1496,77 @@ async function handleUpdatePerson(chatId: number, parameters: any, userId: numbe
       return;
     }
 
-    // Direct update with person_id
+    // Check if person_id is a UUID or a name
+    let personToUpdate = null;
+    
+    // Check if it's a UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    
+    if (uuidRegex.test(parameters.person_id)) {
+      // It's a UUID - direct lookup
+      const { data, error } = await supabase
+        .from('people')
+        .select('*')
+        .eq('id', parameters.person_id)
+        .maybeSingle();
+        
+      if (error || !data) {
+        await sendMessage(chatId, "❌ Person not found with that ID.");
+        return;
+      }
+      personToUpdate = data;
+    } else {
+      // It's a name - search by name
+      const { data: telegramUser, error: telegramError } = await supabase
+        .from('telegram_users')
+        .select('*')
+        .eq('telegram_id', chatId)
+        .eq('is_authenticated', true)
+        .maybeSingle();
+
+      if (telegramError || !telegramUser) {
+        await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+        return;
+      }
+
+      const linkedUserId = telegramUser.state_data?.linked_user_id;
+      
+      if (!linkedUserId) {
+        await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+        return;
+      }
+      
+      // Search for people by name
+      const { data: people, error: searchError } = await supabase
+        .from('people')
+        .select('*')
+        .eq('owner_id', linkedUserId)
+        .ilike('full_name', `%${parameters.person_id}%`);
+
+      if (searchError || !people || people.length === 0) {
+        await sendMessage(chatId, `❌ No person found with name containing "${parameters.person_id}".`);
+        return;
+      }
+      
+      if (people.length > 1) {
+        let response = `🔍 Found ${people.length} people matching "${parameters.person_id}". Please be more specific:\n\n`;
+        people.forEach((person, index) => {
+          response += `${index + 1}. ${person.full_name}`;
+          if (person.company) response += ` (${person.company})`;
+          response += `\n`;
+        });
+        await sendMessage(chatId, response);
+        return;
+      }
+      
+      personToUpdate = people[0];
+    }
+
+    // Direct update with found person
     const { error } = await supabase
       .from('people')
       .update(parameters.updates)
-      .eq('id', parameters.person_id);
+      .eq('id', personToUpdate.id);
 
     if (error) {
       await sendMessage(chatId, "❌ Error updating person. Please try again.");
