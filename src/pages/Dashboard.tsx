@@ -4,14 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
 import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
-import { TasksTable, Task } from "@/components/TasksTable";
-import { SettingsTab } from "@/components/SettingsTab";
-import { BotSetup } from "@/components/BotSetup";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { LogOut, Plus } from "lucide-react";
@@ -41,12 +37,10 @@ const Dashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
-  const [activeTab, setActiveTab] = useState("people");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -112,7 +106,6 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchPeople();
-      fetchTasks();
     }
   }, [user]);
 
@@ -136,25 +129,6 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setTasks(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching tasks",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -269,23 +243,21 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-6 py-12 space-y-8">
-        {/* Hero section with tabs */}
+        {/* Hero section with actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">Business Management</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Your Contacts</h2>
             <p className="text-muted-foreground font-medium">
-              Manage your contacts, tasks, and settings in one place
+              Manage and organize your professional network with ease
             </p>
           </div>
-          {activeTab === "people" && (
-            <div className="flex items-center gap-4">
-              <SearchBar onSearch={handleSearch} />
-              <Button onClick={() => setShowForm(true)} className="shadow-lg">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Person
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            <SearchBar onSearch={handleSearch} />
+            <Button onClick={() => setShowForm(true)} className="shadow-lg">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Person
+            </Button>
+          </div>
         </div>
 
         {/* Stats cards */}
@@ -295,7 +267,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Total Contacts</p>
-                  <p className="text-2xl font-bold text-foreground">{people.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{filteredPeople.length}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
                   <Plus className="h-6 w-6 text-primary" />
@@ -308,9 +280,9 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Active Tasks</p>
+                  <p className="text-sm font-medium text-foreground/80">This Month</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length}
+                    {people.filter(p => new Date(p.created_at) >= new Date(new Date().setDate(1))).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
@@ -324,9 +296,9 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">High Priority</p>
+                  <p className="text-sm font-medium text-foreground/80">With Notes</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {tasks.filter(t => t.priority === 'high').length}
+                    {people.filter(p => p.meeting_notes?.trim()).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
@@ -337,42 +309,24 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Tabbed Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="people">People</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="people" className="space-y-6">
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  Contact Directory
-                  <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                    {filteredPeople.length} entries
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <PeopleTable 
-                  people={filteredPeople}
-                  onDelete={handleDelete}
-                  onView={handleView}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tasks" className="space-y-6">
-            <TasksTable tasks={tasks} onRefresh={fetchTasks} />
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <SettingsTab />
-          </TabsContent>
-        </Tabs>
+        {/* Main data table */}
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              Contact Directory
+              <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                {filteredPeople.length} entries
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <PeopleTable 
+              people={filteredPeople}
+              onDelete={handleDelete}
+              onView={handleView}
+            />
+          </CardContent>
+        </Card>
 
         {showForm && (
           <PersonForm

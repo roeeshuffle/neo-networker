@@ -20,7 +20,7 @@ export type Database = {
           categories: string | null
           company: string | null
           created_at: string | null
-          created_by: string
+          created_by: string | null
           email: string | null
           full_name: string
           id: string
@@ -39,7 +39,7 @@ export type Database = {
           categories?: string | null
           company?: string | null
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           email?: string | null
           full_name: string
           id?: string
@@ -58,7 +58,7 @@ export type Database = {
           categories?: string | null
           company?: string | null
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           email?: string | null
           full_name?: string
           id?: string
@@ -107,48 +107,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tasks: {
-        Row: {
-          assign_to: string | null
-          created_at: string
-          created_by: string
-          due_date: string | null
-          id: string
-          label: string | null
-          priority: string | null
-          status: string | null
-          task_id: number
-          text: string
-          updated_at: string
-        }
-        Insert: {
-          assign_to?: string | null
-          created_at?: string
-          created_by?: string
-          due_date?: string | null
-          id?: string
-          label?: string | null
-          priority?: string | null
-          status?: string | null
-          task_id?: number
-          text: string
-          updated_at?: string
-        }
-        Update: {
-          assign_to?: string | null
-          created_at?: string
-          created_by?: string
-          due_date?: string | null
-          id?: string
-          label?: string | null
-          priority?: string | null
-          status?: string | null
-          task_id?: number
-          text?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       telegram_users: {
         Row: {
           authenticated_at: string | null
@@ -194,10 +152,6 @@ export type Database = {
     }
     Functions: {
       is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_approved_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
