@@ -550,19 +550,32 @@ async function resetUserAuthentication(telegramId: number) {
 
 async function updateUserState(telegramId: number, state: string, stateData: any) {
   try {
-    // First get the current user to preserve authentication status
+    // First get the current user to preserve authentication status and data
     const { data: currentUser } = await supabase
       .from('telegram_users')
-      .select('is_authenticated')
+      .select('is_authenticated, state_data')
       .eq('telegram_id', telegramId)
       .maybeSingle();
+
+    // Preserve authentication data when going to idle state
+    let finalStateData = stateData;
+    if (state === 'idle' && currentUser?.state_data) {
+      const authData = currentUser.state_data;
+      if (authData.linked_email && authData.linked_user_id) {
+        finalStateData = {
+          linked_email: authData.linked_email,
+          linked_user_id: authData.linked_user_id,
+          ...stateData
+        };
+      }
+    }
 
     await supabase
       .from('telegram_users')
       .upsert({
         telegram_id: telegramId,
         current_state: state,
-        state_data: stateData,
+        state_data: finalStateData,
         // Preserve existing authentication status
         is_authenticated: currentUser?.is_authenticated || false
       }, {
