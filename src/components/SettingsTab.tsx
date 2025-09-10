@@ -25,7 +25,15 @@ interface Duplicate {
   people: Person[];
 }
 
-export const SettingsTab: React.FC = () => {
+interface SettingsTabProps {
+  onDeleteAllTelegramUsers?: () => Promise<void>;
+  onDeleteAllPeople?: () => Promise<void>;
+}
+
+export const SettingsTab: React.FC<SettingsTabProps> = ({ 
+  onDeleteAllTelegramUsers, 
+  onDeleteAllPeople 
+}) => {
   const [duplicates, setDuplicates] = useState<Duplicate[]>([]);
   const [loading, setLoading] = useState(true);
   const [mergeLoading, setMergeLoading] = useState(false);
@@ -442,6 +450,96 @@ export const SettingsTab: React.FC = () => {
               <p className="text-muted-foreground text-center">
                 Great! Your database doesn't have any duplicate people records.
               </p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Admin Actions */}
+        {(onDeleteAllTelegramUsers || onDeleteAllPeople) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="w-5 h-5" />
+                Danger Zone
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                These actions are irreversible. Please proceed with caution.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {onDeleteAllTelegramUsers && (
+                <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg">
+                  <div>
+                    <div className="font-medium">Delete All Telegram Users</div>
+                    <div className="text-sm text-muted-foreground">
+                      Permanently remove all telegram user data from the system
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete All Telegram Users
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete All Telegram Users</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete ALL telegram users from the system. 
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={onDeleteAllTelegramUsers}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+              
+              {onDeleteAllPeople && (
+                <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg">
+                  <div>
+                    <div className="font-medium">Delete All People Data</div>
+                    <div className="text-sm text-muted-foreground">
+                      Permanently remove all contact data from the system
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete All Data
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete All People Data</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete ALL people data from the system. 
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={onDeleteAllPeople}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

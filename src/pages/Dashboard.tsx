@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
+  const [todayTasks, setTodayTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -143,10 +144,23 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('id', { count: 'exact' });
+        .select('id, due_date', { count: 'exact' });
 
       if (error) throw error;
       setTotalTasks(data?.length || 0);
+      
+      // Calculate today's tasks (Israel timezone)
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const todayTasksCount = data?.filter(task => {
+        if (!task.due_date) return false;
+        const taskDate = new Date(task.due_date);
+        return taskDate >= todayStart && taskDate <= todayEnd;
+      }).length || 0;
+      
+      setTodayTasks(todayTasksCount);
     } catch (error: any) {
       console.error('Error fetching tasks count:', error);
     }
@@ -313,13 +327,13 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">With Notes</p>
+                  <p className="text-sm font-medium text-foreground/80">Today Tasks</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {people.filter(p => p.meeting_notes?.trim()).length}
+                    {todayTasks}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
-                  <Plus className="h-6 w-6 text-accent" />
+                  <CheckSquare className="h-6 w-6 text-accent" />
                 </div>
               </div>
             </CardHeader>
@@ -350,7 +364,7 @@ const Dashboard = () => {
           </TabsContent>
           
           <TabsContent value="tasks">
-            <TasksTab />
+            <TasksTab onTasksChange={fetchTasksCount} />
           </TabsContent>
         </Tabs>
 

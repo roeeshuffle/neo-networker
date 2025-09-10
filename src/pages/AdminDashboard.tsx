@@ -259,27 +259,10 @@ const AdminDashboard = () => {
               <span className="text-sm text-muted-foreground">
                 Admin: {user?.email}
               </span>
-              <div className="flex gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    if (confirm("Are you sure you want to delete ALL telegram users? This action cannot be undone.")) {
-                      handleDeleteAllTelegramUsers();
-                    }
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All Telegram Users
-                </Button>
-                <Button variant="destructive" onClick={handleDeleteAllPeople}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All Data
-                </Button>
-                <Button variant="outline" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </div>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
@@ -406,7 +389,10 @@ const AdminDashboard = () => {
 
 
           <TabsContent value="settings">
-            <SettingsTab />
+            <SettingsTab 
+              onDeleteAllTelegramUsers={handleDeleteAllTelegramUsers}
+              onDeleteAllPeople={handleDeleteAllPeople}
+            />
           </TabsContent>
         </Tabs>
       </main>

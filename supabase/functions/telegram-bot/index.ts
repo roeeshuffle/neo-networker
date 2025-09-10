@@ -1178,14 +1178,15 @@ async function handleShowTasks(chatId: number, parameters: any) {
       response += `   ID: ${task.task_id} | Status: ${task.status} | Priority: ${task.priority}\n`;
       if (task.assign_to) response += `   👤 ${task.assign_to}\n`;
       if (task.due_date) {
-        const displayDate = new Date(task.due_date).toLocaleString('en-GB', {
+        const displayDate = new Date(task.due_date).toLocaleString('en-IL', {
+          timeZone: 'Asia/Jerusalem',
           year: 'numeric',
           month: '2-digit', 
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit',
           hour12: false
-        }).replace(',', '');
+        }).replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}:\d{2})/, '$3-$2-$1 $4');
         response += `   📅 ${displayDate}\n`;
       }
       if (task.label) response += `   🏷️ ${task.label}\n`;
@@ -1323,7 +1324,15 @@ async function handleUpdateTask(chatId: number, parameters: any) {
       let response = `🔍 Found ${tasks.length} matching task(s). Reply with task number to update ${field} to "${new_value}":\n\n`;
       
       tasks.forEach((task, index) => {
-        const dueText = task.due_date ? ` (due: ${task.due_date})` : '';
+        const dueText = task.due_date ? ` (due: ${new Date(task.due_date).toLocaleString('en-IL', {
+          timeZone: 'Asia/Jerusalem',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}:\d{2})/, '$3-$2-$1 $4')})` : '';
         const assignText = task.assign_to ? ` [${task.assign_to}]` : '';
         response += `${index + 1}. ID: ${task.task_id} - ${task.text}${dueText}${assignText}\n`;
       });

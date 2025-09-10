@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, Calendar, User, Tag, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface Task {
   id: string;
@@ -35,7 +36,11 @@ interface NewTask {
   priority: string;
 }
 
-export const TasksTab: React.FC = () => {
+interface TasksTabProps {
+  onTasksChange?: () => void;
+}
+
+export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -91,7 +96,7 @@ export const TasksTab: React.FC = () => {
       const taskData = {
         text: newTask.text,
         assign_to: newTask.assign_to || null,
-        due_date: newTask.due_date || null,
+        due_date: newTask.due_date ? new Date(newTask.due_date).toISOString() : null,
         status: newTask.status,
         label: newTask.label || null,
         priority: newTask.priority,
@@ -119,6 +124,7 @@ export const TasksTab: React.FC = () => {
       });
       setIsAddDialogOpen(false);
       fetchTasks();
+      onTasksChange?.();
     } catch (error) {
       console.error('Error adding task:', error);
       toast({
@@ -143,6 +149,7 @@ export const TasksTab: React.FC = () => {
         description: "Task deleted successfully"
       });
       fetchTasks();
+      onTasksChange?.();
     } catch (error) {
       console.error('Error deleting task:', error);
       toast({
@@ -245,15 +252,19 @@ export const TasksTab: React.FC = () => {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="due-date">Due Date</Label>
-                  <Input
-                    id="due-date"
-                    type="datetime-local"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="due-date">Due Date</Label>
+                   <Input
+                     id="due-date"
+                     type="datetime-local"
+                     value={newTask.due_date}
+                     onChange={(e) => {
+                       // Ensure the date is treated as Israel timezone
+                       const localDate = e.target.value;
+                       setNewTask({ ...newTask, due_date: localDate });
+                     }}
+                   />
+                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -336,14 +347,14 @@ export const TasksTab: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {task.due_date && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(task.due_date), 'dd-MM-yyyy HH:mm')}
-                      </div>
-                    )}
-                  </TableCell>
+                   <TableCell>
+                     {task.due_date && (
+                       <div className="flex items-center gap-1 text-sm">
+                         <Calendar className="w-3 h-3" />
+                         {formatInTimeZone(new Date(task.due_date), 'Asia/Jerusalem', 'dd-MM-yyyy HH:mm')}
+                       </div>
+                     )}
+                   </TableCell>
                   <TableCell>
                     <Badge variant={getPriorityColor(task.priority)}>
                       {task.priority}
