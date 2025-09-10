@@ -30,7 +30,7 @@ interface TelegramUpdate {
 }
 
 interface UserSession {
-  state: 'idle' | 'adding_person' | 'searching' | 'authenticating' | 'pending_update';
+  state: 'idle' | 'adding_person' | 'searching' | 'authenticating' | 'awaiting_email' | 'pending_update';
   step?: string;
   data?: any;
 }
@@ -140,9 +140,11 @@ serve(async (req) => {
       // Handle conversation flows and regular messages
       console.log(`Current session state: ${session.state}`);
       if (session.state === 'authenticating') {
-        console.log(`User ${userId} attempting authentication with: ${text}`);
-        await handleAuthentication(chatId, text, userId, message.from);
-        await updateUserState(userId, 'idle', {});
+        console.log(`User ${userId} attempting password authentication with: ${text}`);
+        await handlePasswordAuthentication(chatId, text, userId, message.from);
+      } else if (session.state === 'awaiting_email') {
+        console.log(`User ${userId} providing email: ${text}`);
+        await handleEmailAuthentication(chatId, text, userId, message.from);
       } else if (session.state === 'pending_update') {
         // Handle approval for person updates
         if (text === '1') {
@@ -392,48 +394,82 @@ async function updateUserState(telegramId: number, state: string, stateData: any
   }
 }
 
-async function handleAuthentication(chatId: number, password: string, telegramId: number, userInfo: any) {
+async function handlePasswordAuthentication(chatId: number, password: string, telegramId: number, userInfo: any) {
   if (password === AUTH_PASSWORD) {
-    try {
-      // Insert or update user in telegram_users table
-      const { error } = await supabase
-        .from('telegram_users')
-        .upsert({
-          telegram_id: telegramId,
-          telegram_username: userInfo.username || null,
-          first_name: userInfo.first_name || null,
-          is_authenticated: true,
-          authenticated_at: new Date().toISOString()
-        }, {
-          onConflict: 'telegram_id'
-        });
-
-      if (error) {
-        console.error('Authentication error:', error);
-        await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
-        return;
-      }
-
-      await setCommands(chatId);
-        await sendMessage(chatId, 
-          "✅ Authentication successful! Welcome to VC Search Engine!\n\n" +
-          "💡 <b>You can now just type anything!</b>\n" +
-          "Examples:\n" +
-          "• 'search fintech startups'\n" +
-          "• 'add task call John tomorrow'\n" +
-          "• 'show all tasks'\n" +
-          "• 'add Sarah from Google'\n\n" +
-          "Commands:\n" +
-          "🔍 /search - Search people\n" +
-          "➕ /add - Add a new person\n" +
-          "❓ /help - Show help message"
-        );
-    } catch (error) {
-      console.error('Database error:', error);
-      await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
-    }
+    // Password correct, now ask for email
+    await updateUserState(telegramId, 'awaiting_email', {});
+    await sendMessage(chatId, 
+      "✅ Password correct!\n\n" +
+      "📧 Now please enter your email address to link your Telegram account:"
+    );
   } else {
     await sendMessage(chatId, "❌ Incorrect password. Please try again or use /start to restart.");
+  }
+}
+
+async function handleEmailAuthentication(chatId: number, email: string, telegramId: number, userInfo: any) {
+  try {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      await sendMessage(chatId, "❌ Invalid email format. Please enter a valid email address:");
+      return;
+    }
+
+    // Check if this email exists in profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (profileError || !profile) {
+      await sendMessage(chatId, 
+        "❌ Email not found in our system. Please contact an administrator to add your email first, or enter a different email:"
+      );
+      return;
+    }
+
+    // Link telegram user to the profile
+    const { error } = await supabase
+      .from('telegram_users')
+      .upsert({
+        telegram_id: telegramId,
+        telegram_username: userInfo.username || null,
+        first_name: userInfo.first_name || null,
+        is_authenticated: true,
+        authenticated_at: new Date().toISOString(),
+        // Store the linked user's profile ID in state_data for easy reference
+        state_data: { linked_user_id: profile.id, linked_email: profile.email }
+      }, {
+        onConflict: 'telegram_id'
+      });
+
+    if (error) {
+      console.error('Authentication error:', error);
+      await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
+      return;
+    }
+
+    await updateUserState(telegramId, 'idle', { linked_user_id: profile.id, linked_email: profile.email });
+    await setCommands(chatId);
+    await sendMessage(chatId, 
+      `✅ Authentication successful! Welcome ${profile.full_name || profile.email}!\n\n` +
+      "🔗 Your Telegram account is now linked to your profile.\n\n" +
+      "💡 <b>You can now just type anything!</b>\n" +
+      "Examples:\n" +
+      "• 'search fintech startups'\n" +
+      "• 'add task call John tomorrow'\n" +
+      "• 'show all tasks'\n" +
+      "• 'add Sarah from Google'\n\n" +
+      "Commands:\n" +
+      "🔍 /search - Search people\n" +
+      "➕ /add - Add a new person\n" +
+      "❓ /help - Show help message"
+    );
+  } catch (error) {
+    console.error('Database error:', error);
+    await sendMessage(chatId, "❌ Authentication failed. Please try again with /start");
   }
 }
 
@@ -805,14 +841,13 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       return;
     }
 
-    // Get user's actual profile ID from profiles table
-    // Note: This assumes telegram authentication links to a real user account
-    // In a real implementation, you'd have a proper mapping between telegram users and auth users
-    const { data: adminUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', 'guy@wershuffle.com')
-      .single();
+    // Get the linked user ID from telegram user's state_data
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
+    
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      return;
+    }
 
     const task = {
       text: taskText.trim(),
@@ -821,7 +856,8 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       status: status,
       label: label,
       priority: priority,
-      owner_id: adminUser?.id || null  // Use owner_id instead of created_by
+      owner_id: linkedUserId,
+      created_by: linkedUserId  // Set created_by to fix the NOT NULL constraint error
     };
 
     console.log('Inserting task:', task);
@@ -886,15 +922,11 @@ async function handleShowTasks(chatId: number, parameters: any) {
       return;
     }
 
-    // Get user's actual profile ID
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', 'guy@wershuffle.com') // In real implementation, map telegram user to actual profile
-      .single();
-
-    if (!userProfile) {
-      await sendMessage(chatId, "❌ Could not find your profile. Please contact support.");
+    // Get the linked user ID from telegram user's state_data
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
+    
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
       return;
     }
 
@@ -908,7 +940,7 @@ async function handleShowTasks(chatId: number, parameters: any) {
           table_name
         )
       `)
-      .or(`owner_id.eq.${userProfile.id},and(shared_data.table_name.eq.tasks,shared_data.shared_with_user_id.eq.${userProfile.id})`);
+      .or(`owner_id.eq.${linkedUserId},and(shared_data.table_name.eq.tasks,shared_data.shared_with_user_id.eq.${linkedUserId})`);
     
     // Apply period and advanced filters
     if (typeof parameters === 'string') {
