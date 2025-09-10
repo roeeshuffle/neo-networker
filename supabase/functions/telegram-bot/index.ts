@@ -584,6 +584,48 @@ async function executeBotFunction(chatId: number, functionNumber: number, parame
   }
 }
 
+// Helper function to parse natural language dates to SQL date format
+function parseNaturalDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  
+  const today = new Date();
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  
+  const lowerDateStr = dateStr.toLowerCase().trim();
+  
+  // Handle "today"
+  if (lowerDateStr === 'today') {
+    return today.toISOString().split('T')[0];
+  }
+  
+  // Handle "tomorrow"
+  if (lowerDateStr === 'tomorrow') {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  }
+  
+  // Handle day names like "friday", "monday"
+  const dayIndex = dayNames.indexOf(lowerDateStr);
+  if (dayIndex !== -1) {
+    const targetDate = new Date(today);
+    const currentDay = today.getDay();
+    const daysUntilTarget = (dayIndex - currentDay + 7) % 7;
+    const finalDaysToAdd = daysUntilTarget === 0 ? 7 : daysUntilTarget; // If today is the target day, get next week's
+    
+    targetDate.setDate(today.getDate() + finalDaysToAdd);
+    return targetDate.toISOString().split('T')[0];
+  }
+  
+  // Try to parse as ISO date (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr)) {
+    return lowerDateStr;
+  }
+  
+  // If nothing matches, return null (no due date)
+  return null;
+}
+
 // Task Management Functions
 async function handleAddTask(chatId: number, parameters: any, userId: number) {
   try {
@@ -603,7 +645,7 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       // New structured format
       taskText = parameters.text || '';
       assignTo = parameters.assign_to || null;
-      dueDate = parameters.due_date || null;
+      dueDate = parseNaturalDate(parameters.due_date); // Convert natural language date
       status = parameters.status === 'todo' ? 'pending' : (parameters.status || 'pending');
       label = parameters.label || null;
       priority = parameters.priority || 'medium';
