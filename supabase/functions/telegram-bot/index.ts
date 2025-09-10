@@ -426,24 +426,32 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 1. search_information(words: array of strings)
 
-2. add_task(task_text: string, assign_to?: string, due_date?: string, status?: string, label?: string, priority?: string)  
-   - Rule: If no "task" is mentioned in the user prompt, it is not this function.
-   - Example: "add task to meet roee on thursday" → [2, {"text": "meet roee on thursday", "due_date": "thursday"}]
-   - Always return object with "text" field for task description
+2. add_task(task: object)  
+   task = {
+     "text": string,            # required, main task text
+     "assign_to": string|null,  # optional
+     "due_date": string|null,   # optional (ISO date if possible, or natural text like "tomorrow")
+     "status": string|null,     # optional ("todo", "in-progress", "done")
+     "label": string|null,      # optional ("work", "personal", "urgent")
+     "priority": string|null    # optional ("low", "medium", "high")
+   }  
+   - Rule: If no "task" is mentioned in the user prompt, do not use this function.
 
 3. remove_task(task_id: string or number)
 
 4. add_alert_to_task(task_id: string or number)
 
 5. show_all_tasks(period: "daily" | "weekly" | "monthly" | "all", filter?: object)  
-   - Example: "show tasks high priority" → [5, {"filter":"priority","value":"high"}]  
+   filter = {"field": string, "value": string}  
+   - Example: "show tasks high priority" → [5, {"period":"all","filter":{"field":"priority","value":"high"}}]
 
 6. add_new_people(people_data: array of structured fields like Full Name, Email, LinkedIn, Company, Categories, Status, Newsletter, etc.)
 
 7. show_all_meetings(period: "today" | "weekly" | "monthly")
 
-8. update_task(task_id: string or number, field: string, new_value: string)  
-   - Example: "status of task 4 is done" → [8, {"task_id":4,"field":"status","new_value":"done"}]
+8. update_task(task_id: string|number, updates: object)  
+   updates = {"field": string, "new_value": string}  
+   - Example: "status of task 4 is done" → [8, {"task_id":4,"updates":{"field":"status","new_value":"done"}}]
 
 9. update_person(person_id: string or number, updates: object)  
    - Rule: If user does not specify which person, assume it is the last person they added.  
@@ -455,7 +463,48 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 - Always return [function_number, parameters].  
 - If no parameter is needed, return null.  
 - If multiple matches are possible, choose the most direct.  
-- If user asks for "tasks" without mentioning "task", it should NOT trigger add_task.` 
+- Default values for tasks: "status":"todo", "priority":"medium".  
+- Never confuse "tasks" and other words: only treat as task if user explicitly mentions or implies a task action.  
+
+---
+
+### Examples
+
+**User:** "Find me info about AI and marketing"  
+**Assistant:**  
+[1, ["AI", "marketing"]]
+
+**User:** "add task to meet guy"  
+**Assistant:**  
+[2, {"text":"meet guy","assign_to":null,"due_date":null,"status":"todo","label":null,"priority":"medium"}]
+
+**User:** "Add a task: finish report by Monday, assign to Jonathan, high priority"  
+**Assistant:**  
+[2, {"text":"finish report","assign_to":"Jonathan","due_date":"Monday","status":"todo","label":null,"priority":"high"}]
+
+**User:** "Remove task 17"  
+**Assistant:**  
+[3, 17]
+
+**User:** "Set an alert on task 22"  
+**Assistant:**  
+[4, 22]
+
+**User:** "Show me my weekly tasks"  
+**Assistant:**  
+[5, {"period":"weekly"}]
+
+**User:** "Show tasks high priority"  
+**Assistant:**  
+[5, {"period":"all","filter":{"field":"priority","value":"high"}}]
+
+**User:** "status of task 4 is done"  
+**Assistant:**  
+[8, {"task_id":4,"updates":{"field":"status","new_value":"done"}}]
+
+**User:** "Show all meetings today"  
+**Assistant:**  
+[7, "today"]`
           },
           { role: 'user', content: text }
         ],
@@ -547,14 +596,15 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
     let label = null;
     let priority = 'medium';
     
-    // Handle different parameter formats
+    // Handle different parameter formats - now expects structured task object
     if (typeof parameters === 'string') {
       taskText = parameters;
     } else if (parameters && typeof parameters === 'object') {
-      taskText = parameters.text || parameters.task_text || parameters.title || '';
-      assignTo = parameters.assign_to || parameters.assignTo || null;
-      dueDate = parameters.due_date || parameters.dueDate || null;
-      status = parameters.status || 'pending';
+      // New structured format
+      taskText = parameters.text || '';
+      assignTo = parameters.assign_to || null;
+      dueDate = parameters.due_date || null;
+      status = parameters.status === 'todo' ? 'pending' : (parameters.status || 'pending');
       label = parameters.label || null;
       priority = parameters.priority || 'medium';
     }
