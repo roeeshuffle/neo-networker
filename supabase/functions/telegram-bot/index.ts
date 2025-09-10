@@ -468,11 +468,15 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
    task = {
      "text": string,            # required, main task text
      "assign_to": string|null,  # optional
-     "due_date": string|null,   # optional (ISO date if possible, or natural text like "tomorrow")
-     "status": string|null,     # optional ("todo", "in-progress", "done")
+     "due_date": string|null,   # optional, must be full ISO datetime (YYYY-MM-DD HH:MM)
+     "status": string|null,     # optional ("todo", "in-progress", "done"), default = "todo"
      "label": string|null,      # optional ("work", "personal", "urgent")
-     "priority": string|null    # optional ("low", "medium", "high")
+     "priority": string|null    # optional ("low", "medium", "high"), default = "medium"
    }  
+   - Always convert natural language dates/times into ISO datetime format.
+   - You are given today's date: **2025-09-09**.
+   - Example: "next Thursday at 15:30" → "2025-09-11 15:30"
+   - Example: "tomorrow morning" → "2025-09-10 09:00"
    - Rule: If no "task" is mentioned in the user prompt, do not use this function.
 
 3. remove_task(task_id: string or number)
@@ -633,42 +637,74 @@ async function executeBotFunction(chatId: number, functionNumber: number, parame
 function parseNaturalDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
   
-  const today = new Date();
+  const today = new Date('2025-09-09'); // Current date provided
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   
   const lowerDateStr = dateStr.toLowerCase().trim();
+  let timeStr = '09:00'; // Default time
+  
+  // Extract time if present (e.g., "15:30", "3:30 PM", "morning")
+  const timeMatch = lowerDateStr.match(/(\d{1,2}):(\d{2})(\s*(am|pm))?/i);
+  if (timeMatch) {
+    let hours = parseInt(timeMatch[1]);
+    const minutes = parseInt(timeMatch[2]);
+    const isPM = timeMatch[4]?.toLowerCase() === 'pm';
+    
+    if (isPM && hours !== 12) hours += 12;
+    if (!isPM && hours === 12) hours = 0;
+    
+    timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } else if (lowerDateStr.includes('morning')) {
+    timeStr = '09:00';
+  } else if (lowerDateStr.includes('afternoon')) {
+    timeStr = '14:00';
+  } else if (lowerDateStr.includes('evening')) {
+    timeStr = '18:00';
+  } else if (lowerDateStr.includes('night')) {
+    timeStr = '20:00';
+  }
+  
+  let targetDate = new Date(today);
   
   // Handle "today"
-  if (lowerDateStr === 'today') {
-    return today.toISOString().split('T')[0];
+  if (lowerDateStr.includes('today')) {
+    // Keep today's date
+  } else if (lowerDateStr.includes('tomorrow')) {
+    targetDate.setDate(today.getDate() + 1);
+  } else if (lowerDateStr.includes('next')) {
+    // Handle "next friday", "next monday", etc.
+    const nextDayMatch = lowerDateStr.match(/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+    if (nextDayMatch) {
+      const dayIndex = dayNames.indexOf(nextDayMatch[1]);
+      const currentDay = today.getDay();
+      let daysUntilTarget = (dayIndex - currentDay + 7) % 7;
+      if (daysUntilTarget === 0) daysUntilTarget = 7; // Next week if it's the same day
+      targetDate.setDate(today.getDate() + daysUntilTarget);
+    }
+  } else {
+    // Handle day names like "friday", "monday"
+    const dayIndex = dayNames.indexOf(lowerDateStr.split(' ')[0]);
+    if (dayIndex !== -1) {
+      const currentDay = today.getDay();
+      const daysUntilTarget = (dayIndex - currentDay + 7) % 7;
+      const finalDaysToAdd = daysUntilTarget === 0 ? 7 : daysUntilTarget; // If today is the target day, get next week's
+      
+      targetDate.setDate(today.getDate() + finalDaysToAdd);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr)) {
+      // Try to parse as ISO date (YYYY-MM-DD)
+      return `${lowerDateStr} ${timeStr}`;
+    } else {
+      // If nothing matches, return null (no due date)
+      return null;
+    }
   }
   
-  // Handle "tomorrow"
-  if (lowerDateStr === 'tomorrow') {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  }
+  // Return ISO datetime format (YYYY-MM-DD HH:MM)
+  const year = targetDate.getFullYear();
+  const month = (targetDate.getMonth() + 1).toString().padStart(2, '0');
+  const day = targetDate.getDate().toString().padStart(2, '0');
   
-  // Handle day names like "friday", "monday"
-  const dayIndex = dayNames.indexOf(lowerDateStr);
-  if (dayIndex !== -1) {
-    const targetDate = new Date(today);
-    const currentDay = today.getDay();
-    const daysUntilTarget = (dayIndex - currentDay + 7) % 7;
-    const finalDaysToAdd = daysUntilTarget === 0 ? 7 : daysUntilTarget; // If today is the target day, get next week's
-    
-    targetDate.setDate(today.getDate() + finalDaysToAdd);
-    return targetDate.toISOString().split('T')[0];
-  }
-  
-  // Try to parse as ISO date (YYYY-MM-DD)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr)) {
-    return lowerDateStr;
-  }
-  
-  // If nothing matches, return null (no due date)
-  return null;
+  return `${year}-${month}-${day} ${timeStr}`;
 }
 
 // Task Management Functions
