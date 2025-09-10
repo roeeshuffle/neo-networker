@@ -133,6 +133,130 @@ serve(async (req) => {
         console.log(`User ${userId} providing email: ${text}`);
         await handleEmailAuthentication(chatId, text, userId, message.from);
       } else if (session.state === 'pending_update') {
+        // Handle approval for task updates
+        if (text === '1') {
+          const { task_id, field, new_value } = user?.state_data || {};
+          if (task_id && field && new_value !== undefined) {
+            try {
+              const { error } = await supabase
+                .from('tasks')
+                .update({ [field]: new_value })
+                .eq('task_id', task_id);
+
+              if (error) {
+                await sendMessage(chatId, "❌ Error updating task. Please try again.");
+              } else {
+                await sendMessage(chatId, `✅ Task ${task_id} updated: ${field} = ${new_value}`);
+              }
+            } catch (error) {
+              await sendMessage(chatId, "❌ Error updating task. Please try again.");
+            }
+          }
+          await updateUserState(userId, 'idle', {});
+        } else if (text === '0') {
+          await sendMessage(chatId, "❌ Update cancelled.");
+          await updateUserState(userId, 'idle', {});
+        }
+      } else if (session.state === 'pending_person_update') {
+        // Handle approval for person updates (legacy state name)
+        if (text === '1') {
+          const { person_id, updates } = user?.state_data || {};
+          if (person_id && updates) {
+            try {
+              const { error } = await supabase
+                .from('people')
+                .update(updates)
+                .eq('id', person_id);
+
+              if (error) {
+                await sendMessage(chatId, "❌ Error updating person. Please try again.");
+              } else {
+                await sendMessage(chatId, "✅ Person updated successfully!");
+              }
+            } catch (error) {
+              await sendMessage(chatId, "❌ Error updating person. Please try again.");
+            }
+          }
+          await updateUserState(userId, 'idle', {});
+        } else if (text === '0') {
+          await sendMessage(chatId, "❌ Update cancelled.");
+          await updateUserState(userId, 'idle', {});
+        }
+      } else if (session.state === 'pending_person_delete') {
+        // Handle approval for person deletion
+        if (text === '1') {
+          const { person_id, person_name } = user?.state_data || {};
+          if (person_id) {
+            try {
+              const { error } = await supabase
+                .from('people')
+                .delete()
+                .eq('id', person_id);
+
+              if (error) {
+                await sendMessage(chatId, "❌ Error deleting person. Please try again.");
+              } else {
+                await sendMessage(chatId, `✅ ${person_name} deleted successfully.`);
+              }
+            } catch (error) {
+              await sendMessage(chatId, "❌ Error deleting person. Please try again.");
+            }
+          }
+          await updateUserState(userId, 'idle', {});
+        } else if (text === '0') {
+          await sendMessage(chatId, "❌ Deletion cancelled.");
+          await updateUserState(userId, 'idle', {});
+        }
+      } else if (session.state === 'selecting_person_to_update') {
+        // Handle person selection for update
+        const selection = parseInt(text);
+        const { candidates, updates } = user?.state_data || {};
+        
+        if (candidates && selection >= 1 && selection <= candidates.length) {
+          const selectedPerson = candidates[selection - 1];
+          
+          // Show confirmation for selected person
+          let preview = `👤 <b>${selectedPerson.full_name}</b>\n`;
+          if (selectedPerson.company) preview += `🏢 ${selectedPerson.company}\n`;
+          if (selectedPerson.email) preview += `📧 ${selectedPerson.email}\n`;
+          
+          preview += "\n🔄 Proposed updates:\n";
+          Object.entries(updates || {}).forEach(([key, value]) => {
+            preview += `• ${key}: ${value}\n`;
+          });
+          
+          preview += "\nReply: 1 to approve, 0 to cancel";
+          await sendMessage(chatId, preview);
+          
+          // Store pending update
+          await updateUserState(userId, 'pending_person_update', {
+            person_id: selectedPerson.id,
+            updates: updates
+          });
+        } else {
+          await sendMessage(chatId, "❌ Invalid selection. Please try again.");
+        }
+      } else if (session.state === 'selecting_person_to_delete') {
+        // Handle person selection for deletion
+        const selection = parseInt(text);
+        const { candidates } = user?.state_data || {};
+        
+        if (candidates && selection >= 1 && selection <= candidates.length) {
+          const selectedPerson = candidates[selection - 1];
+          
+          // Show confirmation for selected person
+          const confirmMessage = `🗑️ Are you sure you want to delete <b>${selectedPerson.full_name}</b>?`;
+          await sendMessage(chatId, `${confirmMessage}\n\nReply: 1 to confirm deletion, 0 to cancel`);
+          
+          // Store pending deletion
+          await updateUserState(userId, 'pending_person_delete', {
+            person_id: selectedPerson.id,
+            person_name: selectedPerson.full_name
+          });
+        } else {
+          await sendMessage(chatId, "❌ Invalid selection. Please try again.");
+        }
+      } else if (session.state === 'pending_update') {
         // Handle approval for person updates
         if (text === '1') {
           const { person_id, updates } = user?.state_data || {};
@@ -256,41 +380,6 @@ serve(async (req) => {
         }
         
         await updateUserState(userId, 'idle', {});
-      } else if (session.state === 'selecting_person_to_delete') {
-        if (!await checkUserAuthentication(userId)) {
-          await sendMessage(chatId, "🔐 Please authenticate first using /start");
-          return new Response('OK', { headers: corsHeaders });
-        }
-        
-        const choice = parseInt(text.trim());
-        if (choice === 0) {
-          await sendMessage(chatId, "❌ Delete cancelled.");
-          await updateUserState(userId, 'idle', {});
-          return new Response('OK', { headers: corsHeaders });
-        }
-        
-        const stateData = user?.state_data || {};
-        const matchingPeople = stateData.matching_people || [];
-        
-        if (choice < 1 || choice > matchingPeople.length) {
-          await sendMessage(chatId, `❌ Invalid choice. Please select between 1-${matchingPeople.length} or 0 to cancel.`);
-          return new Response('OK', { headers: corsHeaders });
-        }
-        
-        // Get the selected person and ask for confirmation
-        const selectedPerson = matchingPeople[choice - 1];
-        let confirmMsg = `🗑️ Are you sure you want to delete:\n\n`;
-        confirmMsg += `<b>${selectedPerson.full_name}</b>\n`;
-        if (selectedPerson.company) confirmMsg += `🏢 ${selectedPerson.company}\n`;
-        if (selectedPerson.email) confirmMsg += `📧 ${selectedPerson.email}\n`;
-        confirmMsg += `\nReply with:\n0 = Cancel\n1 = Delete`;
-        
-        await sendMessage(chatId, confirmMsg);
-        
-        // Update state to confirmation
-        await updateUserState(userId, 'confirming_person_delete', {
-          person_to_delete: selectedPerson
-        });
       } else {
         // For authenticated users, handle messages based on prefix
         if (await checkUserAuthentication(userId)) {
@@ -650,16 +739,21 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
    - The backend will then search tasks by words, show matches to the user, and ask which task ID to update.  
    - After confirmation, the backend itself will call the actual update function.
 
-9. update_person(person_id: string or number, updates: object)  
-   - Rule: If user does not specify which person, assume it is the last person they added.  
-   - Before applying update: always return a preview of the person record and ask the user for approval (0 = cancel, 1 = approve).  
+9. update_person(person_identifier: string|number, updates: object)  
+   - If user specifies exact ID → update directly with [9, {"person_id": id, "updates": updates}]
+   - If user specifies only a name → return [9, {"words": [name], "updates": updates}]
+   - The backend will search for matching names, show candidates, user picks ID, then confirm action
+   - Examples:
+     "Update Assaf status to CEO" → [9, {"words": ["Assaf"], "updates": {"status": "CEO"}}]
+     "Update person 123 status to CEO" → [9, {"person_id": "123", "updates": {"status": "CEO"}}]
 
-10. delete_person(person_identifier: string)
-   - Deletes a person from the database.
-   - person_identifier can be either:
-     • Full name (preferred)
-     • Or a unique person ID if provided
-   - If multiple matches are found by name, return the list of candidates with IDs and ask the user to confirm which one to delete.
+10. delete_person(person_identifier: string|number)
+    - If user specifies exact ID → delete directly with [10, {"person_id": id}]
+    - If user specifies only a name → return [10, {"words": [name]}] 
+    - The backend will search for matching names, show candidates, user picks ID, then confirm action
+    - Examples:
+      "Delete Assaf" → [10, {"words": ["Assaf"]}]
+      "Delete person 123" → [10, {"person_id": "123"}]
    - Always confirm before deleting:
      Example: "Are you sure you want to delete Amir Tal? (0=cancel, 1=approve)"
    - After user approves → return:
@@ -732,11 +826,19 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 **User:** "Update person guy status to ceo"  
 **Assistant:**  
-[9, {"person_id": "guy", "updates": {"status": "ceo"}}]
+[9, {"words": ["guy"], "updates": {"status": "ceo"}}]
 
-**User:** "Change John's company to Microsoft"  
+**User:** "Update person 123 company to Microsoft"  
 **Assistant:**  
-[9, {"person_id": "John", "updates": {"company": "Microsoft"}}]`
+[9, {"person_id": "123", "updates": {"company": "Microsoft"}}]
+
+**User:** "Delete Assaf"  
+**Assistant:**  
+[10, {"words": ["Assaf"]}]
+
+**User:** "Delete person 42"  
+**Assistant:**  
+[10, {"person_id": "42"}]`
           },
           { role: 'user', content: text }
         ],
@@ -1441,140 +1543,130 @@ async function handleShowMeetings(chatId: number, parameters: any) {
 
 async function handleUpdatePerson(chatId: number, parameters: any, userId: number) {
   try {
-    if (!parameters || !parameters.person_id) {
-      // Get last added person by this user (need to get owner_id from telegram user)
-      const { data: telegramUser, error: telegramError } = await supabase
-        .from('telegram_users')
-        .select('*')
-        .eq('telegram_id', chatId)
-        .eq('is_authenticated', true)
-        .single();
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', chatId)
+      .eq('is_authenticated', true)
+      .maybeSingle();
 
-      if (telegramError || !telegramUser) {
-        await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
-        return;
-      }
-
-      const linkedUserId = telegramUser.state_data?.linked_user_id;
-      
-      if (!linkedUserId) {
-        await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
-        return;
-      }
-
-      const { data: lastPerson } = await supabase
-        .from('people')
-        .select('*')
-        .eq('owner_id', linkedUserId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!lastPerson) {
-        await sendMessage(chatId, "❌ No person found to update. Please specify a person ID.");
-        return;
-      }
-
-      // Show preview and ask for approval
-      let preview = `👤 <b>${lastPerson.full_name}</b>\n`;
-      if (lastPerson.company) preview += `🏢 ${lastPerson.company}\n`;
-      if (lastPerson.email) preview += `📧 ${lastPerson.email}\n`;
-      
-      preview += "\n🔄 Proposed updates:\n";
-      Object.entries(parameters.updates || {}).forEach(([key, value]) => {
-        preview += `• ${key}: ${value}\n`;
-      });
-      
-      preview += "\nReply: 1 to approve, 0 to cancel";
-      await sendMessage(chatId, preview);
-      
-      // Store pending update in user state
-      await updateUserState(userId, 'pending_update', {
-        person_id: lastPerson.id,
-        updates: parameters.updates
-      });
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
       return;
     }
 
-    // Check if person_id is a UUID or a name
-    let personToUpdate = null;
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
     
-    // Check if it's a UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    
-    if (uuidRegex.test(parameters.person_id)) {
-      // It's a UUID - direct lookup
-      const { data, error } = await supabase
-        .from('people')
-        .select('*')
-        .eq('id', parameters.person_id)
-        .maybeSingle();
-        
-      if (error || !data) {
-        await sendMessage(chatId, "❌ Person not found with that ID.");
-        return;
-      }
-      personToUpdate = data;
-    } else {
-      // It's a name - search by name
-      const { data: telegramUser, error: telegramError } = await supabase
-        .from('telegram_users')
-        .select('*')
-        .eq('telegram_id', chatId)
-        .eq('is_authenticated', true)
-        .maybeSingle();
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      return;
+    }
 
-      if (telegramError || !telegramUser) {
-        await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
-        return;
-      }
-
-      const linkedUserId = telegramUser.state_data?.linked_user_id;
+    // Handle direct person ID update (UUID or numeric ID)
+    if (parameters.person_id) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       
-      if (!linkedUserId) {
-        await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      let personToUpdate = null;
+      if (uuidRegex.test(parameters.person_id) || !isNaN(parameters.person_id)) {
+        // Direct lookup by ID
+        const { data, error } = await supabase
+          .from('people')
+          .select('*')
+          .eq('id', parameters.person_id)
+          .eq('owner_id', linkedUserId)
+          .maybeSingle();
+          
+        if (error || !data) {
+          await sendMessage(chatId, "❌ Person not found with that ID.");
+          return;
+        }
+        personToUpdate = data;
+      }
+
+      if (personToUpdate) {
+        // Show confirmation for direct ID update
+        let preview = `👤 <b>${personToUpdate.full_name}</b>\n`;
+        if (personToUpdate.company) preview += `🏢 ${personToUpdate.company}\n`;
+        if (personToUpdate.email) preview += `📧 ${personToUpdate.email}\n`;
+        
+        preview += "\n🔄 Proposed updates:\n";
+        Object.entries(parameters.updates || {}).forEach(([key, value]) => {
+          preview += `• ${key}: ${value}\n`;
+        });
+        
+        preview += "\nReply: 1 to approve, 0 to cancel";
+        await sendMessage(chatId, preview);
+        
+        // Store pending update in user state
+        await updateUserState(userId, 'pending_person_update', {
+          person_id: personToUpdate.id,
+          updates: parameters.updates
+        });
         return;
       }
+    }
+
+    // Handle search by name (words array)
+    if (parameters.words && Array.isArray(parameters.words)) {
+      const searchTerm = parameters.words.join(' ');
       
       // Search for people by name
       const { data: people, error: searchError } = await supabase
         .from('people')
         .select('*')
         .eq('owner_id', linkedUserId)
-        .ilike('full_name', `%${parameters.person_id}%`);
+        .ilike('full_name', `%${searchTerm}%`);
 
       if (searchError || !people || people.length === 0) {
-        await sendMessage(chatId, `❌ No person found with name containing "${parameters.person_id}".`);
+        await sendMessage(chatId, `❌ No person found with name containing "${searchTerm}".`);
         return;
       }
       
-      if (people.length > 1) {
-        let response = `🔍 Found ${people.length} people matching "${parameters.person_id}". Please be more specific:\n\n`;
-        people.forEach((person, index) => {
-          response += `${index + 1}. ${person.full_name}`;
-          if (person.company) response += ` (${person.company})`;
-          response += `\n`;
+      if (people.length === 1) {
+        // Single match - show confirmation
+        const person = people[0];
+        let preview = `👤 <b>${person.full_name}</b>\n`;
+        if (person.company) preview += `🏢 ${person.company}\n`;
+        if (person.email) preview += `📧 ${person.email}\n`;
+        
+        preview += "\n🔄 Proposed updates:\n";
+        Object.entries(parameters.updates || {}).forEach(([key, value]) => {
+          preview += `• ${key}: ${value}\n`;
         });
-        await sendMessage(chatId, response);
+        
+        preview += "\nReply: 1 to approve, 0 to cancel";
+        await sendMessage(chatId, preview);
+        
+        // Store pending update in user state
+        await updateUserState(userId, 'pending_person_update', {
+          person_id: person.id,
+          updates: parameters.updates
+        });
         return;
       }
+
+      // Multiple matches - show candidates
+      let response = `🔍 Found ${people.length} people matching "${searchTerm}". Reply with person number to update:\n\n`;
+      people.forEach((person, index) => {
+        response += `${index + 1}. <b>${person.full_name}</b>`;
+        if (person.company) response += ` (${person.company})`;
+        if (person.email) response += ` - ${person.email}`;
+        response += `\n`;
+      });
       
-      personToUpdate = people[0];
-    }
-
-    // Direct update with found person
-    const { error } = await supabase
-      .from('people')
-      .update(parameters.updates)
-      .eq('id', personToUpdate.id);
-
-    if (error) {
-      await sendMessage(chatId, "❌ Error updating person. Please try again.");
+      await sendMessage(chatId, response);
+      
+      // Store candidates for selection
+      await updateUserState(userId, 'selecting_person_to_update', {
+        candidates: people,
+        updates: parameters.updates
+      });
       return;
     }
 
-    await sendMessage(chatId, "✅ Person updated successfully!");
+    await sendMessage(chatId, "❌ Invalid person update request.");
   } catch (error) {
+    console.error('Error in handleUpdatePerson:', error);
     await sendMessage(chatId, "❌ Error updating person. Please try again.");
   }
 }
@@ -1743,18 +1835,12 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
 
 async function handleDeletePerson(chatId: number, parameters: any, userId: number) {
   try {
-    if (!parameters) {
-      await sendMessage(chatId, "❌ Please specify a person name or ID to delete.");
-      return;
-    }
-
-    // Get the authenticated telegram user to get the owner_id
     const { data: telegramUser, error: telegramError } = await supabase
       .from('telegram_users')
       .select('*')
       .eq('telegram_id', chatId)
       .eq('is_authenticated', true)
-      .single();
+      .maybeSingle();
 
     if (telegramError || !telegramUser) {
       await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
@@ -1768,55 +1854,73 @@ async function handleDeletePerson(chatId: number, parameters: any, userId: numbe
       return;
     }
 
-    const personIdentifier = parameters.toString().trim();
-    
-    // Check if it's a UUID (person ID)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personIdentifier);
-    
-    let query = supabase
-      .from('people')
-      .select('*')
-      .eq('owner_id', linkedUserId);
-    
-    if (isUUID) {
-      query = query.eq('id', personIdentifier);
-    } else {
-      query = query.ilike('full_name', `%${personIdentifier}%`);
-    }
-    
-    const { data: people, error } = await query;
+    // Handle direct person ID deletion (UUID or numeric ID)
+    if (parameters.person_id) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      
+      let personToDelete = null;
+      if (uuidRegex.test(parameters.person_id) || !isNaN(parameters.person_id)) {
+        // Direct lookup by ID
+        const { data, error } = await supabase
+          .from('people')
+          .select('*')
+          .eq('id', parameters.person_id)
+          .eq('owner_id', linkedUserId)
+          .maybeSingle();
+          
+        if (error || !data) {
+          await sendMessage(chatId, "❌ Person not found with that ID.");
+          return;
+        }
+        personToDelete = data;
+      }
 
-    if (error) {
-      console.error('Delete person search error:', error);
-      await sendMessage(chatId, "❌ Error searching for person. Please try again.");
-      return;
+      if (personToDelete) {
+        // Show confirmation for direct ID deletion
+        const confirmMessage = `🗑️ Are you sure you want to delete <b>${personToDelete.full_name}</b>?`;
+        await sendMessage(chatId, `${confirmMessage}\n\nReply: 1 to confirm deletion, 0 to cancel`);
+        
+        // Store pending deletion in user state
+        await updateUserState(userId, 'pending_person_delete', {
+          person_id: personToDelete.id,
+          person_name: personToDelete.full_name
+        });
+        return;
+      }
     }
 
-    if (!people || people.length === 0) {
-      await sendMessage(chatId, `❌ No person found matching "${personIdentifier}"`);
-      return;
-    }
+    // Handle search by name (words array)
+    if (parameters.words && Array.isArray(parameters.words)) {
+      const searchTerm = parameters.words.join(' ');
+      
+      // Search for people by name
+      const { data: people, error: searchError } = await supabase
+        .from('people')
+        .select('*')
+        .eq('owner_id', linkedUserId)
+        .ilike('full_name', `%${searchTerm}%`);
 
-    if (people.length === 1) {
-      // Single match - ask for confirmation
-      const person = people[0];
-      let confirmMsg = `🗑️ Are you sure you want to delete:\n\n`;
-      confirmMsg += `<b>${person.full_name}</b>\n`;
-      if (person.company) confirmMsg += `🏢 ${person.company}\n`;
-      if (person.email) confirmMsg += `📧 ${person.email}\n`;
-      confirmMsg += `\nReply with:\n0 = Cancel\n1 = Delete`;
+      if (searchError || !people || people.length === 0) {
+        await sendMessage(chatId, `❌ No person found with name containing "${searchTerm}".`);
+        return;
+      }
       
-      await sendMessage(chatId, confirmMsg);
-      
-      // Save state for confirmation
-      await updateUserState(chatId, 'confirming_person_delete', {
-        person_to_delete: person
-      });
-      
-    } else {
-      // Multiple matches - show list for selection
-      let response = `🔍 Found ${people.length} matches. Which person do you want to delete?\n\n`;
-      
+      if (people.length === 1) {
+        // Single match - show confirmation
+        const person = people[0];
+        const confirmMessage = `🗑️ Are you sure you want to delete <b>${person.full_name}</b>?`;
+        await sendMessage(chatId, `${confirmMessage}\n\nReply: 1 to confirm deletion, 0 to cancel`);
+        
+        // Store pending deletion in user state
+        await updateUserState(userId, 'pending_person_delete', {
+          person_id: person.id,
+          person_name: person.full_name
+        });
+        return;
+      }
+
+      // Multiple matches - show candidates
+      let response = `🔍 Found ${people.length} people matching "${searchTerm}". Reply with person number to delete:\n\n`;
       people.forEach((person, index) => {
         response += `${index + 1}. <b>${person.full_name}</b>`;
         if (person.company) response += ` (${person.company})`;
@@ -1824,18 +1928,18 @@ async function handleDeletePerson(chatId: number, parameters: any, userId: numbe
         response += `\n`;
       });
       
-      response += `\n💡 Reply with the number (1-${people.length}) to select, or 0 to cancel.`;
-      
       await sendMessage(chatId, response);
       
-      // Save state for selection
-      await updateUserState(chatId, 'selecting_person_to_delete', {
-        matching_people: people
+      // Store candidates for selection
+      await updateUserState(userId, 'selecting_person_to_delete', {
+        candidates: people
       });
+      return;
     }
-    
+
+    await sendMessage(chatId, "❌ Invalid person deletion request.");
   } catch (error) {
-    console.error('Delete person error:', error);
-    await sendMessage(chatId, "❌ Error processing delete request. Please try again.");
+    console.error('Error in handleDeletePerson:', error);
+    await sendMessage(chatId, "❌ Error deleting person. Please try again.");
   }
 }
