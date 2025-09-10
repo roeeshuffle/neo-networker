@@ -428,7 +428,8 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 2. add_task(task_text: string, assign_to?: string, due_date?: string, status?: string, label?: string, priority?: string)  
    - Rule: If no "task" is mentioned in the user prompt, it is not this function.
-   - Example: "add task to meet roee on thursday" → [2, {"task_text": "meet roee on thursday", "due_date": "thursday"}]
+   - Example: "add task to meet roee on thursday" → [2, {"text": "meet roee on thursday", "due_date": "thursday"}]
+   - Always return object with "text" field for task description
 
 3. remove_task(task_id: string or number)
 
@@ -550,7 +551,7 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
     if (typeof parameters === 'string') {
       taskText = parameters;
     } else if (parameters && typeof parameters === 'object') {
-      taskText = parameters.task_text || parameters.text || parameters.title || '';
+      taskText = parameters.text || parameters.task_text || parameters.title || '';
       assignTo = parameters.assign_to || parameters.assignTo || null;
       dueDate = parameters.due_date || parameters.dueDate || null;
       status = parameters.status || 'pending';

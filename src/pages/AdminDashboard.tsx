@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
-import { LogOut, Check, X, Clock, Users, Upload, Trash2, ArrowLeft, CheckSquare, Settings } from "lucide-react";
+import { LogOut, Check, X, Clock, Users, Upload, Trash2, ArrowLeft, Settings } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
-import { TasksTab } from "@/components/TasksTab";
 import { SettingsTab } from "@/components/SettingsTab";
 
 interface PendingUser {
@@ -203,34 +202,6 @@ const AdminDashboard = () => {
     });
   };
 
-  const setupTelegramWebhook = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('telegram-bot', {
-        body: { 
-          action: 'setup_webhook',
-          webhook_url: 'https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/telegram-bot'
-        }
-      });
-
-      if (error) throw error;
-      
-      if (data?.success) {
-        toast({
-          title: "Webhook Setup Success",
-          description: "Telegram webhook has been configured successfully!",
-        });
-      } else {
-        throw new Error(data?.error || 'Failed to setup webhook');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Webhook Setup Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -277,9 +248,6 @@ const AdminDashboard = () => {
               </span>
               <div className="flex gap-2">
                 <CsvUploader onDataLoaded={handleDataLoaded} />
-                <Button onClick={setupTelegramWebhook} className="bg-blue-600 hover:bg-blue-700">
-                  Setup Telegram Bot
-                </Button>
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete All Data
@@ -297,14 +265,10 @@ const AdminDashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="users" className="w-full">
           <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-fit grid-cols-3 bg-muted">
+            <TabsList className="grid w-fit grid-cols-2 bg-muted">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Users
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="flex items-center gap-2">
-                <CheckSquare className="w-4 h-4" />
-                Tasks
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings className="w-4 h-4" />
@@ -417,9 +381,6 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="tasks">
-            <TasksTab />
-          </TabsContent>
 
           <TabsContent value="settings">
             <SettingsTab />
