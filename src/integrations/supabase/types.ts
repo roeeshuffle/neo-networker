@@ -28,6 +28,7 @@ export type Database = {
           meeting_notes: string | null
           more_info: string | null
           newsletter: boolean | null
+          owner_id: string
           poc_in_apex: string | null
           should_avishag_meet: boolean | null
           status: string | null
@@ -47,6 +48,7 @@ export type Database = {
           meeting_notes?: string | null
           more_info?: string | null
           newsletter?: boolean | null
+          owner_id: string
           poc_in_apex?: string | null
           should_avishag_meet?: boolean | null
           status?: string | null
@@ -66,6 +68,7 @@ export type Database = {
           meeting_notes?: string | null
           more_info?: string | null
           newsletter?: boolean | null
+          owner_id?: string
           poc_in_apex?: string | null
           should_avishag_meet?: boolean | null
           status?: string | null
@@ -78,31 +81,67 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          avatar_url: string | null
           created_at: string | null
           email: string
           full_name: string | null
           id: string
           is_approved: boolean | null
+          provider: string | null
           updated_at: string | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           email: string
           full_name?: string | null
           id: string
           is_approved?: boolean | null
+          provider?: string | null
           updated_at?: string | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
           is_approved?: boolean | null
+          provider?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shared_data: {
+        Row: {
+          created_at: string | null
+          id: string
+          owner_id: string
+          record_id: string
+          shared_with_user_id: string
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          owner_id: string
+          record_id: string
+          shared_with_user_id: string
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          owner_id?: string
+          record_id?: string
+          shared_with_user_id?: string
+          table_name?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -115,6 +154,7 @@ export type Database = {
           due_date: string | null
           id: string
           label: string | null
+          owner_id: string
           priority: string | null
           status: string | null
           task_id: number
@@ -128,6 +168,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           label?: string | null
+          owner_id: string
           priority?: string | null
           status?: string | null
           task_id?: number
@@ -141,6 +182,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           label?: string | null
+          owner_id?: string
           priority?: string | null
           status?: string | null
           task_id?: number
@@ -194,6 +236,10 @@ export type Database = {
     }
     Functions: {
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_admin_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

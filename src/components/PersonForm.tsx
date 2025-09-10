@@ -50,7 +50,7 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
       } else {
         const { error } = await supabase
           .from("people")
-          .insert([formData]);
+          .insert([{...formData, owner_id: (await supabase.auth.getUser()).data.user?.id}]);
 
         if (error) throw error;
         toast({

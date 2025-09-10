@@ -85,13 +85,17 @@ export const TasksTab: React.FC = () => {
     }
 
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+
       const taskData = {
         text: newTask.text,
         assign_to: newTask.assign_to || null,
         due_date: newTask.due_date || null,
         status: newTask.status,
         label: newTask.label || null,
-        priority: newTask.priority
+        priority: newTask.priority,
+        owner_id: user.user.id
       };
 
       const { error } = await supabase

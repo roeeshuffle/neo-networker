@@ -32,6 +32,7 @@ export interface Person {
   more_info?: string;
   created_at: string;
   updated_at: string;
+  owner_id?: string;
 }
 
 const Dashboard = () => {
@@ -230,12 +231,12 @@ const Dashboard = () => {
                   {user?.email}
                 </span>
               </div>
-              {user?.email === 'guy@wershuffle.com' && (
-                <Button variant="secondary" onClick={() => navigate("/admin")} className="shadow-sm">
-                  Admin Panel
-                </Button>
-              )}
-              <Button variant="outline" onClick={handleLogout} className="shadow-sm">
+              <Button 
+                onClick={handleLogout} 
+                variant="outline" 
+                size="sm"
+                className="bg-card/80 hover:bg-destructive hover:text-destructive-foreground"
+              >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>

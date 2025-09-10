@@ -7,6 +7,8 @@ import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-rea
 import { Person } from "@/pages/Dashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
+import { ShareDataDialog } from "@/components/ShareDataDialog";
+import { OwnerInfo } from "@/components/OwnerInfo";
 
 interface PeopleTableProps {
   people: Person[];
@@ -294,6 +296,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
               </div>
             </th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Newsletter</th>
+            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Owner</th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -382,26 +385,33 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                      {person.newsletter ? 'Subscribed' : 'Not subscribed'}
                    </span>
                  </div>
-               </td>
-               <td className="px-6 py-4">
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onView(person)}
-                    title="View Details"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onDelete(person.id)}
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                </td>
+                <td className="px-6 py-4">
+                  <OwnerInfo ownerId={person.owner_id || ""} />
+                </td>
+                <td className="px-6 py-4">
+                 <div className="flex gap-2">
+                   <Button
+                     size="sm"
+                     variant="outline"
+                     onClick={() => onView(person)}
+                     title="View Details"
+                   >
+                     <Eye className="h-4 w-4" />
+                   </Button>
+                   <ShareDataDialog 
+                     tableName="people" 
+                     recordId={person.id}
+                   />
+                   <Button
+                     size="sm"
+                     variant="outline"
+                     onClick={() => onDelete(person.id)}
+                     title="Delete"
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
+                 </div>
               </td>
             </tr>
           ))}
