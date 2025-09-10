@@ -191,6 +191,83 @@ export const SettingsTab = () => {
     }
   };
 
+  const areAllFieldsIdentical = (group: DuplicateGroup): boolean => {
+    const firstPerson = group.people[0];
+    const fieldsToCheck = [
+      'categories', 'email', 'newsletter', 'company', 'status', 
+      'linkedin_profile', 'poc_in_apex', 'who_warm_intro', 'agenda',
+      'meeting_notes', 'should_avishag_meet', 'more_info'
+    ];
+
+    return group.people.every(person => 
+      fieldsToCheck.every(field => 
+        person[field as keyof Person] === firstPerson[field as keyof Person]
+      )
+    );
+  };
+
+  const autoMergeGroup = async (group: DuplicateGroup) => {
+    try {
+      const keepPerson = group.people[0];
+      const deleteIds = group.people.slice(1).map(p => p.id);
+
+      // Delete the duplicate records (keep the first one)
+      const { error: deleteError } = await supabase
+        .from('people')
+        .delete()
+        .in('id', deleteIds);
+
+      if (deleteError) throw deleteError;
+
+      return true;
+    } catch (error) {
+      console.error('Error auto-merging group:', error);
+      return false;
+    }
+  };
+
+  const mergeAllIdentical = async () => {
+    const identicalGroups = duplicates.filter(areAllFieldsIdentical);
+    
+    if (identicalGroups.length === 0) {
+      toast({
+        title: "No identical duplicates",
+        description: "No groups with identical fields found"
+      });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to auto-merge ${identicalGroups.length} groups with identical fields?`)) {
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let totalRecordsMerged = 0;
+
+      for (const group of identicalGroups) {
+        const success = await autoMergeGroup(group);
+        if (success) {
+          successCount++;
+          totalRecordsMerged += group.people.length - 1; // -1 because we keep one record
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `Auto-merged ${successCount} groups, removed ${totalRecordsMerged} duplicate records`
+      });
+
+      fetchDuplicates();
+    } catch (error: any) {
+      toast({
+        title: "Error auto-merging",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-16">
@@ -207,9 +284,17 @@ export const SettingsTab = () => {
           <h3 className="text-2xl font-bold">Settings</h3>
           <p className="text-muted-foreground">Manage duplicate records and data cleanup</p>
         </div>
-        <Button onClick={fetchDuplicates} variant="outline">
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          {duplicates.length > 0 && duplicates.some(areAllFieldsIdentical) && (
+            <Button onClick={mergeAllIdentical} className="bg-green-600 hover:bg-green-700">
+              <Merge className="h-4 w-4 mr-2" />
+              Merge All Identical
+            </Button>
+          )}
+          <Button onClick={fetchDuplicates} variant="outline">
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {duplicates.length === 0 ? (
@@ -238,20 +323,52 @@ export const SettingsTab = () => {
               <div key={index} className="border border-border-soft rounded-lg p-4 bg-muted/20">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h4 className="font-semibold">{group.name}</h4>
+                    <h4 className="font-semibold flex items-center gap-2">
+                      {group.name}
+                      {areAllFieldsIdentical(group) && (
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                          Identical
+                        </Badge>
+                      )}
+                    </h4>
                     <p className="text-sm text-muted-foreground">
                       {group.people.length} duplicate records found
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => startMerge(group)}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Merge className="h-4 w-4 mr-2" />
-                      Merge
-                    </Button>
+                    {areAllFieldsIdentical(group) ? (
+                      <Button
+                        size="sm"
+                        onClick={() => autoMergeGroup(group).then(success => {
+                          if (success) {
+                            toast({
+                              title: "Success",
+                              description: `Auto-merged ${group.people.length} identical records`
+                            });
+                            fetchDuplicates();
+                          } else {
+                            toast({
+                              title: "Error",
+                              description: "Failed to auto-merge records",
+                              variant: "destructive"
+                            });
+                          }
+                        })}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Merge className="h-4 w-4 mr-2" />
+                        Auto Merge
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => startMerge(group)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Merge className="h-4 w-4 mr-2" />
+                        Merge
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
