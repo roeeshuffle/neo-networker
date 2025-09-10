@@ -11,9 +11,10 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Merge } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksTab } from "@/components/TasksTab";
+import DuplicateManager from "@/components/DuplicateManager";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
@@ -232,6 +233,16 @@ const Dashboard = () => {
                   {user?.email}
                 </span>
               </div>
+              {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
+                <Button 
+                  onClick={() => navigate('/admin')}
+                  variant="outline" 
+                  size="sm"
+                  className="bg-card/80"
+                >
+                  Admin Panel
+                </Button>
+              )}
               <Button 
                 onClick={handleLogout} 
                 variant="outline" 
@@ -316,10 +327,14 @@ const Dashboard = () => {
 
         {/* Main content with tabs */}
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-fit grid-cols-2 bg-muted">
+          <TabsList className="grid w-fit grid-cols-3 bg-muted">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Contacts
+            </TabsTrigger>
+            <TabsTrigger value="duplicates" className="flex items-center gap-2">
+              <Merge className="w-4 h-4" />
+              Remove Duplicates
             </TabsTrigger>
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
@@ -345,6 +360,10 @@ const Dashboard = () => {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="duplicates">
+            <DuplicateManager onDuplicatesRemoved={() => fetchPeople()} />
           </TabsContent>
           
           <TabsContent value="tasks">
