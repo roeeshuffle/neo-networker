@@ -2,3 +2,6 @@ project_id = "ufekkcirsznhrvqwwsyf"
 
 [functions.telegram-poll]
 verify_jwt = false
+
+[functions.test-bot]
+verify_jwt = false

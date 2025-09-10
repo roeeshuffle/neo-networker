@@ -247,6 +247,12 @@ const AdminDashboard = () => {
               <div className="flex gap-2">
                 <Button 
                   variant="secondary" 
+                  onClick={() => window.open('https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/test-bot', '_blank')}
+                >
+                  Test Bot API Key
+                </Button>
+                <Button 
+                  variant="secondary" 
                   onClick={() => window.open('https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/telegram-poll', '_blank')}
                 >
                   Check Bot Messages
