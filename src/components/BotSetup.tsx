@@ -13,7 +13,7 @@ export const BotSetup = () => {
   const [searchResults, setSearchResults] = useState([]);
   const { toast } = useToast();
 
-  const testBot = async () => {
+  const testBotAuth = async () => {
     if (!chatId) {
       toast({
         title: "Error",
@@ -25,11 +25,14 @@ export const BotSetup = () => {
 
     setLoading(true);
     try {
+      // Simulate /start command
       const { data, error } = await supabase.functions.invoke('telegram-simple', {
         body: { 
-          action: 'send_message',
+          action: 'handle_command',
           chatId: chatId,
-          message: '🚀 Bot is working! Your CRM bot is connected and ready.'
+          telegramId: parseInt(chatId),
+          command: '/start',
+          message: '/start'
         }
       });
 
@@ -37,12 +40,52 @@ export const BotSetup = () => {
 
       toast({
         title: "Success",
-        description: "Test message sent! Check your Telegram.",
+        description: "Bot authentication started! Check your Telegram for the password prompt.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to send test message: ${error.message}`,
+        description: `Failed to start bot auth: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testBotPassword = async () => {
+    if (!chatId) {
+      toast({
+        title: "Error",
+        description: "Please enter your Telegram Chat ID first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Send password "121212"
+      const { data, error } = await supabase.functions.invoke('telegram-simple', {
+        body: { 
+          action: 'handle_command',
+          chatId: chatId,
+          telegramId: parseInt(chatId),
+          command: 'authenticate',
+          message: '121212'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Authentication sent! You should now be authenticated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to authenticate: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -81,6 +124,46 @@ export const BotSetup = () => {
       toast({
         title: "Error",
         description: `Failed to send message: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testBotSearch = async () => {
+    if (!chatId || !searchQuery) {
+      toast({
+        title: "Error",
+        description: "Please enter your Chat ID and a search query",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Send search command
+      const { data, error } = await supabase.functions.invoke('telegram-simple', {
+        body: { 
+          action: 'handle_command',
+          chatId: chatId,
+          telegramId: parseInt(chatId),
+          command: 'search',
+          message: searchQuery
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Search command sent! Check your Telegram for results.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to search: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -145,11 +228,18 @@ export const BotSetup = () => {
           </p>
         </div>
 
-        {/* Test Bot */}
+        {/* Bot Authentication */}
         <div className="space-y-2">
-          <Button onClick={testBot} disabled={loading} className="w-full">
-            {loading ? "Testing..." : "Test Bot Connection"}
+          <Button onClick={testBotAuth} disabled={loading} className="w-full">
+            {loading ? "Starting..." : "1. Start Bot (/start)"}
           </Button>
+          <Button onClick={testBotPassword} disabled={loading} className="w-full" variant="outline">
+            {loading ? "Authenticating..." : "2. Send Password (121212)"}
+          </Button>
+          <p className="text-xs text-gray-500">
+            Step 1: Click "Start Bot" to initiate authentication<br/>
+            Step 2: Click "Send Password" to authenticate with password "121212"
+          </p>
         </div>
 
         {/* Send Custom Message */}
@@ -173,9 +263,17 @@ export const BotSetup = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, company, email..."
           />
-          <Button onClick={searchContacts} disabled={loading} variant="outline">
-            {loading ? "Searching..." : "Search Contacts"}
-          </Button>
+          <div className="flex space-x-2">
+            <Button onClick={searchContacts} disabled={loading} variant="outline" className="flex-1">
+              {loading ? "Searching..." : "Search via API"}
+            </Button>
+            <Button onClick={testBotSearch} disabled={loading} variant="outline" className="flex-1">
+              {loading ? "Sending..." : "Search via Bot"}
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500">
+            API search shows results here. Bot search sends to Telegram.
+          </p>
         </div>
 
         {/* Search Results */}
