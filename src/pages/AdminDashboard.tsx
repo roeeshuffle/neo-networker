@@ -245,18 +245,6 @@ const AdminDashboard = () => {
                 Admin: {user?.email}
               </span>
               <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => window.open('https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/test-bot', '_blank')}
-                >
-                  Test Bot API Key
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => window.open('https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/telegram-poll', '_blank')}
-                >
-                  Check Bot Messages
-                </Button>
                 <CsvUploader onDataLoaded={handleDataLoaded} />
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
