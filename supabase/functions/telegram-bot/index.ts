@@ -208,9 +208,14 @@ serve(async (req) => {
         const selectedTask = matchingTasks[taskNumber - 1];
         const { field, new_value } = pendingUpdate;
         
-        // Perform the update
-        const updateData = { [field]: new_value };
-        const { error } = await supabase.from('tasks').update(updateData).eq('task_id', selectedTask.task_id);
+         // Perform the update
+         let updateData: any = {};
+         if (field === 'status') {
+           updateData.status = new_value === 'done' ? 'completed' : (new_value === 'todo' ? 'pending' : new_value);
+         } else {
+           updateData[field] = new_value;
+         }
+         const { error } = await supabase.from('tasks').update(updateData).eq('task_id', selectedTask.task_id);
         
         if (error) {
           console.error('Task update error:', error);
@@ -1171,7 +1176,7 @@ async function handleUpdateTask(chatId: number, parameters: any) {
         return;
       }
 
-      // Show matching tasks to user
+      // Show matching tasks to user and save state for selection
       let response = `🔍 Found ${tasks.length} matching task(s). Reply with task number to update ${field} to "${new_value}":\n\n`;
       
       tasks.forEach((task, index) => {
@@ -1183,6 +1188,13 @@ async function handleUpdateTask(chatId: number, parameters: any) {
       response += '\n💡 Reply with the task number (1, 2, 3...) to update it.';
 
       await sendMessage(chatId, response);
+      
+      // Save state for task selection
+      await updateUserState(chatId, 'awaiting_task_selection', {
+        matching_tasks: tasks,
+        pending_update: { field, new_value }
+      });
+      
       return;
     }
 
