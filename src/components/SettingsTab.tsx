@@ -8,6 +8,7 @@ import { Trash2, Merge, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Person } from "@/pages/Dashboard";
+import { BotSetup } from "@/components/BotSetup";
 
 interface DuplicateGroup {
   name: string;
@@ -282,7 +283,7 @@ export const SettingsTab = () => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-2xl font-bold">Settings</h3>
-          <p className="text-muted-foreground">Manage duplicate records and data cleanup</p>
+          <p className="text-muted-foreground">Manage duplicate records, data cleanup, and bot configuration</p>
         </div>
         <div className="flex gap-2">
           {duplicates.length > 0 && duplicates.some(areAllFieldsIdentical) && (
@@ -296,6 +297,16 @@ export const SettingsTab = () => {
           </Button>
         </div>
       </div>
+
+      {/* Bot Setup Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Telegram Bot Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BotSetup />
+        </CardContent>
+      </Card>
 
       {duplicates.length === 0 ? (
         <Card>

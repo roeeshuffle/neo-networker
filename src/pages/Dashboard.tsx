@@ -11,6 +11,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { TasksTable, Task } from "@/components/TasksTable";
 import { SettingsTab } from "@/components/SettingsTab";
+import { BotSetup } from "@/components/BotSetup";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { LogOut, Plus } from "lucide-react";
