@@ -1,36 +1,48 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export const BotSetup = () => {
   const [loading, setLoading] = useState(false);
-  const [webhookInfo, setWebhookInfo] = useState<any>(null);
+  const [chatId, setChatId] = useState('');
+  const [message, setMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const { toast } = useToast();
 
-  const setupWebhook = async () => {
+  const testBot = async () => {
+    if (!chatId) {
+      toast({
+        title: "Error",
+        description: "Please enter your Telegram Chat ID first",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('telegram-webhook-setup', {
-        body: { action: 'set_webhook' }
+      const { data, error } = await supabase.functions.invoke('telegram-simple', {
+        body: { 
+          action: 'send_message',
+          chatId: chatId,
+          message: '🚀 Bot is working! Your CRM bot is connected and ready.'
+        }
       });
 
       if (error) throw error;
 
       toast({
-        title: "Webhook Setup",
-        description: data.ok ? "Webhook configured successfully!" : `Error: ${data.description}`,
-        variant: data.ok ? "default" : "destructive"
+        title: "Success",
+        description: "Test message sent! Check your Telegram.",
       });
-
-      if (data.ok) {
-        getWebhookInfo();
-      }
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to setup webhook: ${error.message}`,
+        description: `Failed to send test message: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -38,24 +50,74 @@ export const BotSetup = () => {
     }
   };
 
-  const getWebhookInfo = async () => {
+  const sendCustomMessage = async () => {
+    if (!chatId || !message) {
+      toast({
+        title: "Error",
+        description: "Please enter both Chat ID and message",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('telegram-webhook-setup', {
-        body: { action: 'get_webhook_info' }
+      const { data, error } = await supabase.functions.invoke('telegram-simple', {
+        body: { 
+          action: 'send_message',
+          chatId: chatId,
+          message: message
+        }
       });
 
       if (error) throw error;
 
-      setWebhookInfo(data.result);
       toast({
-        title: "Webhook Info",
-        description: "Webhook information retrieved successfully",
+        title: "Success",
+        description: "Message sent successfully!",
+      });
+      setMessage('');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to send message: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchContacts = async () => {
+    if (!searchQuery) {
+      toast({
+        title: "Error",
+        description: "Please enter a search query",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('telegram-simple', {
+        body: { 
+          action: 'search_people',
+          query: searchQuery
+        }
+      });
+
+      if (error) throw error;
+
+      setSearchResults(data.results);
+      toast({
+        title: "Success",
+        description: `Found ${data.results.length} contacts`,
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to get webhook info: ${error.message}`,
+        description: `Search failed: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -64,30 +126,69 @@ export const BotSetup = () => {
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Telegram Bot Setup</CardTitle>
-        <CardDescription>Configure the Telegram webhook to activate your bot</CardDescription>
+        <CardTitle>Simple Telegram Bot</CardTitle>
+        <CardDescription>Send messages and search contacts directly via Telegram API</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col space-y-2">
-          <Button onClick={setupWebhook} disabled={loading}>
-            {loading ? "Setting up..." : "Setup Webhook"}
-          </Button>
-          <Button variant="outline" onClick={getWebhookInfo} disabled={loading}>
-            {loading ? "Loading..." : "Check Webhook Status"}
+      <CardContent className="space-y-6">
+        {/* Chat ID Setup */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Your Telegram Chat ID:</label>
+          <Input
+            value={chatId}
+            onChange={(e) => setChatId(e.target.value)}
+            placeholder="Enter your Telegram Chat ID (e.g., 123456789)"
+          />
+          <p className="text-xs text-gray-500">
+            Get your Chat ID by messaging @userinfobot on Telegram
+          </p>
+        </div>
+
+        {/* Test Bot */}
+        <div className="space-y-2">
+          <Button onClick={testBot} disabled={loading} className="w-full">
+            {loading ? "Testing..." : "Test Bot Connection"}
           </Button>
         </div>
-        
-        {webhookInfo && (
-          <div className="p-3 bg-gray-50 rounded-lg text-sm">
-            <h4 className="font-semibold mb-2">Webhook Status:</h4>
-            <p><strong>URL:</strong> {webhookInfo.url || 'Not set'}</p>
-            <p><strong>Active:</strong> {webhookInfo.has_custom_certificate ? 'Yes' : 'No'}</p>
-            <p><strong>Pending Updates:</strong> {webhookInfo.pending_update_count}</p>
-            {webhookInfo.last_error_date && (
-              <p className="text-red-600"><strong>Last Error:</strong> {webhookInfo.last_error_message}</p>
-            )}
+
+        {/* Send Custom Message */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Send Custom Message:</label>
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message here..."
+          />
+          <Button onClick={sendCustomMessage} disabled={loading} variant="outline">
+            {loading ? "Sending..." : "Send Message"}
+          </Button>
+        </div>
+
+        {/* Search Contacts */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Search Contacts:</label>
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, company, email..."
+          />
+          <Button onClick={searchContacts} disabled={loading} variant="outline">
+            {loading ? "Searching..." : "Search Contacts"}
+          </Button>
+        </div>
+
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">Search Results:</h4>
+            {searchResults.map((person: any, index) => (
+              <div key={index} className="mb-2 p-2 bg-white rounded border">
+                <p><strong>{person.full_name}</strong></p>
+                {person.company && <p>🏢 {person.company}</p>}
+                {person.email && <p>📧 {person.email}</p>}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
