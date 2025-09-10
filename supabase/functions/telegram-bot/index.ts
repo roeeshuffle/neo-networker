@@ -564,13 +564,21 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       return;
     }
 
+    // Get the admin user to use as created_by for bot tasks
+    const { data: adminUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', 'guy@wershuffle.com')
+      .single();
+
     const task = {
       text: taskText.trim(),
       assign_to: assignTo,
       due_date: dueDate,
       status: status,
       label: label,
-      priority: priority
+      priority: priority,
+      created_by: adminUser?.id || null
     };
 
     console.log('Inserting task:', task);
