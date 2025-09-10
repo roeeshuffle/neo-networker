@@ -180,6 +180,44 @@ serve(async (req) => {
           return new Response('OK', { headers: corsHeaders });
         }
         await handleAddPerson(chatId, text, session, userId);
+      } else if (session.state === 'awaiting_task_selection') {
+        if (!await checkUserAuthentication(userId)) {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          return new Response('OK', { headers: corsHeaders });
+        }
+        
+        // Handle task selection by number
+        const taskNumber = parseInt(text.trim());
+        if (isNaN(taskNumber) || taskNumber < 1) {
+          await sendMessage(chatId, "❌ Please reply with a valid task number (1, 2, 3...)");
+          return new Response('OK', { headers: corsHeaders });
+        }
+        
+        const stateData = user?.state_data || {};
+        const matchingTasks = stateData.matching_tasks || [];
+        const pendingUpdate = stateData.pending_update || {};
+        
+        if (taskNumber > matchingTasks.length) {
+          await sendMessage(chatId, `❌ Invalid task number. Please choose between 1 and ${matchingTasks.length}`);
+          return new Response('OK', { headers: corsHeaders });
+        }
+        
+        // Get the selected task
+        const selectedTask = matchingTasks[taskNumber - 1];
+        const { field, new_value } = pendingUpdate;
+        
+        // Perform the update
+        const updateData = { [field]: new_value };
+        const { error } = await supabase.from('tasks').update(updateData).eq('task_id', selectedTask.task_id);
+        
+        if (error) {
+          console.error('Task update error:', error);
+          await sendMessage(chatId, "❌ Error updating task. Please try again.");
+        } else {
+          await sendMessage(chatId, `✅ Task ${selectedTask.task_id} updated: ${field} = ${new_value}\n📝 "${selectedTask.text}"`);
+        }
+        
+        await updateUserState(userId, 'idle', {});
       } else {
         // For authenticated users, handle messages based on prefix
         if (await checkUserAuthentication(userId)) {
@@ -449,9 +487,12 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 7. show_all_meetings(period: "today" | "weekly" | "monthly")
 
-8. update_task(task_id: string|number, updates: object)  
-   updates = {"field": string, "new_value": string}  
-   - Example: "status of task 4 is done" → [8, {"task_id":4,"updates":{"field":"status","new_value":"done"}}]
+8. update_task_request(words: array of strings, field: string, new_value: string)  
+   - If the user gives a task ID, skip the search step and go straight to update_task.  
+   - If the user only gives text (e.g. "call roee done"), return:  
+     [8, {"words": ["call","roee"], "field": "status", "new_value": "done"}]  
+   - The backend will then search tasks by words, show matches to the user, and ask which task ID to update.  
+   - After confirmation, the backend itself will call the actual update function.
 
 9. update_person(person_id: string or number, updates: object)  
    - Rule: If user does not specify which person, assume it is the last person they added.  
@@ -498,9 +539,13 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 **Assistant:**  
 [5, {"period":"all","filter":{"field":"priority","value":"high"}}]
 
+**User:** "call roee done"  
+**Assistant:**  
+[8, {"words": ["call","roee"], "field": "status", "new_value": "done"}]
+
 **User:** "status of task 4 is done"  
 **Assistant:**  
-[8, {"task_id":4,"updates":{"field":"status","new_value":"done"}}]
+[8, {"task_id": 4, "field": "status", "new_value": "done"}]
 
 **User:** "Show all meetings today"  
 **Assistant:**  
@@ -753,23 +798,76 @@ async function handleShowTasks(chatId: number, parameters: any) {
 
 async function handleUpdateTask(chatId: number, parameters: any) {
   try {
-    if (!parameters || !parameters.task_id || !parameters.field || !parameters.new_value) {
-      await sendMessage(chatId, "❌ I need task ID, field, and new value. Try: 'Set task 5 status to done'");
+    // Direct task ID update (existing functionality)
+    if (parameters && parameters.task_id && parameters.field && parameters.new_value) {
+      const { task_id, field, new_value } = parameters;
+      const updateData = { [field]: new_value };
+      
+      const { error } = await supabase.from('tasks').update(updateData).eq('task_id', task_id);
+
+      if (error) {
+        await sendMessage(chatId, "❌ Error updating task. Please try again.");
+        return;
+      }
+
+      await sendMessage(chatId, `✅ Task ${task_id} updated: ${field} = ${new_value}`);
       return;
     }
 
-    const { task_id, field, new_value } = parameters;
-    const updateData = { [field]: new_value };
+    // Words-based search for task update (new functionality)
+    if (parameters && parameters.words && parameters.field && parameters.new_value) {
+      const { words, field, new_value } = parameters;
+      
+      // Search for tasks that contain any of the words in their text
+      const searchPattern = words.join('|'); // Create OR pattern for search
+      
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('task_id, text, status, priority, due_date, assign_to')
+        .or(`text.ilike.%${words[0]}%${words.length > 1 ? `,text.ilike.%${words[1]}%` : ''}`)
+        .limit(10);
+
+      if (error) {
+        console.error('Search tasks error:', error);
+        await sendMessage(chatId, "❌ Error searching tasks. Please try again.");
+        return;
+      }
+
+      if (!tasks || tasks.length === 0) {
+        await sendMessage(chatId, `❌ No tasks found matching: ${words.join(', ')}`);
+        return;
+      }
+
+      // Show matching tasks to user
+      let response = `🔍 Found ${tasks.length} matching task(s). Reply with task number to update ${field} to "${new_value}":\n\n`;
+      
+      tasks.forEach((task, index) => {
+        const dueText = task.due_date ? ` (due: ${task.due_date})` : '';
+        const assignText = task.assign_to ? ` [${task.assign_to}]` : '';
+        response += `${index + 1}. ID: ${task.task_id} - ${task.text}${dueText}${assignText}\n`;
+      });
+
+      response += '\n💡 Reply with the task number (1, 2, 3...) to update it.';
+
+      await sendMessage(chatId, response);
+      
+      // Store pending update in user state for confirmation
+      await supabase.from('telegram_users').update({
+        current_state: 'awaiting_task_selection',
+        state_data: {
+          pending_update: { field, new_value },
+          matching_tasks: tasks
+        }
+      }).eq('telegram_id', chatId);
+
+      return;
+    }
+
+    // Invalid parameters
+    await sendMessage(chatId, "❌ I need either task ID or search words with field and new value. Try: 'Set task 5 status to done' or 'call roee done'");
     
-    const { error } = await supabase.from('tasks').update(updateData).eq('task_id', task_id);
-
-    if (error) {
-      await sendMessage(chatId, "❌ Error updating task. Please try again.");
-      return;
-    }
-
-    await sendMessage(chatId, `✅ Task ${task_id} updated: ${field} = ${new_value}`);
   } catch (error) {
+    console.error('Update task error:', error);
     await sendMessage(chatId, "❌ Error updating task. Please try again.");
   }
 }
