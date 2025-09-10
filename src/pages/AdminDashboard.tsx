@@ -200,6 +200,34 @@ const AdminDashboard = () => {
     });
   };
 
+  const setupTelegramWebhook = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('telegram-bot', {
+        body: { 
+          action: 'setup_webhook',
+          webhook_url: 'https://ufekkcirsznhrvqwwsyf.supabase.co/functions/v1/telegram-bot'
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({
+          title: "Webhook Setup Success",
+          description: "Telegram webhook has been configured successfully!",
+        });
+      } else {
+        throw new Error(data?.error || 'Failed to setup webhook');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Webhook Setup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -246,6 +274,9 @@ const AdminDashboard = () => {
               </span>
               <div className="flex gap-2">
                 <CsvUploader onDataLoaded={handleDataLoaded} />
+                <Button onClick={setupTelegramWebhook} className="bg-blue-600 hover:bg-blue-700">
+                  Setup Telegram Bot
+                </Button>
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete All Data

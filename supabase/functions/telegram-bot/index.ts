@@ -45,7 +45,14 @@ serve(async (req) => {
   }
 
   try {
-    const update: TelegramUpdate = await req.json();
+    const body = await req.json();
+    
+    // Handle webhook setup request
+    if (body.action === 'setup_webhook') {
+      return await setupWebhook(body.webhook_url);
+    }
+    
+    const update: TelegramUpdate = body;
     console.log('Received update:', JSON.stringify(update, null, 2));
 
     if (!update.message || !update.message.text) {
@@ -173,6 +180,56 @@ serve(async (req) => {
     return new Response('Error', { status: 500, headers: corsHeaders });
   }
 });
+
+async function setupWebhook(webhookUrl: string) {
+  if (!TELEGRAM_API_KEY) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'TELEGRAM_API_KEY not set' 
+    }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_API_KEY}/setWebhook`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: webhookUrl,
+        max_connections: 40,
+        allowed_updates: ["message"]
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.ok) {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Webhook setup successfully' 
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    } else {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `Telegram API error: ${result.description}` 
+      }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: `Failed to setup webhook: ${error.message}` 
+    }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+}
 
 async function sendMessage(chatId: number, text: string) {
   if (!TELEGRAM_API_KEY) {
