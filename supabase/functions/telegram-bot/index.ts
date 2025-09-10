@@ -471,12 +471,19 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
      "due_date": string|null,   # optional, must be full ISO datetime (YYYY-MM-DD HH:MM)
      "status": string|null,     # optional ("todo", "in-progress", "done"), default = "todo"
      "label": string|null,      # optional ("work", "personal", "urgent")
-     "priority": string|null    # optional ("low", "medium", "high"), default = "medium"
+     "priority": string|null,   # optional ("low", "medium", "high"), default = "medium"
+     "repeat": string|null      # optional ("daily", "weekly", "monthly") for recurring tasks
    }  
    - Always convert natural language dates/times into ISO datetime format.
    - You are given today's date: **2025-09-09**.
-   - Example: "next Thursday at 15:30" → "2025-09-11 15:30"
-   - Example: "tomorrow morning" → "2025-09-10 09:00"
+   - Natural language examples:
+     • "tomorrow morning" → "2025-09-10 09:00"
+     • "next Thursday at 15:30" → "2025-09-11 15:30"  
+     • "in 2 weeks at 10am" → "2025-09-23 10:00"
+   - If no time mentioned, default to 09:00.
+   - If no date mentioned, keep due_date = null.
+   - Support recurring: "every Monday at 10am" → due_date="2025-09-15 10:00", repeat="weekly"
+   - Default values: status="todo", priority="medium", label=null
    - Rule: If no "task" is mentioned in the user prompt, do not use this function.
 
 3. remove_task(task_id: string or number)
@@ -643,8 +650,10 @@ function parseNaturalDate(dateStr: string | null): string | null {
   const lowerDateStr = dateStr.toLowerCase().trim();
   let timeStr = '09:00'; // Default time
   
-  // Extract time if present (e.g., "15:30", "3:30 PM", "morning")
+  // Extract time if present (e.g., "15:30", "3:30 PM", "10am", "morning")
   const timeMatch = lowerDateStr.match(/(\d{1,2}):(\d{2})(\s*(am|pm))?/i);
+  const ampmMatch = lowerDateStr.match(/(\d{1,2})\s*(am|pm)/i);
+  
   if (timeMatch) {
     let hours = parseInt(timeMatch[1]);
     const minutes = parseInt(timeMatch[2]);
@@ -654,6 +663,14 @@ function parseNaturalDate(dateStr: string | null): string | null {
     if (!isPM && hours === 12) hours = 0;
     
     timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } else if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1]);
+    const isPM = ampmMatch[2].toLowerCase() === 'pm';
+    
+    if (isPM && hours !== 12) hours += 12;
+    if (!isPM && hours === 12) hours = 0;
+    
+    timeStr = `${hours.toString().padStart(2, '0')}:00`;
   } else if (lowerDateStr.includes('morning')) {
     timeStr = '09:00';
   } else if (lowerDateStr.includes('afternoon')) {
@@ -671,6 +688,20 @@ function parseNaturalDate(dateStr: string | null): string | null {
     // Keep today's date
   } else if (lowerDateStr.includes('tomorrow')) {
     targetDate.setDate(today.getDate() + 1);
+  } else if (lowerDateStr.includes('in') && lowerDateStr.includes('week')) {
+    // Handle "in 2 weeks", "in 1 week"
+    const weeksMatch = lowerDateStr.match(/in\s+(\d+)\s+weeks?/);
+    if (weeksMatch) {
+      const weeks = parseInt(weeksMatch[1]);
+      targetDate.setDate(today.getDate() + (weeks * 7));
+    }
+  } else if (lowerDateStr.includes('in') && lowerDateStr.includes('day')) {
+    // Handle "in 3 days", "in 1 day"
+    const daysMatch = lowerDateStr.match(/in\s+(\d+)\s+days?/);
+    if (daysMatch) {
+      const days = parseInt(daysMatch[1]);
+      targetDate.setDate(today.getDate() + days);
+    }
   } else if (lowerDateStr.includes('next')) {
     // Handle "next friday", "next monday", etc.
     const nextDayMatch = lowerDateStr.match(/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
@@ -683,16 +714,17 @@ function parseNaturalDate(dateStr: string | null): string | null {
     }
   } else {
     // Handle day names like "friday", "monday"
-    const dayIndex = dayNames.indexOf(lowerDateStr.split(' ')[0]);
-    if (dayIndex !== -1) {
+    const dayMatch = lowerDateStr.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+    if (dayMatch) {
+      const dayIndex = dayNames.indexOf(dayMatch[1]);
       const currentDay = today.getDay();
       const daysUntilTarget = (dayIndex - currentDay + 7) % 7;
       const finalDaysToAdd = daysUntilTarget === 0 ? 7 : daysUntilTarget; // If today is the target day, get next week's
       
       targetDate.setDate(today.getDate() + finalDaysToAdd);
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr)) {
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr.split(' ')[0])) {
       // Try to parse as ISO date (YYYY-MM-DD)
-      return `${lowerDateStr} ${timeStr}`;
+      return `${lowerDateStr.split(' ')[0]} ${timeStr}`;
     } else {
       // If nothing matches, return null (no due date)
       return null;
@@ -718,6 +750,7 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
     let status = 'pending';
     let label = null;
     let priority = 'medium';
+    let repeat = null;
     
     // Handle different parameter formats - now expects structured task object
     if (typeof parameters === 'string') {
@@ -730,6 +763,18 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       status = parameters.status === 'todo' ? 'pending' : (parameters.status || 'pending');
       label = parameters.label || null;
       priority = parameters.priority || 'medium';
+      repeat = parameters.repeat || null;
+      
+      // Check for recurring tasks pattern in text if repeat is specified
+      if (repeat && taskText.toLowerCase().includes('every')) {
+        // For recurring tasks, find the next occurrence date
+        const recurringMatch = taskText.toLowerCase().match(/every\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+        if (recurringMatch && !dueDate) {
+          // Calculate next occurrence of this day
+          const dayName = recurringMatch[1];
+          dueDate = parseNaturalDate(`next ${dayName}`);
+        }
+      }
     }
     
     if (!taskText || taskText.trim().length === 0) {
@@ -763,7 +808,13 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
       return;
     }
 
-    await sendMessage(chatId, `✅ Task added: "${task.text}" (${task.priority} priority, ${task.status})`);
+    let responseMsg = `✅ Task added: "${task.text}" (${task.priority} priority, ${task.status})`;
+    if (assignTo) responseMsg += `\n👤 Assigned to: ${assignTo}`;
+    if (dueDate) responseMsg += `\n📅 Due: ${dueDate}`;
+    if (label) responseMsg += `\n🏷️ Label: ${label}`;
+    if (repeat) responseMsg += `\n🔄 Repeats: ${repeat}`;
+    
+    await sendMessage(chatId, responseMsg);
   } catch (error) {
     console.error('Add task error:', error);
     await sendMessage(chatId, "❌ Error adding task. Please try again.");
@@ -799,13 +850,88 @@ async function handleShowTasks(chatId: number, parameters: any) {
   try {
     let query = supabase.from('tasks').select('*');
     
-    // Apply filters if provided
-    if (parameters && parameters.filter) {
-      const { filter, value } = parameters;
-      query = query.eq(filter, value);
+    // Apply period and advanced filters
+    if (typeof parameters === 'string') {
+      const period = parameters;
+      const today = new Date();
+      
+      switch (period) {
+        case 'daily':
+          const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+          query = query.gte('due_date', startOfDay.toISOString()).lt('due_date', endOfDay.toISOString());
+          break;
+        case 'weekly':
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          startOfWeek.setHours(0, 0, 0, 0);
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 7);
+          query = query.gte('due_date', startOfWeek.toISOString()).lt('due_date', endOfWeek.toISOString());
+          break;
+        case 'monthly':
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+          query = query.gte('due_date', startOfMonth.toISOString()).lt('due_date', endOfMonth.toISOString());
+          break;
+        // 'all' - no filter needed
+      }
+    } else if (parameters && typeof parameters === 'object') {
+      // Handle advanced filters
+      if (parameters.filter && parameters.filter.field && parameters.filter.value) {
+        const field = parameters.filter.field;
+        const value = parameters.filter.value;
+        
+        if (field === 'due_date' && value === 'overdue') {
+          // Show overdue tasks
+          const now = new Date().toISOString();
+          query = query.lt('due_date', now).neq('status', 'completed');
+        } else if (field === 'assign_to') {
+          query = query.ilike('assign_to', `%${value}%`);
+        } else if (field === 'status') {
+          // Map display status to database status
+          const dbStatus = value === 'todo' ? 'pending' : (value === 'done' ? 'completed' : value);
+          query = query.eq('status', dbStatus);
+        } else {
+          // Generic field filter
+          query = query.eq(field, value);
+        }
+      }
+      
+      // Apply period filter if specified
+      if (parameters.period && parameters.period !== 'all') {
+        const period = parameters.period;
+        const today = new Date();
+        
+        switch (period) {
+          case 'daily':
+            const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+            query = query.gte('due_date', startOfDay.toISOString()).lt('due_date', endOfDay.toISOString());
+            break;
+          case 'weekly':
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 7);
+            query = query.gte('due_date', startOfWeek.toISOString()).lt('due_date', endOfWeek.toISOString());
+            break;
+          case 'monthly':
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            query = query.gte('due_date', startOfMonth.toISOString()).lt('due_date', endOfMonth.toISOString());
+            break;
+        }
+      }
+      
+      // Legacy filter support
+      if (parameters.filter && parameters.value && !parameters.filter.field) {
+        query = query.eq(parameters.filter, parameters.value);
+      }
     }
 
-    const { data: tasks, error } = await query.limit(10);
+    const { data: tasks, error } = await query.order('created_at', { ascending: false }).limit(20);
 
     if (error) {
       await sendMessage(chatId, "❌ Error fetching tasks. Please try again.");
@@ -813,16 +939,22 @@ async function handleShowTasks(chatId: number, parameters: any) {
     }
 
     if (!tasks || tasks.length === 0) {
-      await sendMessage(chatId, "📝 No tasks found.");
+      await sendMessage(chatId, "📝 No tasks found matching your criteria.");
       return;
     }
 
     let response = `📝 Found ${tasks.length} task(s):\n\n`;
     tasks.forEach((task: any, index: number) => {
-      response += `${index + 1}. <b>${task.text}</b>\n`;
+      const statusEmoji = task.status === 'completed' ? '✅' : 
+                         task.status === 'in-progress' ? '🔄' : '⏳';
+      const priorityEmoji = task.priority === 'high' ? '🔥' : 
+                           task.priority === 'low' ? '🔹' : '📌';
+      
+      response += `${statusEmoji} ${priorityEmoji} <b>${task.text}</b>\n`;
       response += `   ID: ${task.task_id} | Status: ${task.status} | Priority: ${task.priority}\n`;
-      if (task.assign_to) response += `   Assigned: ${task.assign_to}\n`;
-      if (task.due_date) response += `   Due: ${task.due_date}\n`;
+      if (task.assign_to) response += `   👤 ${task.assign_to}\n`;
+      if (task.due_date) response += `   📅 ${task.due_date}\n`;
+      if (task.label) response += `   🏷️ ${task.label}\n`;
       response += '\n';
     });
 
@@ -834,19 +966,57 @@ async function handleShowTasks(chatId: number, parameters: any) {
 
 async function handleUpdateTask(chatId: number, parameters: any) {
   try {
-    // Direct task ID update (existing functionality)
-    if (parameters && parameters.task_id && parameters.field && parameters.new_value) {
-      const { task_id, field, new_value } = parameters;
-      const updateData = { [field]: new_value };
+    // Handle different formats: direct task ID update vs. word-based search
+    if (parameters && parameters.task_id && (parameters.updates || (parameters.field && parameters.new_value))) {
+      // Direct update with task ID - supports both single and multiple field updates
+      let updateData: any = {};
       
-      const { error } = await supabase.from('tasks').update(updateData).eq('task_id', task_id);
+      if (parameters.updates) {
+        // New format with multiple updates
+        if (Array.isArray(parameters.updates)) {
+          // Multiple field updates
+          for (const update of parameters.updates) {
+            const field = update.field;
+            const newValue = update.new_value;
+            
+            if (field === 'status') {
+              updateData.status = newValue === 'done' ? 'completed' : (newValue === 'todo' ? 'pending' : newValue);
+            } else {
+              updateData[field] = newValue;
+            }
+          }
+        } else {
+          // Single field update (legacy format)
+          const field = parameters.updates.field;
+          const newValue = parameters.updates.new_value;
+          
+          if (field === 'status') {
+            updateData.status = newValue === 'done' ? 'completed' : (newValue === 'todo' ? 'pending' : newValue);
+          } else {
+            updateData[field] = newValue;
+          }
+        }
+      } else {
+        // Legacy format with direct field and new_value
+        const field = parameters.field;
+        const newValue = parameters.new_value;
+        
+        if (field === 'status') {
+          updateData.status = newValue === 'done' ? 'completed' : (newValue === 'todo' ? 'pending' : newValue);
+        } else {
+          updateData[field] = newValue;
+        }
+      }
+      
+      const { error } = await supabase.from('tasks').update(updateData).eq('task_id', parameters.task_id);
 
       if (error) {
         await sendMessage(chatId, "❌ Error updating task. Please try again.");
         return;
       }
 
-      await sendMessage(chatId, `✅ Task ${task_id} updated: ${field} = ${new_value}`);
+      const updateSummary = Object.entries(updateData).map(([key, value]) => `${key} = ${value}`).join(', ');
+      await sendMessage(chatId, `✅ Task ${parameters.task_id} updated: ${updateSummary}`);
       return;
     }
 
@@ -886,6 +1056,15 @@ async function handleUpdateTask(chatId: number, parameters: any) {
       response += '\n💡 Reply with the task number (1, 2, 3...) to update it.';
 
       await sendMessage(chatId, response);
+      return;
+    }
+
+    await sendMessage(chatId, "❌ Invalid update parameters. Please specify task ID with updates, or search terms with field and new value.");
+  } catch (error) {
+    console.error('Update task error:', error);
+    await sendMessage(chatId, "❌ Error updating task. Please try again.");
+  }
+}
       
       // Store pending update in user state for confirmation
       await supabase.from('telegram_users').update({
