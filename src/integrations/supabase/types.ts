@@ -20,7 +20,7 @@ export type Database = {
           categories: string | null
           company: string | null
           created_at: string | null
-          created_by: string | null
+          created_by: string
           email: string | null
           full_name: string
           id: string
@@ -39,7 +39,7 @@ export type Database = {
           categories?: string | null
           company?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by?: string
           email?: string | null
           full_name: string
           id?: string
@@ -58,7 +58,7 @@ export type Database = {
           categories?: string | null
           company?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by?: string
           email?: string | null
           full_name?: string
           id?: string
@@ -194,6 +194,10 @@ export type Database = {
     }
     Functions: {
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_approved_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
