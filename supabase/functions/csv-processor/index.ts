@@ -15,6 +15,20 @@ serve(async (req) => {
 
   try {
     const { csvData } = await req.json();
+    
+    // Get user ID from JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header found');
+    }
+    
+    const jwt = authHeader.replace('Bearer ', '');
+    const payload = JSON.parse(atob(jwt.split('.')[1]));
+    const userId = payload.sub;
+    
+    if (!userId) {
+      throw new Error('No user ID found in token');
+    }
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -126,6 +140,9 @@ serve(async (req) => {
       
       // Only add records that have at least a full_name
       if (record.full_name) {
+        // Add required fields that are set by database defaults when using regular client
+        record.created_by = userId;
+        record.owner_id = userId;
         records.push(record);
       }
     }
