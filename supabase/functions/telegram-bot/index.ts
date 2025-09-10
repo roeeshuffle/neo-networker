@@ -1052,6 +1052,27 @@ async function handleShowTasks(chatId: number, parameters: any) {
 
 async function handleUpdateTask(chatId: number, parameters: any) {
   try {
+    // Get the authenticated telegram user to filter tasks by ownership
+    const { data: telegramUser, error: telegramError } = await supabase
+      .from('telegram_users')
+      .select('*')
+      .eq('telegram_id', chatId)
+      .eq('is_authenticated', true)
+      .single();
+
+    if (telegramError || !telegramUser) {
+      await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+      return;
+    }
+
+    // Get the linked user ID from telegram user's state_data
+    const linkedUserId = telegramUser.state_data?.linked_user_id;
+    
+    if (!linkedUserId) {
+      await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+      return;
+    }
+
     // Handle different formats: direct task ID update vs. word-based search
     if (parameters && parameters.task_id && (parameters.updates || (parameters.field && parameters.new_value))) {
       // Direct update with task ID - supports both single and multiple field updates
@@ -1094,7 +1115,7 @@ async function handleUpdateTask(chatId: number, parameters: any) {
         }
       }
       
-      const { error } = await supabase.from('tasks').update(updateData).eq('task_id', parameters.task_id);
+      const { error } = await supabase.from('tasks').update(updateData).eq('task_id', parameters.task_id).eq('owner_id', linkedUserId);
 
       if (error) {
         await sendMessage(chatId, "❌ Error updating task. Please try again.");
@@ -1110,12 +1131,32 @@ async function handleUpdateTask(chatId: number, parameters: any) {
     if (parameters && parameters.words && parameters.field && parameters.new_value) {
       const { words, field, new_value } = parameters;
       
-      // Search for tasks that contain any of the words in their text
-      const searchPattern = words.join('|'); // Create OR pattern for search
+      // Get the authenticated telegram user to filter tasks by ownership
+      const { data: telegramUser, error: telegramError } = await supabase
+        .from('telegram_users')
+        .select('*')
+        .eq('telegram_id', chatId)
+        .eq('is_authenticated', true)
+        .single();
+
+      if (telegramError || !telegramUser) {
+        await sendMessage(chatId, "❌ You need to authenticate first. Please use /start command.");
+        return;
+      }
+
+      // Get the linked user ID from telegram user's state_data
+      const linkedUserId = telegramUser.state_data?.linked_user_id;
       
+      if (!linkedUserId) {
+        await sendMessage(chatId, "❌ Your account is not properly linked. Please restart authentication with /start");
+        return;
+      }
+      
+      // Search for tasks that contain any of the words in their text AND belong to the user
       const { data: tasks, error } = await supabase
         .from('tasks')
         .select('task_id, text, status, priority, due_date, assign_to')
+        .eq('owner_id', linkedUserId)
         .or(`text.ilike.%${words[0]}%${words.length > 1 ? `,text.ilike.%${words[1]}%` : ''}`)
         .limit(10);
 
