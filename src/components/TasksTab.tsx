@@ -56,12 +56,12 @@ export const TasksTab: React.FC = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('tasks')
+        .from('tasks' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasks(data || []);
+      setTasks((data as any[]) || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
@@ -95,7 +95,7 @@ export const TasksTab: React.FC = () => {
       };
 
       const { error } = await supabase
-        .from('tasks')
+        .from('tasks' as any)
         .insert([taskData]);
 
       if (error) throw error;
@@ -128,7 +128,7 @@ export const TasksTab: React.FC = () => {
   const deleteTask = async (taskId: number) => {
     try {
       const { error } = await supabase
-        .from('tasks')
+        .from('tasks' as any)
         .delete()
         .eq('task_id', taskId);
 
@@ -152,7 +152,7 @@ export const TasksTab: React.FC = () => {
   const updateTaskStatus = async (taskId: number, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from('tasks')
+        .from('tasks' as any)
         .update({ status: newStatus })
         .eq('task_id', taskId);
 

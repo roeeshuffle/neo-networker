@@ -4,10 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
-import { LogOut, Check, X, Clock, Users, Upload, Trash2 } from "lucide-react";
+import { LogOut, Check, X, Clock, Users, Upload, Trash2, ArrowLeft, CheckSquare, Settings } from "lucide-react";
 import { CsvUploader } from "@/components/CsvUploader";
+import { TasksTab } from "@/components/TasksTab";
+import { SettingsTab } from "@/components/SettingsTab";
 
 interface PendingUser {
   id: string;
@@ -292,98 +295,136 @@ const AdminDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="users" className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="grid w-fit grid-cols-3 bg-muted">
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4" />
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Return to Dashboard
+            </Button>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved Users</CardTitle>
-              <Check className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
-            </CardContent>
-          </Card>
+          <TabsContent value="users" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingUsers.length}</div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Approved Users</CardTitle>
+                  <Check className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pendingUsers.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No users found.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingUsers.map((pendingUser) => (
-                  <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-medium">{pendingUser.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Registered: {formatDate(pendingUser.created_at)}
-                          </p>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{pendingUsers.length}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>All Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pendingUsers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No users found.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingUsers.map((pendingUser) => (
+                      <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="font-medium">{pendingUser.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Registered: {formatDate(pendingUser.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <Badge variant={pendingUser.is_approved ? "default" : "secondary"}>
+                            {pendingUser.is_approved ? "Approved" : "Pending"}
+                          </Badge>
+                          
+                          {!pendingUser.is_approved && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleApproval(pendingUser.id, true, pendingUser.email, pendingUser.full_name)}
+                                disabled={processingUser === pendingUser.id}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Check className="h-3 w-3 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApproval(pendingUser.id, false, pendingUser.email, pendingUser.full_name)}
+                                disabled={processingUser === pendingUser.id}
+                                className="border-red-600 text-red-600 hover:bg-red-50"
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                Deny
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <Badge variant={pendingUser.is_approved ? "default" : "secondary"}>
-                        {pendingUser.is_approved ? "Approved" : "Pending"}
-                      </Badge>
-                      
-                      {!pendingUser.is_approved && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleApproval(pendingUser.id, true, pendingUser.email, pendingUser.full_name)}
-                            disabled={processingUser === pendingUser.id}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="h-3 w-3 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleApproval(pendingUser.id, false, pendingUser.email, pendingUser.full_name)}
-                            disabled={processingUser === pendingUser.id}
-                            className="border-red-600 text-red-600 hover:bg-red-50"
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Deny
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TasksTab />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <SettingsTab />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

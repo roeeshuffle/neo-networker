@@ -30,12 +30,12 @@ interface TelegramUpdate {
 }
 
 interface UserSession {
-  state: 'idle' | 'adding_person' | 'searching' | 'authenticating';
+  state: 'idle' | 'adding_person' | 'searching' | 'authenticating' | 'pending_update';
   step?: string;
   data?: any;
 }
-const AUTH_PASSWORD = "121212";
 
+const AUTH_PASSWORD = "121212";
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
 serve(async (req) => {
@@ -111,10 +111,13 @@ serve(async (req) => {
         "VC Search Engine Bot Commands:\n\n" +
         "💡 <b>Quick Search:</b> Just type anything to search!\n" +
         "Example: 'fintech', 'Sarah', 'Sequoia'\n\n" +
-        "🔍 /search - Search for people (same as typing directly)\n" +
+        "📝 <b>Tasks:</b> 'add task call John tomorrow', 'show all tasks', 'update task 5 status done'\n" +
+        "👥 <b>People:</b> 'add John Doe from TechCorp', 'search ai engineer'\n\n" +
+        "Commands:\n" +
+        "🔍 /search - Search for people\n" +
         "➕ /add - Add a new person to the database\n" +
         "❌ /cancel - Cancel current operation\n\n" +
-        "Simply type your search query or use commands!"
+        "Simply type your request in natural language!"
       );
     } else if (text === '/search') {
       if (!await checkUserAuthentication(userId)) {
@@ -133,46 +136,70 @@ serve(async (req) => {
     } else if (text === '/cancel') {
       await updateUserState(userId, 'idle', {});
       await sendMessage(chatId, "❌ Operation cancelled. Type /help to see available commands.");
-      } else {
-        // Handle conversation flows and regular messages
-        console.log(`Current session state: ${session.state}`);
-        if (session.state === 'authenticating') {
-          console.log(`User ${userId} attempting authentication with: ${text}`);
-          await handleAuthentication(chatId, text, userId, message.from);
-          await updateUserState(userId, 'idle', {});
-        } else if (session.state === 'searching') {
-          if (!await checkUserAuthentication(userId)) {
-            await sendMessage(chatId, "🔐 Please authenticate first using /start");
-            return new Response('OK', { headers: corsHeaders });
-          }
-          await handleSearch(chatId, text);
-          await updateUserState(userId, 'idle', {});
-        } else if (session.state === 'adding_person') {
-          if (!await checkUserAuthentication(userId)) {
-            await sendMessage(chatId, "🔐 Please authenticate first using /start");
-            return new Response('OK', { headers: corsHeaders });
-          }
-          await handleAddPerson(chatId, text, session, userId);
-        } else {
-          // For authenticated users, handle messages based on prefix
-          if (await checkUserAuthentication(userId)) {
-            if (text.startsWith('.')) {
-              // Remove the dot and search people
-              const searchQuery = text.substring(1).trim();
-              if (searchQuery) {
-                await handleSearch(chatId, searchQuery);
+    } else {
+      // Handle conversation flows and regular messages
+      console.log(`Current session state: ${session.state}`);
+      if (session.state === 'authenticating') {
+        console.log(`User ${userId} attempting authentication with: ${text}`);
+        await handleAuthentication(chatId, text, userId, message.from);
+        await updateUserState(userId, 'idle', {});
+      } else if (session.state === 'pending_update') {
+        // Handle approval for person updates
+        if (text === '1') {
+          const { person_id, updates } = user?.state_data || {};
+          if (person_id && updates) {
+            try {
+              const { error } = await supabase
+                .from('people')
+                .update(updates)
+                .eq('id', person_id);
+
+              if (error) {
+                await sendMessage(chatId, "❌ Error updating person. Please try again.");
               } else {
-                await sendMessage(chatId, "❓ Please provide a search term after the dot (e.g., '.john doe')");
+                await sendMessage(chatId, "✅ Person updated successfully!");
               }
+            } catch (error) {
+              await sendMessage(chatId, "❌ Error updating person. Please try again.");
+            }
+          }
+        } else {
+          await sendMessage(chatId, "❌ Update cancelled.");
+        }
+        await updateUserState(userId, 'idle', {});
+      } else if (session.state === 'searching') {
+        if (!await checkUserAuthentication(userId)) {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          return new Response('OK', { headers: corsHeaders });
+        }
+        await handleSearch(chatId, text);
+        await updateUserState(userId, 'idle', {});
+      } else if (session.state === 'adding_person') {
+        if (!await checkUserAuthentication(userId)) {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
+          return new Response('OK', { headers: corsHeaders });
+        }
+        await handleAddPerson(chatId, text, session, userId);
+      } else {
+        // For authenticated users, handle messages based on prefix
+        if (await checkUserAuthentication(userId)) {
+          if (text.startsWith('.')) {
+            // Remove the dot and search people
+            const searchQuery = text.substring(1).trim();
+            if (searchQuery) {
+              await handleSearch(chatId, searchQuery);
             } else {
-              // Use ChatGPT function router
-              await handleFunctionRouter(chatId, text, userId);
+              await sendMessage(chatId, "❓ Please provide a search term after the dot (e.g., '.john doe')");
             }
           } else {
-            await sendMessage(chatId, "🔐 Please authenticate first using /start");
+            // Use ChatGPT function router
+            await handleFunctionRouter(chatId, text, userId);
           }
+        } else {
+          await sendMessage(chatId, "🔐 Please authenticate first using /start");
         }
       }
+    }
 
     return new Response('OK', { headers: corsHeaders });
   } catch (error) {
@@ -352,10 +379,14 @@ async function handleAuthentication(chatId: number, password: string, telegramId
       await setCommands(chatId);
         await sendMessage(chatId, 
           "✅ Authentication successful! Welcome to VC Search Engine!\n\n" +
-          "💡 <b>You can now just type anything to search!</b>\n" +
-          "Example: 'ai engineer', 'Google', 'fintech'\n\n" +
+          "💡 <b>You can now just type anything!</b>\n" +
+          "Examples:\n" +
+          "• 'search fintech startups'\n" +
+          "• 'add task call John tomorrow'\n" +
+          "• 'show all tasks'\n" +
+          "• 'add Sarah from Google'\n\n" +
           "Commands:\n" +
-          "🔍 /search - Search people (optional)\n" +
+          "🔍 /search - Search people\n" +
           "➕ /add - Add a new person\n" +
           "❓ /help - Show help message"
         );
@@ -365,6 +396,354 @@ async function handleAuthentication(chatId: number, password: string, telegramId
     }
   } else {
     await sendMessage(chatId, "❌ Incorrect password. Please try again or use /start to restart.");
+  }
+}
+
+async function handleFunctionRouter(chatId: number, text: string, userId: number) {
+  if (!OPENAI_API_KEY) {
+    await sendMessage(chatId, "❌ OpenAI API not configured. Please contact administrator.");
+    return;
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: `You are a function router.  
+Your job: take any user request and map it to EXACTLY ONE of these functions, and return ONLY a JSON array [function_number, parameters].  
+
+---
+
+### Functions
+
+1. search_information(words: array of strings)
+
+2. add_task(task_text: string, assign_to?: string, due_date?: string, status?: string, label?: string, priority?: string)  
+   - Rule: If no "task" is mentioned in the user prompt, it is not this function.  
+
+3. remove_task(task_id: string or number)
+
+4. add_alert_to_task(task_id: string or number)
+
+5. show_all_tasks(period: "daily" | "weekly" | "monthly" | "all", filter?: object)  
+   - Example: "show tasks high priority" → [5, {"filter":"priority","value":"high"}]  
+
+6. add_new_people(people_data: array of structured fields like Full Name, Email, LinkedIn, Company, Categories, Status, Newsletter, etc.)
+
+7. show_all_meetings(period: "today" | "weekly" | "monthly")
+
+8. update_task(task_id: string or number, field: string, new_value: string)  
+   - Example: "status of task 4 is done" → [8, {"task_id":4,"field":"status","new_value":"done"}]
+
+9. update_person(person_id: string or number, updates: object)  
+   - Rule: If user does not specify which person, assume it is the last person they added.  
+   - Before applying update: always return a preview of the person record and ask the user for approval (0 = cancel, 1 = approve).  
+
+---
+
+### Rules
+- Always return [function_number, parameters].  
+- If no parameter is needed, return null.  
+- If multiple matches are possible, choose the most direct.  
+- If user asks for "tasks" without mentioning "task", it should NOT trigger add_task.` 
+          },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.1,
+        max_tokens: 150
+      }),
+    });
+
+    const data = await response.json();
+    const functionCall = data.choices[0].message.content.trim();
+    
+    console.log(`Function router response: ${functionCall}`);
+    
+    try {
+      const [functionNumber, parameters] = JSON.parse(functionCall);
+      await executeBotFunction(chatId, functionNumber, parameters, userId, text);
+    } catch (parseError) {
+      console.error('Failed to parse function response:', parseError);
+      // Fallback to search
+      await handleSearch(chatId, text);
+    }
+    
+  } catch (error) {
+    console.error('Function router error:', error);
+    // Fallback to search
+    await handleSearch(chatId, text);
+  }
+}
+
+async function executeBotFunction(chatId: number, functionNumber: number, parameters: any, userId: number, originalText: string) {
+  console.log(`Executing function ${functionNumber} with params:`, parameters);
+  
+  switch (functionNumber) {
+    case 1: // search_information
+      if (parameters && Array.isArray(parameters)) {
+        const searchQuery = parameters.join(' ');
+        await handleSearch(chatId, searchQuery);
+      } else {
+        await handleSearch(chatId, originalText);
+      }
+      break;
+      
+    case 2: // add_task
+      await handleAddTask(chatId, parameters, userId);
+      break;
+      
+    case 3: // remove_task
+      await handleRemoveTask(chatId, parameters);
+      break;
+      
+    case 4: // add_alert_to_task
+      await handleAddAlertToTask(chatId, parameters);
+      break;
+      
+    case 5: // show_all_tasks
+      await handleShowTasks(chatId, parameters);
+      break;
+      
+    case 6: // add_new_people
+      await handleAddPeopleFromBot(chatId, parameters, userId);
+      break;
+      
+    case 7: // show_all_meetings
+      await handleShowMeetings(chatId, parameters);
+      break;
+      
+    case 8: // update_task
+      await handleUpdateTask(chatId, parameters);
+      break;
+      
+    case 9: // update_person
+      await handleUpdatePerson(chatId, parameters, userId);
+      break;
+      
+    default:
+      await sendMessage(chatId, `🚧 Function ${functionNumber} is not implemented yet.`);
+  }
+}
+
+// Task Management Functions
+async function handleAddTask(chatId: number, parameters: any, userId: number) {
+  try {
+    if (!parameters || typeof parameters !== 'object' || !parameters.task_text) {
+      await sendMessage(chatId, "❌ I need task details. Try: 'Add task call John tomorrow'");
+      return;
+    }
+
+    const task = {
+      text: parameters.task_text,
+      assign_to: parameters.assign_to || null,
+      due_date: parameters.due_date || null,
+      status: parameters.status || 'pending',
+      label: parameters.label || null,
+      priority: parameters.priority || 'medium'
+    };
+
+    const { error } = await supabase.from('tasks').insert([task]);
+
+    if (error) {
+      console.error('Add task error:', error);
+      await sendMessage(chatId, "❌ Error adding task. Please try again.");
+      return;
+    }
+
+    await sendMessage(chatId, `✅ Task added: "${task.text}" (${task.priority} priority, ${task.status})`);
+  } catch (error) {
+    console.error('Add task error:', error);
+    await sendMessage(chatId, "❌ Error adding task. Please try again.");
+  }
+}
+
+async function handleRemoveTask(chatId: number, parameters: any) {
+  try {
+    if (!parameters || (!parameters.task_id && typeof parameters !== 'string' && typeof parameters !== 'number')) {
+      await sendMessage(chatId, "❌ I need a task ID to remove. Try: 'Remove task 5'");
+      return;
+    }
+
+    const taskId = parameters.task_id || parameters;
+    const { error } = await supabase.from('tasks').delete().eq('task_id', taskId);
+
+    if (error) {
+      await sendMessage(chatId, "❌ Error removing task. Please try again.");
+      return;
+    }
+
+    await sendMessage(chatId, `✅ Task ${taskId} removed successfully.`);
+  } catch (error) {
+    await sendMessage(chatId, "❌ Error removing task. Please try again.");
+  }
+}
+
+async function handleAddAlertToTask(chatId: number, parameters: any) {
+  await sendMessage(chatId, "🚧 Task alerts feature coming soon!");
+}
+
+async function handleShowTasks(chatId: number, parameters: any) {
+  try {
+    let query = supabase.from('tasks').select('*');
+    
+    // Apply filters if provided
+    if (parameters && parameters.filter) {
+      const { filter, value } = parameters;
+      query = query.eq(filter, value);
+    }
+
+    const { data: tasks, error } = await query.limit(10);
+
+    if (error) {
+      await sendMessage(chatId, "❌ Error fetching tasks. Please try again.");
+      return;
+    }
+
+    if (!tasks || tasks.length === 0) {
+      await sendMessage(chatId, "📝 No tasks found.");
+      return;
+    }
+
+    let response = `📝 Found ${tasks.length} task(s):\n\n`;
+    tasks.forEach((task: any, index: number) => {
+      response += `${index + 1}. <b>${task.text}</b>\n`;
+      response += `   ID: ${task.task_id} | Status: ${task.status} | Priority: ${task.priority}\n`;
+      if (task.assign_to) response += `   Assigned: ${task.assign_to}\n`;
+      if (task.due_date) response += `   Due: ${task.due_date}\n`;
+      response += '\n';
+    });
+
+    await sendMessage(chatId, response);
+  } catch (error) {
+    await sendMessage(chatId, "❌ Error fetching tasks. Please try again.");
+  }
+}
+
+async function handleUpdateTask(chatId: number, parameters: any) {
+  try {
+    if (!parameters || !parameters.task_id || !parameters.field || !parameters.new_value) {
+      await sendMessage(chatId, "❌ I need task ID, field, and new value. Try: 'Set task 5 status to done'");
+      return;
+    }
+
+    const { task_id, field, new_value } = parameters;
+    const updateData = { [field]: new_value };
+    
+    const { error } = await supabase.from('tasks').update(updateData).eq('task_id', task_id);
+
+    if (error) {
+      await sendMessage(chatId, "❌ Error updating task. Please try again.");
+      return;
+    }
+
+    await sendMessage(chatId, `✅ Task ${task_id} updated: ${field} = ${new_value}`);
+  } catch (error) {
+    await sendMessage(chatId, "❌ Error updating task. Please try again.");
+  }
+}
+
+// People Management Functions
+async function handleAddPeopleFromBot(chatId: number, parameters: any, userId: number) {
+  try {
+    if (!Array.isArray(parameters)) {
+      await sendMessage(chatId, "❌ I need person details. Try: 'Add John Doe from TechCorp'");
+      return;
+    }
+
+    const results = [];
+    for (const personData of parameters) {
+      const person = {
+        full_name: personData.full_name || personData.name,
+        email: personData.email || null,
+        company: personData.company || null,
+        categories: personData.categories || null,
+        status: personData.status || null,
+        linkedin_profile: personData.linkedin_profile || null,
+        newsletter: personData.newsletter || false,
+        should_avishag_meet: personData.should_avishag_meet || false
+      };
+
+      if (person.full_name) {
+        const { error } = await supabase.from('people').insert([person]);
+        if (!error) {
+          results.push(person.full_name);
+        }
+      }
+    }
+
+    if (results.length > 0) {
+      await sendMessage(chatId, `✅ Added ${results.length} person(s): ${results.join(', ')}`);
+    } else {
+      await sendMessage(chatId, "❌ Could not add any people. Please check the details.");
+    }
+  } catch (error) {
+    await sendMessage(chatId, "❌ Error adding people. Please try again.");
+  }
+}
+
+async function handleShowMeetings(chatId: number, parameters: any) {
+  await sendMessage(chatId, "🚧 Meetings feature coming soon!");
+}
+
+async function handleUpdatePerson(chatId: number, parameters: any, userId: number) {
+  try {
+    if (!parameters || !parameters.person_id) {
+      // Get last added person by this user
+      const { data: lastPerson } = await supabase
+        .from('people')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!lastPerson) {
+        await sendMessage(chatId, "❌ No person found to update. Please specify a person ID.");
+        return;
+      }
+
+      // Show preview and ask for approval
+      let preview = `👤 <b>${lastPerson.full_name}</b>\n`;
+      if (lastPerson.company) preview += `🏢 ${lastPerson.company}\n`;
+      if (lastPerson.email) preview += `📧 ${lastPerson.email}\n`;
+      
+      preview += "\n🔄 Proposed updates:\n";
+      Object.entries(parameters.updates || {}).forEach(([key, value]) => {
+        preview += `• ${key}: ${value}\n`;
+      });
+      
+      preview += "\nReply: 1 to approve, 0 to cancel";
+      await sendMessage(chatId, preview);
+      
+      // Store pending update in user state
+      await updateUserState(userId, 'pending_update', {
+        person_id: lastPerson.id,
+        updates: parameters.updates
+      });
+      return;
+    }
+
+    // Direct update with person_id
+    const { error } = await supabase
+      .from('people')
+      .update(parameters.updates)
+      .eq('id', parameters.person_id);
+
+    if (error) {
+      await sendMessage(chatId, "❌ Error updating person. Please try again.");
+      return;
+    }
+
+    await sendMessage(chatId, "✅ Person updated successfully!");
+  } catch (error) {
+    await sendMessage(chatId, "❌ Error updating person. Please try again.");
   }
 }
 
@@ -391,7 +770,7 @@ async function handleSearch(chatId: number, query: string) {
 
     let response = `🔍 Found ${people.length} result(s) for "<b>${query}</b>":\n\n`;
     
-    people.forEach((person, index) => {
+    people.forEach((person: any, index: number) => {
       response += `${index + 1}. <b>${person.full_name}</b>\n`;
       if (person.company) response += `   🏢 ${person.company}\n`;
       if (person.email) response += `   📧 ${person.email}\n`;
@@ -483,280 +862,27 @@ async function handleAddPerson(chatId: number, text: string, session: any, userI
 
         if (error) {
           console.error('Insert error:', error);
-          await sendMessage(chatId, "❌ Error saving person to database. Please try again.");
-        } else {
-          await sendMessage(chatId, 
-            `✅ Successfully added <b>${session.data.full_name}</b> to the database!\n\n` +
-            "Type /add to add another person or /search to find people."
-          );
+          await sendMessage(chatId, "❌ Error adding person to database. Please try again with /add");
+          await updateUserState(userId, 'idle', {});
+          return;
         }
-      } catch (error) {
-        console.error('Save error:', error);
-        await sendMessage(chatId, "❌ Error saving to database. Please try again.");
-      }
 
-      // Reset session
-      await updateUserState(userId, 'idle', {});
+        let response = `✅ Successfully added: <b>${session.data.full_name}</b>\n`;
+        if (session.data.company) response += `🏢 Company: ${session.data.company}\n`;
+        if (session.data.email) response += `📧 Email: ${session.data.email}\n`;
+        if (session.data.categories) response += `🏷️ Categories: ${session.data.categories}\n`;
+        
+        await sendMessage(chatId, response);
+        await updateUserState(userId, 'idle', {});
+      } catch (error) {
+        console.error('Database error:', error);
+        await sendMessage(chatId, "❌ Error adding person. Please try again with /add");
+        await updateUserState(userId, 'idle', {});
+      }
       break;
 
     default:
+      await sendMessage(chatId, "❌ Something went wrong. Please try again with /add");
       await updateUserState(userId, 'idle', {});
-      await sendMessage(chatId, "❌ Something went wrong. Type /help to see available commands.");
-  }
-}
-
-async function handleFunctionRouter(chatId: number, text: string, userId: number) {
-  try {
-    const routerPrompt = `You are a function router.  
-Your job: take any user request and map it to EXACTLY ONE of the following 8 functions, and return ONLY a JSON array with the function number and extracted parameters.  
-
-The functions are:
-
-1. search_information(words: array of strings)  
-2. add_task(task_text: string)  
-3. remove_task(task_id: string or number)  
-4. add_alert_to_task(task_id: string or number)  
-5. show_all_tasks(period: "daily" | "weekly" | "monthly")  
-6. add_new_people(people_data: array of structured fields like Full Name, Email, LinkedIn, Company, Categories, Status, Newsletter, etc.)  
-7. show_all_meetings(period: "today" | "weekly" | "monthly")  
-8. update_person_info(identifier: string (name or email to find person), updates: object with fields to update like company, email, status, categories, etc.)
-
-### Rules
-- Always return a JSON array: \`[function_number, parameters]\`
-- Do NOT explain. Do NOT add extra text. Return JSON ONLY.  
-- If multiple interpretations are possible, choose the most direct.  
-- If no parameter is needed, return \`null\` as second element.  
-- Parse user text carefully and extract structured fields when adding people.  
-
-### Examples
-
-**User:** "Find me info about AI and marketing"  
-**Assistant:** \`[1, ["AI", "marketing"]]\`
-
-**User:** "Add a task to call Jonathan tomorrow morning"  
-**Assistant:** \`[2, "call Jonathan tomorrow morning"]\`
-
-**User:** "Remove task 17"  
-**Assistant:** \`[3, 17]\`
-
-**User:** "Set an alert on task 22"  
-**Assistant:** \`[4, 22]\`
-
-**User:** "Show me my weekly tasks"  
-**Assistant:** \`[5, "weekly"]\`
-
-**User:** "Add new person: Full Name Roee Feingold, LinkedIn linkedin.roee.com, Company Google, Status Investor, Categories AI, marketing"  
-**Assistant:** \`[6, ["Full Name: Roee Feingold", "LinkedIn: linkedin.roee.com", "Company: Google", "Status: Investor", "Categories: AI, marketing"]]\`
-
-**User:** "Show all meetings today"  
-**Assistant:** \`[7, "today"]\`
-
-**User:** "Add company Google to Roee Feingold"  
-**Assistant:** \`[8, {"identifier": "Roee Feingold", "updates": {"company": "Google"}}]\`
-
-**User:** "Change email of roee2912@gmail.com to roee@google.com"  
-**Assistant:** \`[8, {"identifier": "roee2912@gmail.com", "updates": {"email": "roee@google.com"}}]\`
-
-User input: "${text}"`;
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'user', content: routerPrompt }
-        ],
-        max_tokens: 150,
-        temperature: 0.1
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('OpenAI API error:', await response.text());
-      await sendMessage(chatId, "❌ Error processing your request. Please try again.");
-      return;
-    }
-
-    const data = await response.json();
-    let routerResult = data.choices[0].message.content.trim();
-    
-    console.log('Function router result:', routerResult);
-    
-    // Clean the response - remove backticks and any markdown formatting
-    routerResult = routerResult.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').replace(/^`/, '').replace(/`$/, '');
-    
-    console.log('Cleaned router result:', routerResult);
-
-    try {
-      const [functionNumber, parameters] = JSON.parse(routerResult);
-      
-      switch (functionNumber) {
-        case 1: // search_information
-          if (Array.isArray(parameters)) {
-            const searchQuery = parameters.join(' ');
-            await handleSearch(chatId, searchQuery);
-          } else {
-            await sendMessage(chatId, "❓ Please provide search terms.");
-          }
-          break;
-          
-        case 2: // add_task
-          await sendMessage(chatId, `📝 Task noted: "${parameters}"\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
-          break;
-          
-        case 3: // remove_task
-          await sendMessage(chatId, `❌ Remove task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
-          break;
-          
-        case 4: // add_alert_to_task
-          await sendMessage(chatId, `⏰ Alert set for task ${parameters}\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
-          break;
-          
-        case 5: // show_all_tasks
-          await sendMessage(chatId, `📋 Showing ${parameters} tasks\n\n⚠️ Note: Task management is not yet implemented, but I've understood your request.`);
-          break;
-          
-        case 6: // add_new_people
-          if (Array.isArray(parameters)) {
-            const personData = {};
-            
-            // Parse structured data from the array
-            parameters.forEach(item => {
-              const [key, value] = item.split(': ');
-              switch (key.toLowerCase()) {
-                case 'full name':
-                  personData.full_name = value;
-                  break;
-                case 'email':
-                  personData.email = value;
-                  break;
-                case 'company':
-                  personData.company = value;
-                  break;
-                case 'categories':
-                  personData.categories = value;
-                  break;
-                case 'status':
-                  personData.status = value;
-                  break;
-                case 'linkedin':
-                  personData.linkedin_profile = value;
-                  break;
-              }
-            });
-            
-            try {
-              const { error } = await supabase
-                .from('people')
-                .insert([personData]);
-
-              if (error) {
-                console.error('Insert person error:', error);
-                await sendMessage(chatId, "❌ Error adding person to database. Please try again.");
-              } else {
-                await sendMessage(chatId, 
-                  `✅ Successfully added <b>${personData.full_name || 'Unknown'}</b> to the database!\n\n` +
-                  `📧 Email: ${personData.email || 'N/A'}\n` +
-                  `🏢 Company: ${personData.company || 'N/A'}\n` +
-                  `🏷️ Categories: ${personData.categories || 'N/A'}\n` +
-                  `📊 Status: ${personData.status || 'N/A'}`
-                );
-              }
-            } catch (error) {
-              console.error('Save person error:', error);
-              await sendMessage(chatId, "❌ Error saving person to database. Please try again.");
-            }
-          } else {
-            await sendMessage(chatId, "➕ Please provide person details. Use /add command for interactive addition.");
-          }
-          break;
-          
-        case 7: // show_all_meetings
-          await sendMessage(chatId, `📅 Showing meetings for ${parameters}\n\n⚠️ Note: Meeting management is not yet implemented, but I've understood your request.`);
-          break;
-          
-        case 8: // update_person_info
-          if (parameters && parameters.identifier && parameters.updates) {
-            try {
-              const identifier = parameters.identifier.trim();
-              const updates = parameters.updates;
-              
-              // Search for person by name or email
-              const { data: people, error: searchError } = await supabase
-                .from('people')
-                .select('*')
-                .or(`full_name.ilike.%${identifier}%,email.ilike.%${identifier}%`);
-              
-              if (searchError) {
-                console.error('Search error:', searchError);
-                await sendMessage(chatId, "❌ Error searching for person. Please try again.");
-                return;
-              }
-              
-              if (!people || people.length === 0) {
-                await sendMessage(chatId, `🔍 No person found matching "${identifier}". Please check the name or email and try again.`);
-                return;
-              }
-              
-              if (people.length > 1) {
-                let response = `⚠️ Found ${people.length} people matching "${identifier}":\n\n`;
-                people.forEach((person, index) => {
-                  response += `${index + 1}. <b>${person.full_name}</b>\n`;
-                  if (person.email) response += `   📧 ${person.email}\n`;
-                  if (person.company) response += `   🏢 ${person.company}\n`;
-                  response += '\n';
-                });
-                response += "Please be more specific (use full name or exact email) to update the right person.";
-                await sendMessage(chatId, response);
-                return;
-              }
-              
-              // Update the person
-              const person = people[0];
-              const { error: updateError } = await supabase
-                .from('people')
-                .update(updates)
-                .eq('id', person.id);
-              
-              if (updateError) {
-                console.error('Update error:', updateError);
-                await sendMessage(chatId, "❌ Error updating person. Please try again.");
-                return;
-              }
-              
-              // Show success message with changes
-              let successMessage = `✅ Successfully updated <b>${person.full_name}</b>!\n\nUpdated fields:\n`;
-              Object.entries(updates).forEach(([field, value]) => {
-                const fieldDisplay = field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-                successMessage += `• ${fieldDisplay}: ${value}\n`;
-              });
-              
-              await sendMessage(chatId, successMessage);
-              
-            } catch (error) {
-              console.error('Update person error:', error);
-              await sendMessage(chatId, "❌ Error updating person. Please try again.");
-            }
-          } else {
-            await sendMessage(chatId, "❓ Please specify who to update and what to change. Example: 'Add company Google to John Smith'");
-          }
-          break;
-          
-        default:
-          await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands");
-      }
-      
-    } catch (parseError) {
-      console.error('Error parsing function router result:', parseError);
-      await sendMessage(chatId, "❓ I couldn't understand your request. Try:\n• Searching with a dot prefix: '.john doe'\n• Using /help to see available commands");
-    }
-    
-  } catch (error) {
-    console.error('Function router error:', error);
-    await sendMessage(chatId, "❌ Error processing your request. Please try again.");
   }
 }
