@@ -484,6 +484,12 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
    - If no date mentioned, keep due_date = null.
    - Support recurring: "every Monday at 10am" → due_date="2025-09-15 10:00", repeat="weekly"
    - Default values: status="todo", priority="medium", label=null
+   - Assignment patterns to recognize:
+     • "Assign to Guy" → assign_to="Guy"
+     • "Task for Guy" → assign_to="Guy"
+     • "Guy should..." → assign_to="Guy"
+     • "Tell Guy to..." → assign_to="Guy"
+     • "Add task for Guy to meet Alon" → assign_to="Guy", text="meet Alon"
    - Rule: If no "task" is mentioned in the user prompt, do not use this function.
 
 3. remove_task(task_id: string or number)
@@ -532,7 +538,11 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
 
 **User:** "Add a task: finish report by Monday, assign to Jonathan, high priority"  
 **Assistant:**  
-[2, {"text":"finish report","assign_to":"Jonathan","due_date":"Monday","status":"todo","label":null,"priority":"high"}]
+[2, {"text":"finish report","assign_to":"Jonathan","due_date":"2025-09-15 09:00","status":"todo","label":null,"priority":"high"}]
+
+**User:** "Add task for Guy to meet Alon from Puzzelsoft next Thursday"  
+**Assistant:**  
+[2, {"text":"meet Alon from Puzzelsoft","assign_to":"Guy","due_date":"2025-09-11 09:00","status":"todo","label":null,"priority":"medium"}]
 
 **User:** "Remove task 17"  
 **Assistant:**  
