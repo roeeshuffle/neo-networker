@@ -10,6 +10,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
+import { CsvUploader } from "@/components/CsvUploader";
 import { LogOut, Plus, CheckSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksTab } from "@/components/TasksTab";
@@ -256,6 +257,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-4">
             <SearchBar onSearch={handleSearch} />
+            <CsvUploader onDataLoaded={() => fetchPeople()} />
             <Button onClick={() => setShowForm(true)} className="shadow-lg">
               <Plus className="h-4 w-4 mr-2" />
               Add Person

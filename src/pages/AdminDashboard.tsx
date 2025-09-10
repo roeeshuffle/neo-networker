@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
 import { LogOut, Check, X, Clock, Users, Upload, Trash2, ArrowLeft, Settings } from "lucide-react";
-import { CsvUploader } from "@/components/CsvUploader";
 import { SettingsTab } from "@/components/SettingsTab";
 
 interface PendingUser {
@@ -90,7 +89,7 @@ const AdminDashboard = () => {
   };
 
   const checkAdminAccess = (email: string | undefined) => {
-    if (email !== 'guy@wershuffle.com') {
+    if (!email || !['guy@wershuffle.com', 'roee2912@gmail.com'].includes(email)) {
       toast({
         title: "Access Denied",
         description: "You don't have admin access.",
@@ -168,6 +167,32 @@ const AdminDashboard = () => {
     navigate("/auth");
   };
 
+  const handleDeleteAllTelegramUsers = async () => {
+    if (!confirm("Are you sure you want to delete ALL telegram users? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('telegram_users')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "All telegram users have been deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteAllPeople = async () => {
     if (!confirm("Are you sure you want to delete ALL people data? This action cannot be undone.")) {
       return;
@@ -192,14 +217,6 @@ const AdminDashboard = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleDataLoaded = () => {
-    // Refresh or notify that data has been loaded
-    toast({
-      title: "Success",
-      description: "CSV data has been imported successfully.",
-    });
   };
 
   const formatDate = (dateString: string) => {
@@ -247,7 +264,10 @@ const AdminDashboard = () => {
                 Admin: {user?.email}
               </span>
               <div className="flex gap-2">
-                <CsvUploader onDataLoaded={handleDataLoaded} />
+                <Button variant="destructive" onClick={handleDeleteAllTelegramUsers}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All Telegram Users
+                </Button>
                 <Button variant="destructive" onClick={handleDeleteAllPeople}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete All Data
