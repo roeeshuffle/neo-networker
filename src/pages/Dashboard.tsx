@@ -11,10 +11,10 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare, Merge } from "lucide-react";
+import { LogOut, Plus, CheckSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksTab } from "@/components/TasksTab";
-import DuplicateManager from "@/components/DuplicateManager";
+import { ContactsPanel } from "@/components/ContactsPanel";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
@@ -327,14 +327,10 @@ const Dashboard = () => {
 
         {/* Main content with tabs */}
         <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-fit grid-cols-3 bg-muted">
+          <TabsList className="grid w-fit grid-cols-2 bg-muted">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Contacts
-            </TabsTrigger>
-            <TabsTrigger value="duplicates" className="flex items-center gap-2">
-              <Merge className="w-4 h-4" />
-              Remove Duplicates
             </TabsTrigger>
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
@@ -343,27 +339,12 @@ const Dashboard = () => {
           </TabsList>
           
           <TabsContent value="contacts">
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  Contact Directory
-                  <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                    {filteredPeople.length} entries
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <PeopleTable 
-                  people={filteredPeople}
-                  onDelete={handleDelete}
-                  onView={handleView}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="duplicates">
-            <DuplicateManager onDuplicatesRemoved={() => fetchPeople()} />
+            <ContactsPanel 
+              filteredPeople={filteredPeople}
+              onDelete={handleDelete}
+              onView={handleView}
+              onRefresh={fetchPeople}
+            />
           </TabsContent>
           
           <TabsContent value="tasks">

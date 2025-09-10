@@ -168,15 +168,11 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteAllTelegramUsers = async () => {
-    if (!confirm("Are you sure you want to delete ALL telegram users? This action cannot be undone.")) {
-      return;
-    }
-    
     try {
       const { error } = await supabase
         .from('telegram_users')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+        .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all UUIDs
       
       if (error) throw error;
       
@@ -264,7 +260,14 @@ const AdminDashboard = () => {
                 Admin: {user?.email}
               </span>
               <div className="flex gap-2">
-                <Button variant="destructive" onClick={handleDeleteAllTelegramUsers}>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete ALL telegram users? This action cannot be undone.")) {
+                      handleDeleteAllTelegramUsers();
+                    }
+                  }}
+                >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete All Telegram Users
                 </Button>

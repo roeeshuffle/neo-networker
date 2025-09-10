@@ -139,7 +139,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
         if (error) throw error;
 
         toast({
-          title: "Records merged",
+          title: "Success",
           description: `Kept record for ${recordToKeep.full_name} and deleted ${recordsToDelete.length} duplicates.`,
         });
 
@@ -167,7 +167,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
       if (error) throw error;
 
       toast({
-        title: "Records deleted",
+        title: "Success",
         description: `Deleted all ${duplicate.records.length} records for ${duplicate.full_name}.`,
       });
 
