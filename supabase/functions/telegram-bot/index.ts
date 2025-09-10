@@ -556,6 +556,13 @@ User input: "${text}"`;
               break;
             }
             
+            // Get admin user ID for bot-created tasks
+            const { data: adminUser } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', 'guy@wershuffle.com')
+              .single();
+
             const { data, error } = await supabase
               .from('tasks')
               .insert([{
@@ -564,7 +571,8 @@ User input: "${text}"`;
                 due_date,
                 status,
                 label,
-                priority
+                priority,
+                created_by: adminUser?.id || null
               }])
               .select()
               .single();

@@ -111,7 +111,7 @@ export type Database = {
         Row: {
           assign_to: string | null
           created_at: string
-          created_by: string | null
+          created_by: string
           due_date: string | null
           id: string
           label: string | null
@@ -124,7 +124,7 @@ export type Database = {
         Insert: {
           assign_to?: string | null
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           due_date?: string | null
           id?: string
           label?: string | null
@@ -137,7 +137,7 @@ export type Database = {
         Update: {
           assign_to?: string | null
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           due_date?: string | null
           id?: string
           label?: string | null

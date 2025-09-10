@@ -22,6 +22,7 @@ export interface Task {
   priority: string;
   created_at: string;
   updated_at: string;
+  created_by: string;
 }
 
 interface TasksTableProps {
@@ -68,11 +69,12 @@ export const TasksTable = ({ tasks, onRefresh }: TasksTableProps) => {
         if (error) throw error;
         toast({ title: "Success", description: "Task updated successfully" });
       } else {
+        const { data: { user } } = await supabase.auth.getUser();
         const { error } = await supabase
           .from('tasks')
           .insert([{
             ...formData,
-            created_by: (await supabase.auth.getUser()).data.user?.id
+            created_by: user?.id
           }]);
 
         if (error) throw error;
