@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { csvData } = await req.json();
+    const { csvData, customMapping = {} } = await req.json();
     
     // Get user ID from JWT token
     const authHeader = req.headers.get('Authorization');
@@ -63,7 +63,7 @@ serve(async (req) => {
     const headers = parseCSVLine(lines[0]).map((h: string) => h.replace(/"/g, ''));
     
     // Create mapping from CSV headers to database columns
-    const columnMapping: { [key: string]: string } = {
+    const defaultColumnMapping: { [key: string]: string } = {
       'Full Name': 'full_name',
       'full name': 'full_name',
       'fullname': 'full_name',
@@ -102,6 +102,9 @@ serve(async (req) => {
       'more info': 'more_info',
       'more_info': 'more_info'
     };
+
+    // Merge default mapping with custom mapping from user
+    const columnMapping = { ...defaultColumnMapping, ...customMapping };
 
     const records = [];
     

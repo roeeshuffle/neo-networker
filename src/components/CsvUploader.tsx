@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, FileText } from "lucide-react";
+import { ColumnMappingDialog } from "./ColumnMappingDialog";
 
 interface CsvUploaderProps {
   onDataLoaded: () => void;
@@ -15,6 +16,9 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [showMapping, setShowMapping] = useState(false);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvData, setCsvData] = useState<string>("");
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,27 +34,73 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
     }
   };
 
+  const parseCSVHeaders = (csvText: string): string[] => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length === 0) return [];
+    
+    // Simple CSV header parsing - can be enhanced for quoted values
+    return lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+  };
+
+  const getKnownColumns = (): string[] => {
+    return [
+      'Full Name', 'full name', 'fullname', 'name',
+      'Categories', 'categories', 'category',
+      'E-mail', 'Email', 'email',
+      'Newsletter', 'newsletter',
+      'Company', 'company',
+      'Status', 'status',
+      'Linkedin', 'LinkedIn', 'linkedin', 'linkedin_profile',
+      'POC in APEX', 'poc in apex', 'poc_in_apex',
+      'Who warm intro', 'who warm intro', 'who_warm_intro',
+      'Agenda', 'agenda',
+      'Meeting Notes', 'meeting notes', 'meeting_notes',
+      'Should Avishag meet?', 'should avishag meet', 'should_avishag_meet',
+      'More info', 'more info', 'more_info'
+    ];
+  };
+
+  const checkForUnknownColumns = (headers: string[]): string[] => {
+    const knownColumns = getKnownColumns().map(col => col.toLowerCase());
+    return headers.filter(header => 
+      !knownColumns.includes(header.toLowerCase())
+    );
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
     setLoading(true);
     try {
       const fileText = await file.text();
-      
-      const { data, error } = await supabase.functions.invoke('csv-processor', {
-        body: { csvData: fileText }
-      });
+      const headers = parseCSVHeaders(fileText);
+      const unknownColumns = checkForUnknownColumns(headers);
 
-      if (error) throw error;
+      if (unknownColumns.length > 0) {
+        // Show column mapping dialog
+        setCsvHeaders(unknownColumns);
+        setCsvData(fileText);
+        setShowMapping(true);
+        setLoading(false);
+        return;
+      }
 
+      // Proceed with direct upload if all columns are recognized
+      await processUpload(fileText, {});
+    } catch (error: any) {
       toast({
-        title: "Success",
-        description: `Imported ${data.imported} records successfully`,
+        title: "Error processing file",
+        description: error.message,
+        variant: "destructive",
       });
+      setLoading(false);
+    }
+  };
 
-      setOpen(false);
-      setFile(null);
-      onDataLoaded();
+  const handleMappingComplete = async (mapping: { [key: string]: string }) => {
+    setLoading(true);
+    try {
+      await processUpload(csvData, mapping);
     } catch (error: any) {
       toast({
         title: "Error importing data",
@@ -60,6 +110,28 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const processUpload = async (fileText: string, columnMapping: { [key: string]: string }) => {
+    const { data, error } = await supabase.functions.invoke('csv-processor', {
+      body: { 
+        csvData: fileText,
+        customMapping: columnMapping 
+      }
+    });
+
+    if (error) throw error;
+
+    toast({
+      title: "Success",
+      description: `Imported ${data.imported} records successfully`,
+    });
+
+    setOpen(false);
+    setFile(null);
+    setCsvData("");
+    setCsvHeaders([]);
+    onDataLoaded();
   };
 
   return (
@@ -107,6 +179,13 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
           </div>
         </div>
       </DialogContent>
+
+      <ColumnMappingDialog
+        open={showMapping}
+        onOpenChange={setShowMapping}
+        csvHeaders={csvHeaders}
+        onMappingComplete={handleMappingComplete}
+      />
     </Dialog>
   );
 };
