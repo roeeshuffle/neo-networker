@@ -143,6 +143,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const mergeDuplicate = async (duplicate: Duplicate, keepIndex: number) => {
     try {
+      setMergeLoading(true);
       const toKeep = duplicate.people[keepIndex];
       const toDelete = duplicate.people.filter((_, i) => i !== keepIndex);
 
@@ -167,11 +168,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         description: "Failed to merge duplicate records",
         variant: "destructive"
       });
+    } finally {
+      setMergeLoading(false);
     }
   };
 
   const deleteAllDuplicates = async (duplicate: Duplicate) => {
     try {
+      setMergeLoading(true);
       const { error } = await supabase
         .from('people')
         .delete()
@@ -193,6 +197,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         description: "Failed to delete duplicate records",
         variant: "destructive"
       });
+    } finally {
+      setMergeLoading(false);
     }
   };
 
@@ -223,7 +229,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const nonIdenticalDuplicates = duplicates.filter(d => !areRecordsIdentical(d.people));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Processing Overlay */}
+      {mergeLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-8 shadow-lg">
+            <div className="flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-lg font-medium">Processing duplicates...</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Duplicates Management</h2>
@@ -368,11 +386,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                                       </Badge>
                                     </CardTitle>
                                     <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => mergeDuplicate(selectedDuplicate, personIndex)}
-                                      >
+                                       <Button
+                                         variant="outline"
+                                         size="sm"
+                                         onClick={() => mergeDuplicate(selectedDuplicate, personIndex)}
+                                         disabled={mergeLoading}
+                                       >
                                         <Merge className="w-4 h-4 mr-1" />
                                         Keep This
                                       </Button>

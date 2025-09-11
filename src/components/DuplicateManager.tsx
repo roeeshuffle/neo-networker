@@ -127,6 +127,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
 
   const mergeDuplicate = async (duplicate: Duplicate, recordToKeep: Person) => {
     try {
+      setMergeLoading(true);
       const recordsToDelete = duplicate.records.filter(r => r.id !== recordToKeep.id);
       
       if (recordsToDelete.length > 0) {
@@ -153,11 +154,14 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setMergeLoading(false);
     }
   };
 
   const deleteAllDuplicates = async (duplicate: Duplicate) => {
     try {
+      setMergeLoading(true);
       const idsToDelete = duplicate.records.map(r => r.id);
       const { error } = await supabase
         .from('people')
@@ -180,6 +184,8 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setMergeLoading(false);
     }
   };
 
@@ -206,7 +212,19 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
   const manualReviewDuplicates = duplicates.filter(d => !areRecordsIdentical(d.records));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Processing Overlay */}
+      {mergeLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-8 shadow-lg">
+            <div className="flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="text-lg font-medium">Processing duplicates...</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -303,7 +321,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
       )}
 
       {/* Review dialog */}
-      <Dialog open={!!selectedDuplicate} onOpenChange={(open) => !open && setSelectedDuplicate(null)}>
+      <Dialog open={!!selectedDuplicate} onOpenChange={(open) => !open && !mergeLoading && setSelectedDuplicate(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Duplicates: {selectedDuplicate?.full_name}</DialogTitle>
@@ -319,6 +337,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
                         size="sm"
                         onClick={() => mergeDuplicate(selectedDuplicate, record)}
                         className="bg-green-600 hover:bg-green-700"
+                        disabled={mergeLoading}
                       >
                         Keep This
                       </Button>
