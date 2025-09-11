@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          categories: string | null
+          connection_strength: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          domains: string[] | null
+          id: string
+          last_interaction: string | null
+          linkedin_profile: string | null
+          notion_id: string | null
+          owner_id: string
+          record: string
+          tags: string[] | null
+          twitter: string | null
+          twitter_follower_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          categories?: string | null
+          connection_strength?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          domains?: string[] | null
+          id?: string
+          last_interaction?: string | null
+          linkedin_profile?: string | null
+          notion_id?: string | null
+          owner_id: string
+          record: string
+          tags?: string[] | null
+          twitter?: string | null
+          twitter_follower_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          categories?: string | null
+          connection_strength?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          domains?: string[] | null
+          id?: string
+          last_interaction?: string | null
+          linkedin_profile?: string | null
+          notion_id?: string | null
+          owner_id?: string
+          record?: string
+          tags?: string[] | null
+          twitter?: string | null
+          twitter_follower_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       people: {
         Row: {
           agenda: string | null

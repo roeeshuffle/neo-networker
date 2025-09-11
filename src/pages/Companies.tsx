@@ -2,52 +2,45 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from '@supabase/supabase-js';
 import { SearchBar } from "@/components/SearchBar";
-import { PeopleTable } from "@/components/PeopleTable";
-import { PersonForm } from "@/components/PersonForm";
-import { EditablePersonModal } from "@/components/EditablePersonModal";
-import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare } from "lucide-react";
+import { CompaniesTable } from "@/components/CompaniesTable";
+import { CompanyForm } from "@/components/CompanyForm";
+import { EditableCompanyModal } from "@/components/EditableCompanyModal";
+import { LogOut, Plus, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TasksTab } from "@/components/TasksTab";
-import { ContactsPanel } from "@/components/ContactsPanel";
+import { CompaniesPanel } from "@/components/CompaniesPanel";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
-export interface Person {
+export interface Company {
   id: string;
-  full_name: string;
+  record: string;
+  tags?: string[];
   categories?: string;
-  email?: string;
-  newsletter?: boolean;
-  company?: string;
-  status?: string;
   linkedin_profile?: string;
-  poc_in_apex?: string;
-  who_warm_intro?: string;
-  agenda?: string;
-  meeting_notes?: string;
-  should_avishag_meet?: boolean;
-  more_info?: string;
+  last_interaction?: string;
+  connection_strength?: string;
+  twitter_follower_count?: number;
+  twitter?: string;
+  domains?: string[];
+  description?: string;
+  notion_id?: string;
   created_at: string;
   updated_at: string;
   owner_id?: string;
 }
 
-const Dashboard = () => {
+const Companies = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
-  const [totalTasks, setTotalTasks] = useState(0);
-  const [todayTasks, setTodayTasks] = useState(0);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-  const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -112,23 +105,22 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      fetchPeople();
-      fetchTasksCount();
+      fetchCompanies();
     }
   }, [user]);
 
-  const fetchPeople = async () => {
+  const fetchCompanies = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('people')
+        .from('companies')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setPeople(data || []);
-      setFilteredPeople(data || []);
+      setCompanies(data || []);
+      setFilteredCompanies(data || []);
     } catch (error: any) {
       toast({
         title: "Error fetching data",
@@ -140,49 +132,23 @@ const Dashboard = () => {
     }
   };
 
-  const fetchTasksCount = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, due_date', { count: 'exact' });
-
-      if (error) throw error;
-      setTotalTasks(data?.length || 0);
-      
-      // Calculate today's tasks (Israel timezone)
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
-      const todayTasksCount = data?.filter(task => {
-        if (!task.due_date) return false;
-        const taskDate = new Date(task.due_date);
-        return taskDate >= todayStart && taskDate <= todayEnd;
-      }).length || 0;
-      
-      setTodayTasks(todayTasksCount);
-    } catch (error: any) {
-      console.error('Error fetching tasks count:', error);
-    }
-  };
-
   const handleSearch = (query: string) => {
     if (!query.trim()) {
-      setFilteredPeople(people);
+      setFilteredCompanies(companies);
       return;
     }
 
     const searchTerm = query.toLowerCase();
-    const filtered = people.filter(person => 
-      person.full_name.toLowerCase().includes(searchTerm) ||
-      person.company?.toLowerCase().includes(searchTerm) ||
-      person.categories?.toLowerCase().includes(searchTerm) ||
-      person.email?.toLowerCase().includes(searchTerm) ||
-      person.status?.toLowerCase().includes(searchTerm) ||
-      person.more_info?.toLowerCase().includes(searchTerm)
+    const filtered = companies.filter(company => 
+      company.record.toLowerCase().includes(searchTerm) ||
+      company.categories?.toLowerCase().includes(searchTerm) ||
+      company.description?.toLowerCase().includes(searchTerm) ||
+      company.twitter?.toLowerCase().includes(searchTerm) ||
+      company.domains?.some(domain => domain.toLowerCase().includes(searchTerm)) ||
+      company.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
     );
 
-    setFilteredPeople(filtered);
+    setFilteredCompanies(filtered);
   };
 
   const handleLogout = async () => {
@@ -190,15 +156,14 @@ const Dashboard = () => {
     navigate("/auth");
   };
 
-
-  const handleView = (person: Person) => {
-    setViewingPerson(person);
+  const handleView = (company: Company) => {
+    setViewingCompany(company);
   };
 
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('people')
+        .from('companies')
         .delete()
         .eq('id', id);
 
@@ -206,13 +171,13 @@ const Dashboard = () => {
 
       toast({
         title: "Success",
-        description: "Person deleted successfully",
+        description: "Company deleted successfully",
       });
 
-      fetchPeople();
+      fetchCompanies();
     } catch (error: any) {
       toast({
-        title: "Error deleting person",
+        title: "Error deleting company",
         description: error.message,
         variant: "destructive",
       });
@@ -221,8 +186,8 @@ const Dashboard = () => {
 
   const handleFormClose = () => {
     setShowForm(false);
-    setEditingPerson(null);
-    fetchPeople();
+    setEditingCompany(null);
+    fetchCompanies();
   };
 
   if (loading) {
@@ -230,7 +195,7 @@ const Dashboard = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-soft/30 to-secondary-soft/30">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary/20 border-t-primary mx-auto"></div>
-          <p className="mt-6 text-muted-foreground font-medium">Loading your workspace...</p>
+          <p className="mt-6 text-muted-foreground font-medium">Loading your companies...</p>
         </div>
       </div>
     );
@@ -251,7 +216,7 @@ const Dashboard = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">VCrm</h1>
+                <h1 className="text-2xl font-bold tracking-tight">VCrm - Companies</h1>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -261,6 +226,14 @@ const Dashboard = () => {
                   {user?.email}
                 </span>
               </div>
+              <Button 
+                onClick={() => navigate('/dashboard')}
+                variant="outline" 
+                size="sm"
+                className="bg-card/80"
+              >
+                Back to Dashboard
+              </Button>
               {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
                 <Button 
                   onClick={() => navigate('/admin')}
@@ -292,16 +265,16 @@ const Dashboard = () => {
         </div>
 
         {/* Stats cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="border-primary/20 bg-gradient-to-br from-primary-soft/30 to-primary-soft/10">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Total Contacts</p>
-                  <p className="text-2xl font-bold text-foreground">{filteredPeople.length}</p>
+                  <p className="text-sm font-medium text-foreground/80">Total Companies</p>
+                  <p className="text-2xl font-bold text-foreground">{filteredCompanies.length}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Plus className="h-6 w-6 text-primary" />
+                  <Building2 className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardHeader>
@@ -311,83 +284,44 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Total Tasks</p>
+                  <p className="text-sm font-medium text-foreground/80">Active Companies</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {totalTasks}
+                    {filteredCompanies.filter(c => c.connection_strength === 'strong').length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-secondary" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-accent/20 bg-gradient-to-br from-accent-soft/30 to-accent-soft/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Today Tasks</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {todayTasks}
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-accent" />
+                  <Plus className="h-6 w-6 text-secondary" />
                 </div>
               </div>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Main content with tabs */}
-        <Tabs defaultValue="contacts" className="space-y-6">
-          <TabsList className="grid w-fit grid-cols-3 bg-muted">
-            <TabsTrigger value="contacts" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger value="companies" className="flex items-center gap-2" onClick={() => navigate('/companies')}>
-              <Plus className="w-4 h-4" />
-              Companies
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4" />
-              Tasks
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="contacts">
-            <ContactsPanel 
-              filteredPeople={filteredPeople}
-              onDelete={handleDelete}
-              onView={handleView}
-              onRefresh={fetchPeople}
-              onShowForm={() => setShowForm(true)}
-            />
-          </TabsContent>
-          
-          <TabsContent value="tasks">
-            <TasksTab onTasksChange={fetchTasksCount} />
-          </TabsContent>
-        </Tabs>
+        {/* Main content */}
+        <CompaniesPanel 
+          filteredCompanies={filteredCompanies}
+          onDelete={handleDelete}
+          onView={handleView}
+          onRefresh={fetchCompanies}
+          onShowForm={() => setShowForm(true)}
+        />
 
         {showForm && (
-          <PersonForm
-            person={editingPerson}
+          <CompanyForm
+            company={editingCompany}
             onClose={handleFormClose}
           />
         )}
 
-        <EditablePersonModal
-          person={viewingPerson}
-          isOpen={!!viewingPerson}
-          onClose={() => setViewingPerson(null)}
-          onSave={fetchPeople}
+        <EditableCompanyModal
+          company={viewingCompany}
+          isOpen={!!viewingCompany}
+          onClose={() => setViewingCompany(null)}
+          onSave={fetchCompanies}
         />
       </main>
     </div>
   );
 };
 
-export default Dashboard;
+export default Companies;
