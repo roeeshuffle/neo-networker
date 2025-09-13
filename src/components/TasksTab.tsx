@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, Calendar, User, Tag, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 interface Task {
   id: string;
@@ -95,10 +95,19 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
 
+      // Handle timezone properly - treat input as Israel time
+      let dueDateISO = null;
+      if (newTask.due_date) {
+        // Parse the datetime-local input as Israel time
+        const localDateTime = new Date(newTask.due_date);
+        // Convert from Israel timezone to UTC for storage
+        dueDateISO = fromZonedTime(localDateTime, 'Asia/Jerusalem').toISOString();
+      }
+
       const taskData = {
         text: newTask.text,
         assign_to: newTask.assign_to || null,
-        due_date: newTask.due_date ? new Date(newTask.due_date).toISOString() : null,
+        due_date: dueDateISO,
         status: newTask.status,
         label: newTask.label || null,
         priority: newTask.priority,
