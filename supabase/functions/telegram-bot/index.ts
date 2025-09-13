@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.2';
+import { fromZonedTime } from 'https://esm.sh/date-fns-tz@3.2.0';
 
 const TELEGRAM_API_KEY = Deno.env.get('TELEGRAM_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -723,14 +724,15 @@ Your job: take any user request and map it to EXACTLY ONE of these functions, an
      • "in 2 weeks at 10am" → "2025-09-23 10:00"
    - If no time mentioned, default to 09:00.
    - If no date mentioned, keep due_date = null.
-   - Support recurring: "every Monday at 10am" → due_date="2025-09-15 10:00", repeat="weekly"
-   - Default values: status="todo", priority="medium", label=null
-   - Assignment patterns to recognize:
-     • "Assign to Guy" → assign_to="Guy"
-     • "Task for Guy" → assign_to="Guy"
-     • "Guy should..." → assign_to="Guy"
-     • "Tell Guy to..." → assign_to="Guy"
-     • "Add task for Guy to meet Alon" → assign_to="Guy", text="meet Alon"
+    - Support recurring: "every Monday at 10am" → due_date="2025-09-15 10:00", repeat="weekly"
+    - Default values: status="todo", priority="medium", label=null
+    - Timezone: All dates/times are in Israel timezone (Asia/Jerusalem). Treat due_date you output (e.g., "2025-09-09 18:40") as Israel local time; the backend will convert it to UTC for storage. Do NOT include timezone suffix.
+    - Assignment patterns to recognize:
+      • "Assign to Guy" → assign_to="Guy"
+      • "Task for Guy" → assign_to="Guy"
+      • "Guy should..." → assign_to="Guy"
+      • "Tell Guy to..." → assign_to="Guy"
+      • "Add task for Guy to meet Alon" → assign_to="Guy", text="meet Alon"
    - Rule: If no "task" is mentioned in the user prompt, do not use this function.
 
 3. remove_task(task_id: string or number)
@@ -1018,8 +1020,10 @@ function parseNaturalDate(dateStr: string | null): string | null {
       
       targetDate.setDate(today.getDate() + finalDaysToAdd);
     } else if (/^\d{4}-\d{2}-\d{2}$/.test(lowerDateStr.split(' ')[0])) {
-      // Try to parse as ISO date (YYYY-MM-DD)
-      return `${lowerDateStr.split(' ')[0]} ${timeStr}`;
+      // Parse as local Israel time then convert to UTC ISO
+      const localISO = `${lowerDateStr.split(' ')[0]}T${timeStr}:00`;
+      const utcDate = fromZonedTime(localISO, 'Asia/Jerusalem');
+      return utcDate.toISOString();
     } else {
       // If nothing matches, return null (no due date)
       return null;
@@ -1031,9 +1035,10 @@ function parseNaturalDate(dateStr: string | null): string | null {
   const month = (targetDate.getMonth() + 1).toString().padStart(2, '0');
   const day = targetDate.getDate().toString().padStart(2, '0');
   
-  // Return full ISO timestamp that preserves timezone
-  return `${year}-${month}-${day}T${timeStr}:00.000Z`;
-}
+  // Convert Israel local time to UTC ISO
+  const localISO = `${year}-${month}-${day}T${timeStr}:00`;
+  const utcDate = fromZonedTime(localISO, 'Asia/Jerusalem');
+  return utcDate.toISOString();
 
 // Task Management Functions
 async function handleAddTask(chatId: number, parameters: any, userId: number) {
@@ -1121,18 +1126,19 @@ async function handleAddTask(chatId: number, parameters: any, userId: number) {
 
     let responseMsg = `✅ Task added: "${task.text}" (${task.priority} priority, ${task.status})`;
     if (assignTo) responseMsg += `\n👤 Assigned to: ${assignTo}`;
-    if (dueDate) {
-      // Format the display date better
-      const displayDate = new Date(dueDate).toLocaleString('en-GB', {
-        year: 'numeric',
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }).replace(',', '');
-      responseMsg += `\n📅 Due: ${displayDate}`;
-    }
+      if (dueDate) {
+        // Format the display date better in Israel timezone
+        const displayDate = new Date(dueDate).toLocaleString('en-GB', {
+          timeZone: 'Asia/Jerusalem',
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).replace(',', '');
+        responseMsg += `\n📅 Due: ${displayDate}`;
+      }
     if (label) responseMsg += `\n🏷️ Label: ${label}`;
     if (repeat) responseMsg += `\n🔄 Repeats: ${repeat}`;
     

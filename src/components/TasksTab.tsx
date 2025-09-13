@@ -98,10 +98,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       // Handle timezone properly - treat input as Israel time
       let dueDateISO = null;
       if (newTask.due_date) {
-        // Parse the datetime-local input as Israel time
-        const localDateTime = new Date(newTask.due_date);
-        // Convert from Israel timezone to UTC for storage
-        dueDateISO = fromZonedTime(localDateTime, 'Asia/Jerusalem').toISOString();
+        // Convert from Israel timezone to UTC for storage using the raw input string
+        dueDateISO = fromZonedTime(newTask.due_date, 'Asia/Jerusalem').toISOString();
       }
 
       const taskData = {
