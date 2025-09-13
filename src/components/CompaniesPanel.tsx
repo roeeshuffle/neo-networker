@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Merge } from "lucide-react";
 import { CompaniesTable } from "./CompaniesTable";
+import { CompanyDuplicateManager } from "./CompanyDuplicateManager";
 import { Company } from "@/pages/Companies";
 
 interface CompaniesPanelProps {
@@ -23,6 +24,7 @@ export const CompaniesPanel = ({
   onRefresh,
   onShowForm,
 }: CompaniesPanelProps) => {
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const { toast } = useToast();
 
   const handleDeleteAllCompanies = async () => {
@@ -30,13 +32,13 @@ export const CompaniesPanel = ({
       const { error } = await supabase
         .from('companies')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+        .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all UUIDs
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "All companies deleted successfully",
+        description: "All companies have been deleted.",
       });
 
       onRefresh();
@@ -49,65 +51,95 @@ export const CompaniesPanel = ({
     }
   };
 
-  return (
-    <Card className="border-border-soft bg-card/60 backdrop-blur-sm">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-semibold tracking-tight">
-            Company Directory
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({filteredCompanies.length} companies)
-            </span>
-          </CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              onClick={onShowForm}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Company
-            </Button>
-            
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  className="shadow-lg"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all companies
-                    and remove their data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDeleteAllCompanies}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    Delete All Companies
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+  if (showDuplicates) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDuplicates(false)}
+          >
+            ← Back to Companies
+          </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <CompaniesTable 
-          companies={filteredCompanies}
-          onDelete={onDelete}
-          onView={onView}
+        <CompanyDuplicateManager 
+          onDuplicatesRemoved={() => {
+            onRefresh();
+            setShowDuplicates(false);
+          }} 
         />
-      </CardContent>
-    </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Company Directory</h2>
+          <p className="text-muted-foreground">Manage your business relationships</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={onShowForm} className="shadow-lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Company
+          </Button>
+        </div>
+      </div>
+      
+      <Card className="overflow-hidden">
+         <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3">
+              <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                {filteredCompanies.length} entries
+              </span>
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setShowDuplicates(true)}
+                className="flex items-center gap-2"
+              >
+                <Merge className="w-4 h-4" />
+                Remove Duplicates
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    Delete All Companies
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all {filteredCompanies.length} companies. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAllCompanies}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Delete All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <CompaniesTable 
+            companies={filteredCompanies}
+            onDelete={onDelete}
+            onView={onView}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
