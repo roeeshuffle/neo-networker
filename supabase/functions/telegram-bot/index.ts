@@ -1039,6 +1039,7 @@ function parseNaturalDate(dateStr: string | null): string | null {
   const localISO = `${year}-${month}-${day}T${timeStr}:00`;
   const utcDate = fromZonedTime(localISO, 'Asia/Jerusalem');
   return utcDate.toISOString();
+}
 
 // Task Management Functions
 async function handleAddTask(chatId: number, parameters: any, userId: number) {
