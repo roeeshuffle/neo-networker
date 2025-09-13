@@ -44,6 +44,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTask, setNewTask] = useState<NewTask>({
     text: '',
     assign_to: '',
@@ -89,6 +90,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       return;
     }
 
+    setIsAddingTask(true);
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
@@ -132,6 +134,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
         description: "Failed to add task",
         variant: "destructive"
       });
+    } finally {
+      setIsAddingTask(false);
     }
   };
 
@@ -307,8 +311,15 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
                 />
               </div>
               
-              <Button onClick={addTask} className="w-full">
-                Add Task
+              <Button onClick={addTask} className="w-full" disabled={isAddingTask}>
+                {isAddingTask ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary/20 border-t-primary mr-2"></div>
+                    Adding Task...
+                  </>
+                ) : (
+                  "Add Task"
+                )}
               </Button>
             </div>
           </DialogContent>
