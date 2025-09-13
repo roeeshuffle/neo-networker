@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Upload, Merge } from "lucide-react";
 import { CompaniesTable } from "./CompaniesTable";
 import { CompanyDuplicateManager } from "./CompanyDuplicateManager";
+import { CompanyCsvUploader } from "./CompanyCsvUploader";
 import { Company } from "@/pages/Companies";
 
 interface CompaniesPanelProps {
@@ -80,6 +81,7 @@ export const CompaniesPanel = ({
           <p className="text-muted-foreground">Manage your business relationships</p>
         </div>
         <div className="flex gap-2">
+          <CompanyCsvUploader onDataLoaded={onRefresh} />
           <Button onClick={onShowForm} className="shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Add Company
