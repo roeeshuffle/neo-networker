@@ -6,7 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Eye, Trash2, ExternalLink, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
-import { Company } from "@/pages/Companies";
+import type { Company } from "@/pages/Companies";
 
 interface CompaniesTableProps {
   companies: Company[];

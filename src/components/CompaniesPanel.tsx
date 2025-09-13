@@ -8,7 +8,7 @@ import { Plus, Trash2, Upload, Merge } from "lucide-react";
 import { CompaniesTable } from "./CompaniesTable";
 import { CompanyDuplicateManager } from "./CompanyDuplicateManager";
 import { CompanyCsvUploader } from "./CompanyCsvUploader";
-import { Company } from "@/pages/Companies";
+import type { Company } from "@/pages/Companies";
 
 interface CompaniesPanelProps {
   filteredCompanies: Company[];
