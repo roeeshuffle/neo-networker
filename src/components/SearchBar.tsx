@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
+  placeholder?: string;
 }
 
 interface SuggestionItem {
@@ -14,7 +15,7 @@ interface SuggestionItem {
   count: number;
 }
 
-export const SearchBar = ({ onSearch }: SearchBarProps) => {
+export const SearchBar = ({ onSearch, placeholder = "Search contacts..." }: SearchBarProps) => {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -142,7 +143,7 @@ export const SearchBar = ({ onSearch }: SearchBarProps) => {
       <Input
         ref={inputRef}
         type="text"
-        placeholder="Search contacts..."
+        placeholder={placeholder}
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
         onFocus={() => query && setShowSuggestions(true)}

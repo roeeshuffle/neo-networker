@@ -15,6 +15,9 @@ import { LogOut, Plus, CheckSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksTab } from "@/components/TasksTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
+import { CompaniesPanel } from "@/components/CompaniesPanel";
+import { CompanyForm } from "@/components/CompanyForm";
+import { EditableCompanyModal } from "@/components/EditableCompanyModal";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
@@ -37,17 +40,41 @@ export interface Person {
   owner_id?: string;
 }
 
+export interface Company {
+  id: string;
+  record: string;
+  tags?: string[];
+  categories?: string;
+  linkedin_profile?: string;
+  last_interaction?: string;
+  connection_strength?: string;
+  twitter_follower_count?: number;
+  twitter?: string;
+  domains?: string[];
+  description?: string;
+  notion_id?: string;
+  created_at: string;
+  updated_at: string;
+  owner_id?: string;
+}
+
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [todayTasks, setTodayTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
+  const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
+  const [activeTab, setActiveTab] = useState("contacts");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -113,6 +140,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchPeople();
+      fetchCompanies();
       fetchTasksCount();
     }
   }, [user]);
@@ -166,23 +194,65 @@ const Dashboard = () => {
     }
   };
 
-  const handleSearch = (query: string) => {
-    if (!query.trim()) {
-      setFilteredPeople(people);
-      return;
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setCompanies(data || []);
+      setFilteredCompanies(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching companies",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const searchTerm = query.toLowerCase();
-    const filtered = people.filter(person => 
-      person.full_name.toLowerCase().includes(searchTerm) ||
-      person.company?.toLowerCase().includes(searchTerm) ||
-      person.categories?.toLowerCase().includes(searchTerm) ||
-      person.email?.toLowerCase().includes(searchTerm) ||
-      person.status?.toLowerCase().includes(searchTerm) ||
-      person.more_info?.toLowerCase().includes(searchTerm)
-    );
+  const handleSearch = (query: string) => {
+    if (activeTab === "contacts") {
+      if (!query.trim()) {
+        setFilteredPeople(people);
+        return;
+      }
 
-    setFilteredPeople(filtered);
+      const searchTerm = query.toLowerCase();
+      const filtered = people.filter(person => 
+        person.full_name.toLowerCase().includes(searchTerm) ||
+        person.company?.toLowerCase().includes(searchTerm) ||
+        person.categories?.toLowerCase().includes(searchTerm) ||
+        person.email?.toLowerCase().includes(searchTerm) ||
+        person.status?.toLowerCase().includes(searchTerm) ||
+        person.more_info?.toLowerCase().includes(searchTerm)
+      );
+
+      setFilteredPeople(filtered);
+    } else if (activeTab === "companies") {
+      if (!query.trim()) {
+        setFilteredCompanies(companies);
+        return;
+      }
+
+      const searchTerm = query.toLowerCase();
+      const filtered = companies.filter(company => 
+        company.record.toLowerCase().includes(searchTerm) ||
+        company.categories?.toLowerCase().includes(searchTerm) ||
+        company.description?.toLowerCase().includes(searchTerm) ||
+        company.twitter?.toLowerCase().includes(searchTerm) ||
+        company.domains?.some(domain => domain.toLowerCase().includes(searchTerm)) ||
+        company.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+      );
+
+      setFilteredCompanies(filtered);
+    }
   };
 
   const handleLogout = async () => {
@@ -223,6 +293,40 @@ const Dashboard = () => {
     setShowForm(false);
     setEditingPerson(null);
     fetchPeople();
+  };
+
+  const handleCompanyFormClose = () => {
+    setShowCompanyForm(false);
+    setEditingCompany(null);
+    fetchCompanies();
+  };
+
+  const handleViewCompany = (company: Company) => {
+    setViewingCompany(company);
+  };
+
+  const handleDeleteCompany = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Company deleted successfully",
+      });
+
+      fetchCompanies();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting company",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -288,7 +392,10 @@ const Dashboard = () => {
       <main className="container mx-auto px-6 py-12 space-y-8">
         {/* Search section */}
         <div className="flex justify-start mb-8">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar 
+            onSearch={handleSearch} 
+            placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "companies" ? "companies" : "items"}...`}
+          />
         </div>
 
         {/* Stats cards */}
@@ -341,13 +448,13 @@ const Dashboard = () => {
         </div>
 
         {/* Main content with tabs */}
-        <Tabs defaultValue="contacts" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-fit grid-cols-3 bg-muted">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Contacts
             </TabsTrigger>
-            <TabsTrigger value="companies" className="flex items-center gap-2" onClick={() => navigate('/companies')}>
+            <TabsTrigger value="companies" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Companies
             </TabsTrigger>
@@ -367,6 +474,16 @@ const Dashboard = () => {
             />
           </TabsContent>
           
+          <TabsContent value="companies">
+            <CompaniesPanel 
+              filteredCompanies={filteredCompanies}
+              onDelete={handleDeleteCompany}
+              onView={handleViewCompany}
+              onRefresh={fetchCompanies}
+              onShowForm={() => setShowCompanyForm(true)}
+            />
+          </TabsContent>
+          
           <TabsContent value="tasks">
             <TasksTab onTasksChange={fetchTasksCount} />
           </TabsContent>
@@ -379,11 +496,25 @@ const Dashboard = () => {
           />
         )}
 
+        {showCompanyForm && (
+          <CompanyForm
+            company={editingCompany}
+            onClose={handleCompanyFormClose}
+          />
+        )}
+
         <EditablePersonModal
           person={viewingPerson}
           isOpen={!!viewingPerson}
           onClose={() => setViewingPerson(null)}
           onSave={fetchPeople}
+        />
+
+        <EditableCompanyModal
+          company={viewingCompany}
+          isOpen={!!viewingCompany}
+          onClose={() => setViewingCompany(null)}
+          onSave={fetchCompanies}
         />
       </main>
     </div>

@@ -261,7 +261,7 @@ const Companies = () => {
       <main className="container mx-auto px-6 py-12 space-y-8">
         {/* Search section */}
         <div className="flex justify-start mb-8">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar onSearch={handleSearch} placeholder="Search companies..." />
         </div>
 
         {/* Stats cards */}
