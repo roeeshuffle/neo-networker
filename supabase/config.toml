@@ -2,3 +2,6 @@ project_id = "ufekkcirsznhrvqwwsyf"
 
 [functions.telegram-bot]
 verify_jwt = false
+
+[functions.company-csv-processor]
+verify_jwt = true

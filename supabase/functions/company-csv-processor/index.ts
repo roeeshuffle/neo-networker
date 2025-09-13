@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4'
-import { corsHeaders } from '../_shared/cors.ts'
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -34,9 +37,9 @@ Deno.serve(async (req) => {
     
     // Default column mapping for companies
     const defaultMapping: { [key: string]: string } = {
-      'record id': 'record',
-      'recordid': 'record',
-      'id': 'record',
+      'record id': 'id',
+      'recordid': 'id',
+      'id': 'id',
       'record': 'record',
       'company name': 'record',
       'name': 'record',
@@ -105,14 +108,19 @@ Deno.serve(async (req) => {
           let value = values[index].replace(/"/g, '').trim()
           
           // Handle specific field types
-          if (dbColumn === 'record' && value) {
+          if (dbColumn === 'id' && value) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+            if (uuidRegex.test(value)) {
+              record.id = value
+            }
+          } else if (dbColumn === 'record' && value) {
             record.record = value
           } else if (dbColumn === 'tags' && value) {
-            // Convert comma-separated string to array
-            record.tags = value.split(';').map(tag => tag.trim()).filter(Boolean)
+            // Convert delimited string to array (comma or semicolon)
+            record.tags = value.split(/[;,]/).map(tag => tag.trim()).filter(Boolean)
           } else if (dbColumn === 'domains' && value) {
-            // Convert comma-separated string to array
-            record.domains = value.split(';').map(domain => domain.trim()).filter(Boolean)
+            // Convert delimited string to array (comma or semicolon)
+            record.domains = value.split(/[;,]/).map(domain => domain.trim()).filter(Boolean)
           } else if (dbColumn === 'twitter_follower_count' && value) {
             // Convert to integer
             const count = parseInt(value.replace(/,/g, ''), 10)
@@ -124,6 +132,11 @@ Deno.serve(async (req) => {
             const date = new Date(value)
             if (!isNaN(date.getTime())) {
               record.last_interaction = date.toISOString()
+            }
+          } else if (dbColumn === 'created_at' && value) {
+            const date = new Date(value)
+            if (!isNaN(date.getTime())) {
+              record.created_at = date.toISOString()
             }
           } else if (value) {
             record[dbColumn] = value
