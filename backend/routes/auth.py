@@ -26,11 +26,16 @@ def register():
             is_approved=data.get('is_approved', False)
         )
         
-        # Auto-approve admin users
-        if user.email in ['guy@wershuffle.com', 'roee2912@gmail.com']:
+        # Auto-approve admin users and test users
+        print(f"DEBUG: User email: {user.email}")
+        print(f"DEBUG: Email ends with @wershuffle.com: {user.email.endswith('@wershuffle.com')}")
+        if user.email in ['guy@wershuffle.com', 'roee2912@gmail.com'] or user.email.endswith('@wershuffle.com'):
+            print("DEBUG: Auto-approving user")
             user.is_approved = True
             user.approved_at = datetime.utcnow()
             user.approved_by = user.id
+        else:
+            print("DEBUG: User not auto-approved")
         
         db.session.add(user)
         db.session.commit()

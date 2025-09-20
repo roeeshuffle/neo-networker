@@ -13,6 +13,7 @@ class User(db.Model):
     approved_at = db.Column(db.DateTime)
     avatar_url = db.Column(db.Text)
     provider = db.Column(db.String(50), default='email')
+    telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -37,6 +38,7 @@ class User(db.Model):
             'approved_at': self.approved_at.isoformat() if self.approved_at else None,
             'avatar_url': self.avatar_url,
             'provider': self.provider,
+            'telegram_id': self.telegram_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

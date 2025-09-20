@@ -199,9 +199,9 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
         print(f"DEBUG: add_task_from_telegram called with args: {args}")
         
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         print(f"DEBUG: Found user: {user.email} (ID: {user.id})")
 
@@ -285,9 +285,9 @@ def remove_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
     """Remove a task from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         # Extract task_id from args - could be a number or string
         task_id = args
@@ -329,9 +329,9 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     """Show tasks from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         # Get tasks for the user
         tasks = Task.query.filter_by(owner_id=user.id).limit(20).all()
@@ -367,9 +367,9 @@ def add_people_from_telegram(args: list, telegram_user: TelegramUser) -> str:
     """Add people from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         results = []
         for person_data in args:
@@ -522,6 +522,37 @@ def delete_person_from_telegram(args: any, telegram_user: TelegramUser) -> str:
                 response += "\n"
             
             return response
+        elif isinstance(args, str):
+            # Handle string parameter (from OpenAI function router)
+            search_term = args
+            people = Person.query.filter(Person.full_name.ilike(f'%{search_term}%')).limit(10).all()
+            
+            if not people:
+                return f"❌ No person found with name containing: {search_term}"
+            
+            if len(people) == 1:
+                # If only one match, delete it directly
+                person = people[0]
+                person_name = person.full_name
+                db.session.delete(person)
+                db.session.commit()
+                return f"✅ {person_name} deleted successfully."
+            else:
+                # Multiple matches, show list and set state for confirmation
+                response = f"🔍 Found {len(people)} matching person(s). Reply with person number to delete:\n\n"
+                for i, person in enumerate(people):
+                    response += f"{i + 1}. {person.full_name}"
+                    if person.company:
+                        response += f" ({person.company})"
+                    response += "\n"
+                
+                # Set state to wait for user selection
+                telegram_user.current_state = 'waiting_delete_confirmation'
+                # Store the search term to recreate the list
+                telegram_user.state_data = {'search_term': search_term}
+                db.session.commit()
+                
+                return response
         else:
             return "❌ Invalid delete request."
         
@@ -569,9 +600,9 @@ def add_company_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     """Add a company from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         # Create the company
         company = Company(
@@ -596,15 +627,34 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     """Add a task from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
+
+        # Parse due_date if provided
+        due_date = None
+        if args.get('due_date'):
+            try:
+                from datetime import datetime
+                # Handle different date formats
+                due_date_str = args.get('due_date')
+                if 'T' in due_date_str:
+                    # ISO format: 2025-09-20T15:30
+                    due_date = datetime.fromisoformat(due_date_str.replace('T', ' '))
+                else:
+                    # Simple format: 2025-09-20 15:30
+                    due_date = datetime.fromisoformat(due_date_str)
+            except Exception as e:
+                print(f"Error parsing due_date '{args.get('due_date')}': {e}")
+                # Continue without due_date if parsing fails
 
         # Create the task
         task = Task(
             id=str(uuid.uuid4()),
             text=args.get('text'),
             assign_to=args.get('assign_to'),
+            due_date=due_date,
+            status=args.get('status', 'todo'),
             priority=args.get('priority', 'medium'),
             label=args.get('label'),
             owner_id=user.id,
@@ -626,9 +676,9 @@ def search_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
         search_type = args.get('type', 'people')
         
         # Find the user associated with this telegram user
-        user = User.query.get(telegram_user.user_id) if telegram_user.user_id else None
+        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         if not user:
-            return "❌ User not found. Please authenticate first."
+            return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         results = []
         
@@ -817,19 +867,59 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 telegram_user.authenticated_at = datetime.utcnow()
                 telegram_user.current_state = 'idle'
                 db.session.commit()
-                response_text = "✅ You are already connected to your webapp account! You can now use the bot. (v3)"
+                response_text = "✅ You are already connected to your webapp account! You can now use the bot."
             else:
-                # User needs to connect via webapp first
-                telegram_user.current_state = 'waiting_email'
+                # User needs to authenticate with password first
+                telegram_user.current_state = 'waiting_password'
                 db.session.commit()
-                response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
+                response_text = "🔐 Please enter the password to authenticate:\n\nPassword: 121212"
         elif text == '/status':
             auth_status = 'Authenticated' if telegram_user.is_authenticated else 'Not authenticated'
             telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
             response_text = f"Status: {auth_status}"
         else:
             # Handle state-based responses
-            if telegram_user.current_state == 'waiting_email':
+            if telegram_user.current_state == 'waiting_password':
+                # User is trying to authenticate with password
+                if text == '121212':
+                    telegram_logger.info(f"✅ User {telegram_user.first_name} authenticated with correct password")
+                    telegram_user.is_authenticated = True
+                    telegram_user.authenticated_at = datetime.utcnow()
+                    telegram_user.current_state = 'idle'
+                    db.session.commit()
+                    response_text = f"✅ Authentication successful! Your Telegram ID is: {telegram_user.telegram_id}\n\nNow connect this ID in your webapp:\n1. Go to Settings tab\n2. Enter your Telegram ID: {telegram_user.telegram_id}\n3. Click Connect Telegram\n\nAfter connecting, you can use the bot to manage your data!"
+                else:
+                    telegram_logger.info(f"❌ User {telegram_user.first_name} entered wrong password: '{text}'")
+                    response_text = "❌ Wrong password. Please try again or use /auth to restart."
+            elif telegram_user.current_state == 'waiting_delete_confirmation':
+                # User is selecting which contact to delete
+                try:
+                    selection = int(text.strip())
+                    if telegram_user.state_data and 'search_term' in telegram_user.state_data:
+                        search_term = telegram_user.state_data['search_term']
+                        people = Person.query.filter(Person.full_name.ilike(f'%{search_term}%')).limit(10).all()
+                        
+                        if 1 <= selection <= len(people):
+                            person = people[selection - 1]
+                            person_name = person.full_name
+                            db.session.delete(person)
+                            db.session.commit()
+                            
+                            # Reset state
+                            telegram_user.current_state = 'idle'
+                            telegram_user.state_data = None
+                            db.session.commit()
+                            
+                            response_text = f"✅ {person_name} deleted successfully."
+                        else:
+                            response_text = f"❌ Invalid selection. Please choose a number between 1 and {len(people)}."
+                    else:
+                        response_text = "❌ Error: No delete operation in progress. Please start over."
+                except ValueError:
+                    response_text = "❌ Please enter a valid number to select the contact to delete."
+                except Exception as e:
+                    response_text = f"❌ Error deleting contact: {str(e)}"
+            elif telegram_user.current_state == 'waiting_email':
                 # User is trying to authenticate but needs to connect via webapp first
                 telegram_logger.info(f"📧 User {telegram_user.first_name} tried to authenticate but not connected to webapp")
                 response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
@@ -987,6 +1077,89 @@ def extract_profile_image(html: str) -> str:
     except Exception as error:
         print(f'Error extracting profile image: {error}')
         return None
+
+@telegram_bp.route('/telegram/connect', methods=['POST'])
+@jwt_required()
+def connect_telegram():
+    """Connect telegram account to user"""
+    try:
+        current_user_id = get_jwt_identity()
+        print(f"🔍 TELEGRAM CONNECT - JWT Identity: {current_user_id}")
+        current_user = User.query.get(current_user_id)
+        print(f"🔍 TELEGRAM CONNECT - User found: {current_user is not None}")
+        if current_user:
+            print(f"🔍 TELEGRAM CONNECT - User email: {current_user.email}")
+            print(f"🔍 TELEGRAM CONNECT - User approved: {current_user.is_approved}")
+            print(f"🔍 TELEGRAM CONNECT - User telegram_id: {current_user.telegram_id}")
+        
+        if not current_user:
+            print(f"❌ TELEGRAM CONNECT - User not found")
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        telegram_id = data.get('telegram_id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'telegram_id is required'}), 400
+        
+        # Check if telegram_id is already connected to another user
+        existing_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if existing_user and existing_user.id != current_user.id:
+            return jsonify({'error': 'This Telegram ID is already connected to another account'}), 400
+        
+        # Update user with telegram_id
+        current_user.telegram_id = telegram_id
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Telegram account connected successfully',
+            'user': current_user.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@telegram_bp.route('/telegram/disconnect', methods=['POST'])
+@jwt_required()
+def disconnect_telegram():
+    """Disconnect telegram account from user"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Remove telegram_id from user
+        current_user.telegram_id = None
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Telegram account disconnected successfully',
+            'user': current_user.to_dict()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@telegram_bp.route('/telegram/status', methods=['GET'])
+@jwt_required()
+def telegram_status():
+    """Get telegram connection status"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({
+            'connected': current_user.telegram_id is not None,
+            'telegram_id': current_user.telegram_id
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @telegram_bp.route('/telegram/setup-webhook', methods=['POST'])
 @jwt_required()

@@ -111,9 +111,83 @@ class TelegramPoller:
             else:
                 return f"👋 Welcome back {telegram_user.first_name}!\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
         
+        elif text == '/auth':
+            telegram_logger.info(f"🔐 User {telegram_user.first_name} initiated authentication")
+            if telegram_user.user_id:
+                # User is already connected to a webapp account
+                telegram_user.is_authenticated = True
+                telegram_user.authenticated_at = datetime.utcnow()
+                telegram_user.current_state = 'idle'
+                db.session.commit()
+                return "✅ You are already connected to your webapp account! You can now use the bot."
+            else:
+                # User needs to authenticate with password first
+                telegram_user.current_state = 'waiting_password'
+                db.session.commit()
+                return "🔐 Please enter the password to authenticate:\n\nPassword: 121212"
+        
+        elif text == '/help':
+            telegram_logger.info(f"❓ User {telegram_user.first_name} requested help")
+            return """Available commands:
+/start - Start the bot
+/help - Show this help message
+/auth - Authenticate (requires webapp connection)
+/status - Check your status
+
+To use this bot, you need to connect your Telegram account via the webapp first."""
+        
+        elif text == '/status':
+            auth_status = 'Authenticated' if telegram_user.is_authenticated else 'Not authenticated'
+            telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
+            return f"Status: {auth_status}"
+        
         else:
+            # Handle state-based responses first
+            if telegram_user.current_state == 'waiting_password':
+                # User is trying to authenticate with password
+                if text == '121212':
+                    telegram_logger.info(f"✅ User {telegram_user.first_name} authenticated with correct password")
+                    telegram_user.is_authenticated = True
+                    telegram_user.authenticated_at = datetime.utcnow()
+                    telegram_user.current_state = 'idle'
+                    db.session.commit()
+                    return f"✅ Authentication successful! Your Telegram ID is: {telegram_user.telegram_id}\n\nNow connect this ID in your webapp:\n1. Go to Settings tab\n2. Enter your Telegram ID: {telegram_user.telegram_id}\n3. Click Connect Telegram\n\nAfter connecting, you can use the bot to manage your data!"
+                else:
+                    telegram_logger.info(f"❌ User {telegram_user.first_name} entered wrong password: '{text}'")
+                    return "❌ Wrong password. Please try again or use /auth to restart."
+            
+            elif telegram_user.current_state == 'waiting_delete_confirmation':
+                # User is selecting which contact to delete
+                try:
+                    from models import Person
+                    selection = int(text.strip())
+                    if telegram_user.state_data and 'search_term' in telegram_user.state_data:
+                        search_term = telegram_user.state_data['search_term']
+                        people = Person.query.filter(Person.full_name.ilike(f'%{search_term}%')).limit(10).all()
+                        
+                        if 1 <= selection <= len(people):
+                            person = people[selection - 1]
+                            person_name = person.full_name
+                            db.session.delete(person)
+                            db.session.commit()
+                            
+                            # Reset state
+                            telegram_user.current_state = 'idle'
+                            telegram_user.state_data = None
+                            db.session.commit()
+                            
+                            return f"✅ {person_name} deleted successfully."
+                        else:
+                            return f"❌ Invalid selection. Please choose a number between 1 and {len(people)}."
+                    else:
+                        return "❌ Error: No delete operation in progress. Please start over."
+                except ValueError:
+                    return "❌ Please enter a valid number to select the contact to delete."
+                except Exception as e:
+                    return f"❌ Error deleting contact: {str(e)}"
+            
             # Use OpenAI to process natural language requests
-            if telegram_user.is_authenticated and telegram_user.user_id:
+            elif telegram_user.is_authenticated and telegram_user.user_id:
                 telegram_logger.info(f"🤖 Processing natural language request for user {telegram_user.first_name}: '{text}'")
                 # Import the function from the webhook handler
                 from routes.telegram import process_natural_language_request, send_admin_notification

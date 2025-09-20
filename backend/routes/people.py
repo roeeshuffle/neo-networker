@@ -40,9 +40,16 @@ def create_person():
     """Create a new person"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔍 PEOPLE CREATE - JWT Identity: {current_user_id}")
         current_user = User.query.get(current_user_id)
+        print(f"🔍 PEOPLE CREATE - User found: {current_user is not None}")
+        if current_user:
+            print(f"🔍 PEOPLE CREATE - User email: {current_user.email}")
+            print(f"🔍 PEOPLE CREATE - User approved: {current_user.is_approved}")
+            print(f"🔍 PEOPLE CREATE - User telegram_id: {current_user.telegram_id}")
         
         if not current_user or not current_user.is_approved:
+            print(f"❌ PEOPLE CREATE - Unauthorized: user={current_user is not None}, approved={current_user.is_approved if current_user else 'N/A'}")
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()

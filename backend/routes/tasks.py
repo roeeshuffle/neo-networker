@@ -40,9 +40,16 @@ def create_task():
     """Create a new task"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔍 TASK CREATE - JWT Identity: {current_user_id}")
         current_user = User.query.get(current_user_id)
+        print(f"🔍 TASK CREATE - User found: {current_user is not None}")
+        if current_user:
+            print(f"🔍 TASK CREATE - User email: {current_user.email}")
+            print(f"🔍 TASK CREATE - User approved: {current_user.is_approved}")
+            print(f"🔍 TASK CREATE - User telegram_id: {current_user.telegram_id}")
         
         if not current_user or not current_user.is_approved:
+            print(f"❌ TASK CREATE - Unauthorized: user={current_user is not None}, approved={current_user.is_approved if current_user else 'N/A'}")
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
