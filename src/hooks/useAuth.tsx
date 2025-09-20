@@ -6,6 +6,7 @@ interface User {
   email: string;
   full_name: string;
   is_approved: boolean;
+  telegram_id?: number;
   created_at: string;
   updated_at: string;
 }

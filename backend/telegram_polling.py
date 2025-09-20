@@ -98,33 +98,26 @@ class TelegramPoller:
         """Handle different types of messages"""
         telegram_logger.info(f"🔍 Processing command: '{text}' for user {telegram_user.first_name}")
         
-        # Handle authentication flow
-        if not telegram_user.is_authenticated:
-            telegram_logger.info(f"🔐 User {telegram_user.first_name} needs authentication")
-            return f"🔐 **Authentication Required**\n\nTo use this bot, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: http://localhost:8080\n2. Login to your account\n3. Go to Settings tab\n4. Click 'Connect Telegram'\n5. Enter your Telegram ID: `{telegram_user.telegram_id}`\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
+        # Check if user's Telegram ID is connected in the web app
+        webapp_user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        if not webapp_user:
+            telegram_logger.info(f"🔐 User {telegram_user.first_name} needs to connect via webapp")
+            return f"🔐 **Connection Required**\n\nTo use this bot, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
         
         # Handle commands only if not in a state
         elif text == '/start':
             telegram_logger.info(f"🚀 User {telegram_user.first_name} started the bot")
-            if not telegram_user.is_authenticated:
-                return f"🔐 **Welcome to Neo Networker Bot!**\n\nTo use this bot, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: http://localhost:8080\n2. Login to your account\n3. Go to Settings tab\n4. Click 'Connect Telegram'\n5. Enter your Telegram ID: `{telegram_user.telegram_id}`\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
+            if not webapp_user:
+                return f"🔐 **Welcome to Neo Networker Bot!**\n\nTo use this bot, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
             else:
                 return f"👋 Welcome back {telegram_user.first_name}!\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
         
         elif text == '/auth':
-            telegram_logger.info(f"🔐 User {telegram_user.first_name} initiated authentication")
-            if telegram_user.user_id:
-                # User is already connected to a webapp account
-                telegram_user.is_authenticated = True
-                telegram_user.authenticated_at = datetime.utcnow()
-                telegram_user.current_state = 'idle'
-                db.session.commit()
-                return "✅ You are already connected to your webapp account! You can now use the bot."
+            telegram_logger.info(f"🔐 User {telegram_user.first_name} checked connection status")
+            if webapp_user:
+                return "✅ You are connected to your webapp account! You can now use the bot."
             else:
-                # User needs to authenticate with password first
-                telegram_user.current_state = 'waiting_password'
-                db.session.commit()
-                return "🔐 Please enter the password to authenticate:\n\nPassword: 121212"
+                return f"🔐 **Not Connected**\n\nTo use this bot, connect your Telegram account via the webapp:\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'"
         
         elif text == '/help':
             telegram_logger.info(f"❓ User {telegram_user.first_name} requested help")
@@ -137,26 +130,18 @@ class TelegramPoller:
 To use this bot, you need to connect your Telegram account via the webapp first."""
         
         elif text == '/status':
-            auth_status = 'Authenticated' if telegram_user.is_authenticated else 'Not authenticated'
-            telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
-            return f"Status: {auth_status}"
+            if webapp_user:
+                auth_status = 'Connected to webapp'
+                telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
+                return f"Status: {auth_status}\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
+            else:
+                auth_status = 'Not connected to webapp'
+                telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
+                return f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         
         else:
             # Handle state-based responses first
-            if telegram_user.current_state == 'waiting_password':
-                # User is trying to authenticate with password
-                if text == '121212':
-                    telegram_logger.info(f"✅ User {telegram_user.first_name} authenticated with correct password")
-                    telegram_user.is_authenticated = True
-                    telegram_user.authenticated_at = datetime.utcnow()
-                    telegram_user.current_state = 'idle'
-                    db.session.commit()
-                    return f"✅ Authentication successful! Your Telegram ID is: {telegram_user.telegram_id}\n\nNow connect this ID in your webapp:\n1. Go to Settings tab\n2. Enter your Telegram ID: {telegram_user.telegram_id}\n3. Click Connect Telegram\n\nAfter connecting, you can use the bot to manage your data!"
-                else:
-                    telegram_logger.info(f"❌ User {telegram_user.first_name} entered wrong password: '{text}'")
-                    return "❌ Wrong password. Please try again or use /auth to restart."
-            
-            elif telegram_user.current_state == 'waiting_delete_confirmation':
+            if telegram_user.current_state == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
                     from models import Person
@@ -221,7 +206,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                     return f"❌ Error deleting task: {str(e)}"
             
             # Use OpenAI to process natural language requests
-            elif telegram_user.is_authenticated and telegram_user.user_id:
+            elif webapp_user:
                 telegram_logger.info(f"🤖 Processing natural language request for user {telegram_user.first_name}: '{text}'")
                 # Import the function from the webhook handler
                 from routes.telegram import process_natural_language_request, send_admin_notification
@@ -239,8 +224,8 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 
                 return response_text
             else:
-                telegram_logger.info(f"🚫 Unauthenticated user {telegram_user.first_name} tried to use bot: '{text}'")
-                return "🔐 Please authenticate first. Send /start to begin authentication."
+                telegram_logger.info(f"🚫 Unconnected user {telegram_user.first_name} tried to use bot: '{text}'")
+                return "🔐 Please connect your Telegram account via the webapp first. Send /start for instructions."
     
     def send_message(self, chat_id, text):
         """Send a message back to the user"""
