@@ -105,15 +105,21 @@ For add_task, extract these fields from natural language:
 - notes: additional notes or details about the task
 - alert_time: when to alert about the task (format: YYYY-MM-DD HH:MM)
 
+IMPORTANT: When converting relative dates:
+- "tomorrow" = next day from today's date
+- "today" = current date
+- "next week" = 7 days from today
+- Always use the actual calculated date, not hardcoded examples
+
 CONTACT vs TASK DETECTION:
 - "add contact", "new contact", "add person" → contact functions
 - "add task", "new task", "call", "meeting", "schedule" → task functions
 - "call [person]" → task (unless it's "add contact [person]")
 
-Examples:
+Examples (use actual calculated dates, not hardcoded ones):
 "Find AI info" → [1, ["AI"]]
-"add task call John tomorrow" → [2, {"text":"call John","due_date":"2025-09-20 09:00","status":"todo","priority":"medium"}]
-"add task call Alon from puzzlesoft tomorrow at 15:00 note for the meeting: talk with guy before" → [2, {"text":"call Alon","assign_to":"puzzlesoft","due_date":"2025-09-20 15:00","status":"todo","priority":"medium","notes":"talk with guy before"}]
+"add task call John tomorrow" → [2, {"text":"call John","due_date":"[CALCULATE: tomorrow's date] 09:00","status":"todo","priority":"medium"}]
+"add task call Alon from puzzlesoft tomorrow at 15:00 note for the meeting: talk with guy before" → [2, {"text":"call Alon","assign_to":"puzzlesoft","due_date":"[CALCULATE: tomorrow's date] 15:00","status":"todo","priority":"medium","notes":"talk with guy before"}]
 "add contact sachar caspi works as ceo in Shuffle, sachar@shuffel.com, skills - marketing and music" → [6, [{"full_name":"sachar caspi","email":"sachar@shuffel.com","company":"Shuffle","status":"ceo","skills":"marketing and music","categories":"marketing and music"}]]
 "show weekly tasks" → [5, {"period":"weekly"}]
 "delete person 123" → [10, {"person_id":"123"}]
