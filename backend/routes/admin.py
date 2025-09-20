@@ -19,6 +19,36 @@ def check_admin_access(user_id):
     admin_emails = ['guy@wershuffle.com', 'roee2912@gmail.com']
     return user.email in admin_emails
 
+@admin_bp.route('/admin/pending-users', methods=['GET'])
+@jwt_required()
+def get_pending_users():
+    """Get pending users (admin only)"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not check_admin_access(current_user_id):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        users = User.query.filter_by(is_approved=False).order_by(User.created_at.desc()).all()
+        
+        user_data = []
+        for user in users:
+            user_data.append({
+                'id': user.id,
+                'email': user.email,
+                'full_name': user.full_name,
+                'is_approved': user.is_approved,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'approved_at': user.approved_at.isoformat() if user.approved_at else None,
+                'approved_by': user.approved_by
+            })
+        
+        return jsonify(user_data), 200
+        
+    except Exception as e:
+        admin_logger.error(f"Error getting pending users: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/admin/users', methods=['GET'])
 @jwt_required()
 def get_all_users():
