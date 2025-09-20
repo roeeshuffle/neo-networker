@@ -817,7 +817,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 telegram_user.authenticated_at = datetime.utcnow()
                 telegram_user.current_state = 'idle'
                 db.session.commit()
-                response_text = "✅ You are already connected to your webapp account! You can now use the bot."
+                response_text = "✅ You are already connected to your webapp account! You can now use the bot. (v3)"
             else:
                 # User needs to connect via webapp first
                 telegram_user.current_state = 'waiting_email'
