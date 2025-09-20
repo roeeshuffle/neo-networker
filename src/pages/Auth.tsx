@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { apiClient } from "@/integrations/api/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,30 +17,17 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleGoogleAuth = async () => {
     setLoading(true);
     
-    // Debug: Log the current origin to help troubleshoot
-    console.log("Current origin:", window.location.origin);
-    console.log("Full URL:", window.location.href);
-    
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        }
+      toast({
+        title: "Google Auth Not Available",
+        description: "Google authentication is not yet implemented with the Flask backend. Please use email/password authentication.",
+        variant: "destructive",
       });
-
-      if (error) {
-        console.error("Supabase OAuth error:", error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
     } catch (error: any) {
       console.error("Google Auth error:", error);
       toast({
@@ -60,152 +47,36 @@ const Auth = () => {
     try {
       if (isLogin) {
         console.log("Attempting login with:", email);
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const success = await login(email, password);
 
-        console.log("Login response:", { data, error });
-
-        if (error) {
-          console.log("Login error:", error.message);
-          
-          // Check if it's an invalid credentials error
-          if (error.message.includes("Invalid login credentials")) {
-            console.log("Invalid credentials, checking if user exists...");
-            
-            try {
-              // Check if user exists but is not approved
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('is_approved, email')
-                .eq('email', email)
-                .single();
-
-              console.log("Profile check result:", { profile, profileError });
-
-              if (profile) {
-                if (!profile.is_approved) {
-                  console.log("User exists but not approved");
-                  toast({
-                    title: "Account Pending Approval",
-                    description: "Your account is waiting for admin approval. You will receive an email once approved.",
-                    variant: "destructive",
-                  });
-                  setLoading(false);
-                  return;
-                }
-                // If user is approved but still getting invalid credentials, it's a password issue
-                console.log("User is approved but wrong password");
-                toast({
-                  title: "Invalid Password",
-                  description: "The password you entered is incorrect.",
-                  variant: "destructive",
-                });
-                setLoading(false);
-                return;
-              } else {
-                console.log("User not found in profiles");
-                toast({
-                  title: "User Not Found",
-                  description: "No account found with this email address. Please sign up first.",
-                  variant: "destructive",
-                });
-                setLoading(false);
-                return;
-              }
-            } catch (profileError) {
-              console.error("Error checking profile:", profileError);
-              // If we can't check the profile, show generic error
-              toast({
-                title: "Login Failed",
-                description: "Invalid email or password.",
-                variant: "destructive",
-              });
-              setLoading(false);
-              return;
-            }
-          } else {
-            // Other auth errors
-            console.log("Other auth error:", error.message);
-            toast({
-              title: "Login Failed",
-              description: error.message,
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (data.user) {
-          console.log("User logged in successfully, checking approval...");
-          // Double-check approval status after successful auth
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('is_approved')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profileError) {
-            console.error("Error checking approval:", profileError);
-            throw profileError;
-          }
-
-          if (!profile?.is_approved) {
-            console.log("User not approved, signing out");
-            await supabase.auth.signOut();
-            toast({
-              title: "Account Pending Approval",
-              description: "Your account is pending admin approval. You will receive an email once approved.",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-
-          console.log("User approved, navigating to dashboard");
+        if (success) {
+          console.log("Login successful");
           toast({
             title: "Welcome back!",
             description: "Successfully signed in.",
           });
           navigate("/dashboard");
+        } else {
+          console.log("Login failed");
+          toast({
+            title: "Login Failed",
+            description: "Invalid email or password.",
+            variant: "destructive",
+          });
         }
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: {
-              full_name: fullName,
-            }
-          }
-        });
-
-        if (error) throw error;
-
+        console.log("Registration not implemented yet");
         toast({
-          title: "Registration Submitted",
-          description: "Your registration has been submitted for admin approval. Please wait for approval.",
+          title: "Registration Not Available",
+          description: "Registration is not yet implemented with the Flask backend.",
+          variant: "destructive",
         });
-        
-        setIsLogin(true);
-        setEmail("");
-        setPassword("");
-        setFullName("");
       }
     } catch (error: any) {
       console.error("Catch block error:", error);
       let errorMessage = "An error occurred during authentication.";
       
-      if (error.message.includes("Invalid login credentials")) {
-        errorMessage = "Invalid email or password.";
-      } else if (error.message.includes("User already registered")) {
-        errorMessage = "This email is already registered. Please sign in instead.";
-      } else if (error.message.includes("Password should be at least")) {
-        errorMessage = "Password should be at least 6 characters long.";
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = error.message;
       }
 

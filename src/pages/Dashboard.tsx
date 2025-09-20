@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { User, Session } from '@supabase/supabase-js';
 import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
@@ -59,8 +58,7 @@ export interface Company {
 }
 
 const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -79,84 +77,34 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (!session?.user) {
-          navigate("/auth");
-        } else {
-          // Check if user is approved when they sign in
-          setTimeout(() => {
-            checkUserApproval(session.user.id);
-          }, 0);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session?.user) {
-        navigate("/auth");
-      } else {
-        checkUserApproval(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const checkUserApproval = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_approved')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (!profile?.is_approved) {
-        await supabase.auth.signOut();
-        navigate("/auth");
-        toast({
-          title: "Account Not Approved",
-          description: "Your account is pending admin approval.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error('Error checking user approval:', error);
-      await supabase.auth.signOut();
+    // Check authentication status
+    if (!authLoading && !isAuthenticated) {
       navigate("/auth");
+      return;
+    }
+
+    if (isAuthenticated && user) {
+      // User is authenticated, load data
+      loadData();
+    }
+  }, [isAuthenticated, authLoading, user, navigate]);
+
+  const loadData = async () => {
+    if (user) {
+      await fetchPeople();
+      await fetchCompanies();
+      await fetchTasksCount();
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchPeople();
-      fetchCompanies();
-      fetchTasksCount();
-    }
-  }, [user]);
 
   const fetchPeople = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('people')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setPeople(data || []);
-      setFilteredPeople(data || []);
+      // For now, we'll use a simple mock data since the API client doesn't have getPeople yet
+      // This will be updated when we implement the people API endpoints
+      setPeople([]);
+      setFilteredPeople([]);
     } catch (error: any) {
       toast({
         title: "Error fetching data",
