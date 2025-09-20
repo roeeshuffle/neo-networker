@@ -918,7 +918,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 response_text = f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         else:
             # Handle state-based responses
-            elif telegram_user.current_state == 'waiting_delete_confirmation':
+            if telegram_user.current_state == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
                     selection = int(text.strip())
