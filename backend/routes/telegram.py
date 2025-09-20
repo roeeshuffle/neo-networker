@@ -805,34 +805,37 @@ def telegram_webhook():
             response_text = """Available commands:
 /start - Start the bot
 /help - Show this help message
-/auth - Authenticate with password
-/status - Check your status"""
+/auth - Authenticate (requires webapp connection)
+/status - Check your status
+
+To use this bot, you need to connect your Telegram account via the webapp first."""
         elif text == '/auth':
             telegram_logger.info(f"🔐 User {telegram_user.first_name} initiated authentication")
-            telegram_user.current_state = 'waiting_password'
-            db.session.commit()
-            response_text = "Please enter the authentication password:"
+            if telegram_user.user_id:
+                # User is already connected to a webapp account
+                telegram_user.is_authenticated = True
+                telegram_user.authenticated_at = datetime.utcnow()
+                telegram_user.current_state = 'idle'
+                db.session.commit()
+                response_text = "✅ You are already connected to your webapp account! You can now use the bot."
+            else:
+                # User needs to connect via webapp first
+                telegram_user.current_state = 'waiting_email'
+                db.session.commit()
+                response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
         elif text == '/status':
             auth_status = 'Authenticated' if telegram_user.is_authenticated else 'Not authenticated'
             telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
             response_text = f"Status: {auth_status}"
         else:
             # Handle state-based responses
-            if telegram_user.current_state == 'waiting_password':
-                telegram_logger.info(f"🔑 User {telegram_user.first_name} attempting authentication with password")
-                if text == "121212":
-                    telegram_logger.info(f"✅ User {telegram_user.first_name} successfully authenticated - v2")
-                    telegram_user.is_authenticated = True
-                    telegram_user.authenticated_at = datetime.utcnow()
-                    telegram_user.current_state = 'idle'
-                    db.session.commit()  # Commit the authentication status
-                    response_text = "Authentication successful! You can now use the bot."
-                else:
-                    telegram_logger.warning(f"❌ User {telegram_user.first_name} failed authentication with password: '{text}'")
-                    response_text = "Invalid password. Please try again or use /auth to restart."
+            if telegram_user.current_state == 'waiting_email':
+                # User is trying to authenticate but needs to connect via webapp first
+                telegram_logger.info(f"📧 User {telegram_user.first_name} tried to authenticate but not connected to webapp")
+                response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
             else:
                 # Use OpenAI to process natural language requests
-                if telegram_user.is_authenticated:
+                if telegram_user.is_authenticated and telegram_user.user_id:
                     telegram_logger.info(f"🤖 Processing natural language request for user {telegram_user.first_name}: '{text}'")
                     response_text = process_natural_language_request(text, telegram_user)
                     telegram_logger.info(f"🤖 OpenAI response for user {telegram_user.first_name}: '{response_text[:100]}...'")
