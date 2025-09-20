@@ -821,7 +821,7 @@ def telegram_webhook():
             if telegram_user.current_state == 'waiting_password':
                 telegram_logger.info(f"🔑 User {telegram_user.first_name} attempting authentication with password")
                 if text == "121212":
-                    telegram_logger.info(f"✅ User {telegram_user.first_name} successfully authenticated")
+                    telegram_logger.info(f"✅ User {telegram_user.first_name} successfully authenticated - v2")
                     telegram_user.is_authenticated = True
                     telegram_user.authenticated_at = datetime.utcnow()
                     telegram_user.current_state = 'idle'
