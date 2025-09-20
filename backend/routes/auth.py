@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
+import hashlib
 from models import User
 from database import db
 from datetime import datetime
@@ -22,7 +23,7 @@ def register():
         user = User(
             id=str(uuid.uuid4()),
             email=data['email'],
-            password_hash=generate_password_hash(data['password']),
+            password_hash=generate_password_hash(data['password'], method='pbkdf2:sha256'),
             full_name=data.get('full_name', ''),
             is_approved=False  # Always start as not approved
         )
