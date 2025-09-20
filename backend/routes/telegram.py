@@ -842,8 +842,27 @@ def telegram_webhook():
         # Log response being sent
         telegram_logger.info(f"📤 Sending response to user {telegram_user.first_name}: '{response_text[:100]}...'")
         
-        # Send response back to telegram (you'll need to implement this)
-        # For now, just return success
+        # Send response back to telegram
+        try:
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            if bot_token:
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                data = {
+                    'chat_id': chat_id,
+                    'text': response_text,
+                    'parse_mode': 'HTML'
+                }
+                
+                response = requests.post(url, data=data, timeout=10)
+                if response.status_code == 200:
+                    telegram_logger.info(f"✅ Message sent successfully to user {telegram_user.first_name}")
+                else:
+                    telegram_logger.error(f"❌ Failed to send message to user {telegram_user.first_name}: {response.status_code} - {response.text}")
+            else:
+                telegram_logger.error("❌ Telegram bot token not configured")
+        except Exception as e:
+            telegram_logger.error(f"💥 Error sending message to user {telegram_user.first_name}: {str(e)}")
+        
         return jsonify({'status': 'ok', 'response': response_text})
         
     except Exception as e:
