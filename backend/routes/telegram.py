@@ -946,7 +946,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                     response_text = "❌ Please enter a valid number to select the contact to delete."
                 except Exception as e:
                     response_text = f"❌ Error deleting contact: {str(e)}"
-            elif telegram_user.current_state == 'waiting_email':
+            if telegram_user.current_state == 'waiting_email':
                 # User is trying to authenticate but needs to connect via webapp first
                 telegram_logger.info(f"📧 User {telegram_user.first_name} tried to authenticate but not connected to webapp")
                 response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
