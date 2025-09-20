@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/integrations/api/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Users, Merge, Trash2, Eye, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 
 interface Person {
@@ -28,28 +30,112 @@ interface Duplicate {
 interface SettingsTabProps {
   onDeleteAllTelegramUsers?: () => Promise<void>;
   onDeleteAllPeople?: () => Promise<void>;
+  currentUser?: any;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({ 
   onDeleteAllTelegramUsers, 
-  onDeleteAllPeople 
+  onDeleteAllPeople,
+  currentUser 
 }) => {
+  const { refreshUser } = useAuth();
   const [duplicates, setDuplicates] = useState<Duplicate[]>([]);
   const [loading, setLoading] = useState(true);
   const [mergeLoading, setMergeLoading] = useState(false);
   const [selectedDuplicate, setSelectedDuplicate] = useState<Duplicate | null>(null);
+  const [telegramId, setTelegramId] = useState('');
+  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(false);
 
   useEffect(() => {
     fetchDuplicates();
+    checkTelegramStatus();
   }, []);
+
+  const checkTelegramStatus = async () => {
+    try {
+      const { data: user } = await apiClient.getCurrentUser();
+      if (user?.telegram_id) {
+        setTelegramConnected(true);
+        setTelegramId(user.telegram_id.toString());
+      } else {
+        setTelegramConnected(false);
+        setTelegramId('');
+      }
+    } catch (error) {
+      console.error('Error checking Telegram status:', error);
+      setTelegramConnected(false);
+      setTelegramId('');
+    }
+  };
+
+  const connectTelegram = async () => {
+    if (!telegramId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid Telegram ID",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setTelegramLoading(true);
+    try {
+      const { error } = await apiClient.connectTelegram(telegramId);
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Telegram account connected successfully!",
+      });
+      
+      // Refresh the user data in the authentication context
+      await refreshUser();
+      // Also refresh the local state
+      await checkTelegramStatus();
+    } catch (error) {
+      console.error('Error connecting Telegram:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect Telegram account",
+        variant: "destructive"
+      });
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const disconnectTelegram = async () => {
+    setTelegramLoading(true);
+    try {
+      const { error } = await apiClient.disconnectTelegram();
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Telegram account disconnected successfully!",
+      });
+      
+      // Refresh the user data in the authentication context
+      await refreshUser();
+      // Also refresh the local state
+      await checkTelegramStatus();
+    } catch (error) {
+      console.error('Error disconnecting Telegram:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect Telegram account",
+        variant: "destructive"
+      });
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
 
   const fetchDuplicates = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('people')
-        .select('*')
-        .order('full_name');
+      const { data, error } = await apiClient.getPeople();
 
       if (error) throw error;
 
@@ -106,14 +192,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         if (allIdentical && people.length > 1) {
           try {
             // Keep the oldest record, delete the rest
-            const toDelete = people.slice(1).map(p => p.id);
+            const toDelete = people.slice(1);
             
-            const { error } = await supabase
-              .from('people')
-              .delete()
-              .in('id', toDelete);
-
-            if (error) throw error;
+            for (const person of toDelete) {
+              const { error } = await apiClient.deletePerson(person.id);
+              if (error) throw error;
+            }
             
             mergedCount++;
           } catch (error) {
@@ -147,12 +231,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       const toKeep = duplicate.people[keepIndex];
       const toDelete = duplicate.people.filter((_, i) => i !== keepIndex);
 
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .in('id', toDelete.map(p => p.id));
-
-      if (error) throw error;
+      for (const person of toDelete) {
+        const { error } = await apiClient.deletePerson(person.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
@@ -176,12 +258,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const deleteAllDuplicates = async (duplicate: Duplicate) => {
     try {
       setMergeLoading(true);
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .in('id', duplicate.people.map(p => p.id));
-
-      if (error) throw error;
+      
+      for (const person of duplicate.people) {
+        const { error } = await apiClient.deletePerson(person.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
@@ -241,6 +322,60 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* Telegram Connection Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowRight className="w-5 h-5" />
+            Telegram Bot Connection
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Connect your Telegram account to use the bot features
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {telegramConnected ? (
+            <div className="flex items-center justify-between p-4 border border-green-200 rounded-lg bg-green-50">
+              <div>
+                <div className="font-medium text-green-800">Telegram Connected</div>
+                <div className="text-sm text-green-600">ID: {telegramId}</div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={disconnectTelegram}
+                disabled={telegramLoading}
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Telegram User ID</label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  To get your Telegram ID, message @userinfobot on Telegram
+                </p>
+                <Input
+                  type="text"
+                  value={telegramId}
+                  onChange={(e) => setTelegramId(e.target.value)}
+                  placeholder="Enter your Telegram ID"
+                />
+              </div>
+              <Button
+                onClick={connectTelegram}
+                disabled={telegramLoading || !telegramId.trim()}
+                className="w-full"
+              >
+                {telegramLoading ? 'Connecting...' : 'Connect Telegram'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       <div className="flex items-center justify-between">
         <div>

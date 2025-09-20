@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +29,7 @@ export const CompanyDuplicateManager = ({ onDuplicatesRemoved }: CompanyDuplicat
     try {
       setLoading(true);
       
-      const { data: companies, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('created_at', { ascending: true });
+      const { data: companies, error } = await apiClient.getCompanies();
 
       if (error) throw error;
 
@@ -98,13 +95,11 @@ export const CompanyDuplicateManager = ({ onDuplicatesRemoved }: CompanyDuplicat
           const companiesToDelete = duplicate.companies.slice(1);
           
           if (companiesToDelete.length > 0) {
-            const idsToDelete = companiesToDelete.map(c => c.id);
-            const { error } = await supabase
-              .from('companies')
-              .delete()
-              .in('id', idsToDelete);
-
-            if (error) throw error;
+            // Delete companies one by one
+            for (const company of companiesToDelete) {
+              const { error } = await apiClient.deleteCompany(company.id);
+              if (error) throw error;
+            }
             mergedCount += companiesToDelete.length;
           }
         }
@@ -134,13 +129,11 @@ export const CompanyDuplicateManager = ({ onDuplicatesRemoved }: CompanyDuplicat
       const companiesToDelete = duplicate.companies.filter(c => c.id !== companyToKeep.id);
       
       if (companiesToDelete.length > 0) {
-        const idsToDelete = companiesToDelete.map(c => c.id);
-        const { error } = await supabase
-          .from('companies')
-          .delete()
-          .in('id', idsToDelete);
-
-        if (error) throw error;
+        // Delete companies one by one
+        for (const company of companiesToDelete) {
+          const { error } = await apiClient.deleteCompany(company.id);
+          if (error) throw error;
+        }
 
         toast({
           title: "Success",
@@ -165,13 +158,11 @@ export const CompanyDuplicateManager = ({ onDuplicatesRemoved }: CompanyDuplicat
   const deleteAllDuplicates = async (duplicate: CompanyDuplicate) => {
     try {
       setMergeLoading(true);
-      const idsToDelete = duplicate.companies.map(c => c.id);
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .in('id', idsToDelete);
-
-      if (error) throw error;
+      // Delete all companies in the duplicate group
+      for (const company of duplicate.companies) {
+        const { error } = await apiClient.deleteCompany(company.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",

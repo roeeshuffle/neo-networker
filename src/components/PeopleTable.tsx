@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { useState, useEffect } from "react";
 import { ShareDataDialog } from "@/components/ShareDataDialog";
 import { OwnerInfo } from "@/components/OwnerInfo";
@@ -39,8 +39,9 @@ const getTextColorFromBg = (bgColor: string): string => {
 // Function to fetch LinkedIn profile image
 const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke('linkedin-profile-image', {
-      body: { linkedin_url: linkedinUrl }
+    const { data, error } = await apiClient.request('/linkedin-profile-image', {
+      method: 'POST',
+      body: JSON.stringify({ linkedin_url: linkedinUrl })
     });
 
     if (error) {

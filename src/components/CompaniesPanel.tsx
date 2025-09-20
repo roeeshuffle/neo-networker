@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Plus, Trash2, Upload, Merge } from "lucide-react";
 import { CompaniesTable } from "./CompaniesTable";
 import { CompanyDuplicateManager } from "./CompanyDuplicateManager";
@@ -30,12 +30,15 @@ export const CompaniesPanel = ({
 
   const handleDeleteAllCompanies = async () => {
     try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all UUIDs
-
-      if (error) throw error;
+      // Get all companies first, then delete them one by one
+      const { data: companies, error: fetchError } = await apiClient.getCompanies();
+      if (fetchError) throw fetchError;
+      
+      // Delete all companies
+      for (const company of companies || []) {
+        const { error } = await apiClient.deleteCompany(company.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",

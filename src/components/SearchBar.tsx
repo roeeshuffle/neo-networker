@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Search, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -28,9 +28,7 @@ export const SearchBar = ({ onSearch, placeholder = "Search contacts..." }: Sear
 
   const fetchAllData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('people')
-        .select('full_name, company, categories');
+      const { data, error } = await apiClient.getPeople();
       
       if (error) throw error;
       setAllData(data || []);

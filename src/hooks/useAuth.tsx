@@ -15,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -92,6 +93,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     apiClient.setToken('');
   };
 
+  const refreshUser = async () => {
+    try {
+      const { data: userData } = await apiClient.getCurrentUser();
+      if (userData) {
+        setUser(userData);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
+
   const isAuthenticated = !!token && !!user;
 
   const value: AuthContextType = {
@@ -99,6 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
+    refreshUser,
     isAuthenticated,
     loading,
   };

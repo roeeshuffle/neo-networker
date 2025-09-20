@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface OwnerInfoProps {
@@ -19,11 +19,7 @@ export const OwnerInfo = ({ ownerId }: OwnerInfoProps) => {
   useEffect(() => {
     const fetchOwner = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, email, full_name, avatar_url')
-          .eq('id', ownerId)
-          .single();
+      const { data, error } = await apiClient.getCurrentUser();
 
         if (error) throw error;
         setOwner(data);

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session } from '@apiClient/apiClient-js';
 import { SearchBar } from "@/components/SearchBar";
 import { CompaniesTable } from "@/components/CompaniesTable";
 import { CompanyForm } from "@/components/CompanyForm";
@@ -46,7 +46,7 @@ const Companies = () => {
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = apiClient.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
@@ -63,7 +63,7 @@ const Companies = () => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    apiClient.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -79,16 +79,12 @@ const Companies = () => {
 
   const checkUserApproval = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_approved')
-        .eq('id', userId)
-        .single();
+      const { data: profile, error } = await apiClient.getCurrentUser();
 
       if (error) throw error;
 
       if (!profile?.is_approved) {
-        await supabase.auth.signOut();
+        await apiClient.logout();
         navigate("/auth");
         toast({
           title: "Account Not Approved",
@@ -98,7 +94,7 @@ const Companies = () => {
       }
     } catch (error: any) {
       console.error('Error checking user approval:', error);
-      await supabase.auth.signOut();
+      await apiClient.auth.signOut();
       navigate("/auth");
     }
   };
@@ -112,10 +108,7 @@ const Companies = () => {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await apiClient.getCompanies();
 
       if (error) throw error;
 
@@ -152,7 +145,7 @@ const Companies = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await apiClient.auth.signOut();
     navigate("/auth");
   };
 
@@ -162,10 +155,7 @@ const Companies = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', id);
+      const { error } = await apiClient.deleteCompany(id);
 
       if (error) throw error;
 

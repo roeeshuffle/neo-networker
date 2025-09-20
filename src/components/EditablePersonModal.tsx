@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ExternalLink, Calendar, User, Briefcase, Mail, FileText, Users, Target, Edit, Plus, Save } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditablePersonModalProps {
@@ -61,10 +61,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
     if (!person) return;
     
     try {
-      const { error } = await supabase
-        .from('people')
-        .update(formData)
-        .eq('id', person.id);
+      const { error } = await apiClient.updatePerson(person.id, formData);
 
       if (error) throw error;
 

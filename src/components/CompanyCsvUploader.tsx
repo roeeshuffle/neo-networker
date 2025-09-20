@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Upload, FileText } from "lucide-react";
 import { CompanyColumnMappingDialog } from "./CompanyColumnMappingDialog";
 
@@ -113,11 +113,12 @@ export const CompanyCsvUploader = ({ onDataLoaded }: CompanyCsvUploaderProps) =>
   };
 
   const processUpload = async (fileText: string, columnMapping: { [key: string]: string }) => {
-    const { data, error } = await supabase.functions.invoke('company-csv-processor', {
-      body: { 
+    const { data, error } = await apiClient.request('/company-csv-processor', {
+      method: 'POST',
+      body: JSON.stringify({ 
         csvData: fileText,
         customMapping: columnMapping 
-      }
+      })
     });
 
     if (error) throw error;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,10 +43,7 @@ export const CompanyForm = ({ company, onClose }: CompanyFormProps) => {
       };
 
       if (company) {
-        const { error } = await supabase
-          .from("companies")
-          .update(submitData)
-          .eq("id", company.id);
+        const { error } = await apiClient.updateCompany(company.id, submitData);
 
         if (error) throw error;
         toast({
@@ -54,9 +51,7 @@ export const CompanyForm = ({ company, onClose }: CompanyFormProps) => {
           description: "Company updated successfully",
         });
       } else {
-        const { error } = await supabase
-          .from("companies")
-          .insert([{...submitData, owner_id: (await supabase.auth.getUser()).data.user?.id}]);
+        const { error } = await apiClient.createCompany(submitData);
 
         if (error) throw error;
         toast({

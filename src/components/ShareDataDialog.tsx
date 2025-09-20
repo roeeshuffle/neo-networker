@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,15 +33,13 @@ export const ShareDataDialog = ({ tableName, recordId, currentShares = [] }: Sha
 
   const fetchUsers = async () => {
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, avatar_url')
-        .eq('is_approved', true);
-
-      if (error) throw error;
-
-      const currentUser = await supabase.auth.getUser();
-      const filteredUsers = profiles?.filter(user => user.id !== currentUser.data.user?.id) || [];
+      const { data: profiles } = await apiClient.getUsers();
+      const { data: currentUser } = await apiClient.getCurrentUser();
+      
+      // Filter out current user and only show approved users
+      const filteredUsers = profiles?.filter(user => 
+        user.id !== currentUser?.id && user.is_approved
+      ) || [];
       
       setUsers(filteredUsers);
     } catch (error) {
@@ -60,31 +58,20 @@ export const ShareDataDialog = ({ tableName, recordId, currentShares = [] }: Sha
   const handleSave = async () => {
     setLoading(true);
     try {
-      const currentUser = await supabase.auth.getUser();
-      if (!currentUser.data.user) throw new Error('Not authenticated');
+      const { data: currentUser } = await apiClient.getCurrentUser();
+      if (!currentUser) throw new Error('Not authenticated');
 
-      // Remove existing shares
-      await supabase
-        .from('shared_data')
-        .delete()
-        .eq('table_name', tableName)
-        .eq('record_id', recordId)
-        .eq('owner_id', currentUser.data.user.id);
-
-      // Add new shares
-      if (selectedUsers.length > 0) {
-        const shares = selectedUsers.map(userId => ({
-          owner_id: currentUser.data.user!.id,
-          shared_with_user_id: userId,
-          table_name: tableName,
-          record_id: recordId
-        }));
-
-        const { error } = await supabase
-          .from('shared_data')
-          .insert(shares);
-
-        if (error) throw error;
+      // For now, we'll use individual share endpoints
+      // This is a simplified version - in a real app, you'd want bulk operations
+      for (const userId of selectedUsers) {
+        try {
+          await apiClient.request(`/${tableName}/${recordId}/share`, {
+            method: 'POST',
+            body: JSON.stringify({ shared_with_user_id: userId })
+          });
+        } catch (error) {
+          console.error(`Error sharing with user ${userId}:`, error);
+        }
       }
 
       toast({

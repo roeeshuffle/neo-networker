@@ -74,6 +74,10 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async getUsers() {
+    return this.request('/auth/users');
+  }
+
   // People methods
   async getPeople() {
     return this.request('/people');

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,10 +37,7 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
 
     try {
       if (person) {
-        const { error } = await supabase
-          .from("people")
-          .update(formData)
-          .eq("id", person.id);
+        const { error } = await apiClient.updatePerson(person.id, formData);
 
         if (error) throw error;
         toast({
@@ -48,9 +45,7 @@ export const PersonForm = ({ person, onClose }: PersonFormProps) => {
           description: "Person updated successfully",
         });
       } else {
-        const { error } = await supabase
-          .from("people")
-          .insert([{...formData, owner_id: (await supabase.auth.getUser()).data.user?.id}]);
+        const { error } = await apiClient.createPerson(formData);
 
         if (error) throw error;
         toast({

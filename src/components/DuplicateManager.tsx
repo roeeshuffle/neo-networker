@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,10 +29,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
     try {
       setLoading(true);
       
-      const { data: people, error } = await supabase
-        .from('people')
-        .select('*')
-        .order('created_at', { ascending: true });
+      const { data: people, error } = await apiClient.getPeople();
 
       if (error) throw error;
 
@@ -95,13 +92,11 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
           const recordsToDelete = duplicate.records.slice(1);
           
           if (recordsToDelete.length > 0) {
-            const idsToDelete = recordsToDelete.map(r => r.id);
-            const { error } = await supabase
-              .from('people')
-              .delete()
-              .in('id', idsToDelete);
-
-            if (error) throw error;
+            // Delete records one by one
+            for (const record of recordsToDelete) {
+              const { error } = await apiClient.deletePerson(record.id);
+              if (error) throw error;
+            }
             mergedCount += recordsToDelete.length;
           }
         }
@@ -131,13 +126,11 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
       const recordsToDelete = duplicate.records.filter(r => r.id !== recordToKeep.id);
       
       if (recordsToDelete.length > 0) {
-        const idsToDelete = recordsToDelete.map(r => r.id);
-        const { error } = await supabase
-          .from('people')
-          .delete()
-          .in('id', idsToDelete);
-
-        if (error) throw error;
+        // Delete records one by one
+        for (const record of recordsToDelete) {
+          const { error } = await apiClient.deletePerson(record.id);
+          if (error) throw error;
+        }
 
         toast({
           title: "Success",
@@ -162,13 +155,11 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
   const deleteAllDuplicates = async (duplicate: Duplicate) => {
     try {
       setMergeLoading(true);
-      const idsToDelete = duplicate.records.map(r => r.id);
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .in('id', idsToDelete);
-
-      if (error) throw error;
+      // Delete all records in the duplicate group
+      for (const record of duplicate.records) {
+        const { error } = await apiClient.deletePerson(record.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",

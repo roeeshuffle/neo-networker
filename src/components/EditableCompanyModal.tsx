@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Company } from "@/pages/Companies";
 
 interface EditableCompanyModalProps {
@@ -44,10 +44,7 @@ export const EditableCompanyModal = ({ company, isOpen, onClose, onSave }: Edita
     if (!company) return;
 
     try {
-      const { error } = await supabase
-        .from('companies')
-        .update(formData)
-        .eq('id', company.id);
+      const { error } = await apiClient.updateCompany(company.id, formData);
 
       if (error) throw error;
 

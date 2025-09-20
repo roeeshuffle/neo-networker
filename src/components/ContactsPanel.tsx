@@ -6,7 +6,7 @@ import { PeopleTable } from "@/components/PeopleTable";
 import DuplicateManager from "@/components/DuplicateManager";
 import { CsvUploader } from "@/components/CsvUploader";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/integrations/api/client";
 import { Merge, Trash2, Plus } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
@@ -24,12 +24,15 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
 
   const handleDeleteAllContacts = async () => {
     try {
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all UUIDs
-
-      if (error) throw error;
+      // Get all people first, then delete them one by one
+      const { data: people, error: fetchError } = await apiClient.getPeople();
+      if (fetchError) throw fetchError;
+      
+      // Delete all people
+      for (const person of people || []) {
+        const { error } = await apiClient.deletePerson(person.id);
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",

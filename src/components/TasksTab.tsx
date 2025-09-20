@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, Calendar, User, Tag, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 interface Task {
   id: string;
@@ -61,10 +60,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('tasks' as any)
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await apiClient.getTasks();
 
       if (error) throw error;
       setTasks((data as any[]) || []);
@@ -92,14 +88,15 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
 
     setIsAddingTask(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Not authenticated');
+      const { data: user } = await apiClient.getCurrentUser();
+      if (!user) throw new Error('Not authenticated');
 
-      // Handle timezone properly - treat input as Israel time
+      // Handle timezone properly - store datetime-local as-is (local time)
       let dueDateISO = null;
       if (newTask.due_date) {
-        // Convert from Israel timezone to UTC for storage using the raw input string
-        dueDateISO = fromZonedTime(newTask.due_date, 'Asia/Jerusalem').toISOString();
+        // The datetime-local input gives us a string like "2025-09-20T21:00"
+        // Store it as-is without timezone conversion to avoid confusion
+        dueDateISO = newTask.due_date + ':00'; // Add seconds to make it a valid ISO string
       }
 
       const taskData = {
@@ -109,12 +106,10 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
         status: newTask.status,
         label: newTask.label || null,
         priority: newTask.priority,
-        owner_id: user.user.id
+        owner_id: user.id
       };
 
-      const { error } = await supabase
-        .from('tasks' as any)
-        .insert([taskData]);
+      const { error } = await apiClient.createTask(taskData);
 
       if (error) throw error;
 
@@ -146,12 +141,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
     }
   };
 
-  const deleteTask = async (taskId: number) => {
+  const deleteTask = async (taskId: string) => {
     try {
-      const { error } = await supabase
-        .from('tasks' as any)
-        .delete()
-        .eq('task_id', taskId);
+      const { error } = await apiClient.deleteTask(taskId);
 
       if (error) throw error;
 
@@ -171,12 +163,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
     }
   };
 
-  const updateTaskStatus = async (taskId: number, newStatus: string) => {
+  const updateTaskStatus = async (taskId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('tasks' as any)
-        .update({ status: newStatus })
-        .eq('task_id', taskId);
+      const { error } = await apiClient.updateTask(taskId, { status: newStatus });
 
       if (error) throw error;
 
@@ -270,7 +259,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
                      type="datetime-local"
                      value={newTask.due_date}
                      onChange={(e) => {
-                       // Ensure the date is treated as Israel timezone
+                       // Store the datetime-local value as-is (local time)
                        const localDate = e.target.value;
                        setNewTask({ ...newTask, due_date: localDate });
                      }}
@@ -369,7 +358,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
                      {task.due_date && (
                        <div className="flex items-center gap-1 text-sm">
                          <Calendar className="w-3 h-3" />
-                         {formatInTimeZone(new Date(task.due_date), 'Asia/Jerusalem', 'dd-MM-yyyy HH:mm')}
+                         {format(new Date(task.due_date), 'dd-MM-yyyy HH:mm')}
                        </div>
                      )}
                    </TableCell>
@@ -381,7 +370,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
                   <TableCell>
                     <Select
                       value={task.status}
-                      onValueChange={(value) => updateTaskStatus(task.task_id, value)}
+                      onValueChange={(value) => updateTaskStatus(task.id, value)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -405,7 +394,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteTask(task.task_id)}
+                      onClick={() => deleteTask(task.id)}
                       className="w-8 h-8 p-0"
                     >
                       <Trash2 className="w-3 h-3" />

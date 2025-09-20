@@ -1,126 +1,43 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, UserCheck, UserX, Users, Mail, Calendar } from "lucide-react";
+import { apiClient } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
-import { User, Session } from '@supabase/supabase-js';
-import { LogOut, Check, X, Clock, Users, Upload, Trash2, ArrowLeft, Settings } from "lucide-react";
-import { SettingsTab } from "@/components/SettingsTab";
 
 interface PendingUser {
   id: string;
   email: string;
   full_name: string;
-  is_approved: boolean;
   created_at: string;
+  is_approved: boolean;
+  approved_at?: string;
+  approved_by?: string;
 }
 
 const AdminDashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processingUser, setProcessingUser] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (!session?.user) {
-          navigate("/auth");
-        } else {
-          checkAdminAccess(session.user.email);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session?.user) {
-        navigate("/auth");
-      } else {
-        checkAdminAccess(session.user.email);
-        setupRealtimeSubscription();
-      setupRealtimeSubscription();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      // Clean up realtime subscription if it exists
-      if (typeof window !== 'undefined') {
-        supabase.removeAllChannels();
-      }
-    };
-  }, [navigate]);
-
-  const setupRealtimeSubscription = () => {
-    console.log("Setting up realtime subscription for profiles");
-    
-    const channel = supabase
-      .channel('profiles-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'profiles'
-        },
-        (payload) => {
-          console.log('Profiles table changed:', payload);
-          // Refresh the user list when profiles change
-          fetchPendingUsers();
-        }
-      )
-      .subscribe();
-
-    return channel;
-  };
-
-  const checkAdminAccess = (email: string | undefined) => {
-    if (!email || !['guy@wershuffle.com', 'roee2912@gmail.com'].includes(email)) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have admin access.",
-        variant: "destructive",
-      });
-      navigate("/dashboard");
-      return;
-    }
     fetchPendingUsers();
-  };
+  }, []);
 
   const fetchPendingUsers = async () => {
     try {
       setLoading(true);
-      console.log("Fetching users as admin:", user?.email);
+      const { data, error } = await apiClient.getPendingUsers();
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      console.log("Fetch result:", { data, error });
-
       if (error) throw error;
-
       setPendingUsers(data || []);
     } catch (error: any) {
-      console.error("Error details:", error);
       toast({
-        title: "Error fetching users",
-        description: error.message,
+        title: "Error",
+        description: "Failed to fetch pending users",
         variant: "destructive",
       });
     } finally {
@@ -128,88 +45,43 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleApproval = async (userId: string, approved: boolean, userEmail: string, userName: string) => {
+  const handleApproveUser = async (userId: string) => {
     try {
-      setProcessingUser(userId);
+      const { error } = await apiClient.approveUser(userId);
       
-      // Update user approval status
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          is_approved: approved,
-          approved_by: user?.id,
-          approved_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
       if (error) throw error;
-
+      
       toast({
-        title: approved ? "User Approved" : "User Denied",
-        description: `${userName} has been ${approved ? 'approved' : 'denied'}.`,
+        title: "Success",
+        description: "User approved successfully",
       });
-
-      // Refresh the list
+      
       fetchPendingUsers();
     } catch (error: any) {
       toast({
-        title: "Error updating user",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingUser(null);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  const handleDeleteAllTelegramUsers = async () => {
-    try {
-      const { error } = await supabase
-        .from('telegram_users')
-        .delete()
-        .gte('id', '00000000-0000-0000-0000-000000000000'); // This will match all UUIDs
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "All telegram users have been deleted.",
-      });
-    } catch (error: any) {
-      toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to approve user",
         variant: "destructive",
       });
     }
   };
 
-  const handleDeleteAllPeople = async () => {
-    if (!confirm("Are you sure you want to delete ALL people data? This action cannot be undone.")) {
-      return;
-    }
-    
+  const handleRejectUser = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      const { error } = await apiClient.rejectUser(userId);
       
       if (error) throw error;
       
       toast({
         title: "Success",
-        description: "All people data has been deleted.",
+        description: "User rejected successfully",
       });
+      
+      fetchPendingUsers();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to reject user",
         variant: "destructive",
       });
     }
@@ -225,177 +97,139 @@ const AdminDashboard = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const pendingCount = pendingUsers.filter(u => !u.is_approved).length;
-  const approvedCount = pendingUsers.filter(u => u.is_approved).length;
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img 
-                src="/lovable-uploads/756c1423-2a04-4806-8117-719d07336118.png" 
-                alt="VCrm Logo" 
-                className="h-12 w-12"
-              />
-              <div>
-                <h1 className="text-2xl font-bold">VCrm Admin Dashboard</h1>
-                <p className="text-muted-foreground">Manage user approvals</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Admin: {user?.email}
-              </span>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">Manage user registrations and approvals</p>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="users" className="w-full">
-          <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-fit grid-cols-2 bg-muted">
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Settings
-              </TabsTrigger>
-            </TabsList>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Return to Dashboard
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="border-primary/20 bg-gradient-to-br from-primary-soft/30 to-primary-soft/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground/80">Pending Users</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {pendingUsers.filter(user => !user.is_approved).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
 
-          <TabsContent value="users" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
-                </CardContent>
-              </Card>
+          <Card className="border-secondary/20 bg-gradient-to-br from-secondary-soft/30 to-secondary-soft/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground/80">Approved Users</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {pendingUsers.filter(user => user.is_approved).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                  <UserCheck className="h-6 w-6 text-secondary" />
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Approved Users</CardTitle>
-                  <Check className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
-                </CardContent>
-              </Card>
+          <Card className="border-accent/20 bg-gradient-to-br from-accent-soft/30 to-accent-soft/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground/80">Total Users</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {pendingUsers.length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-accent" />
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        </div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{pendingUsers.length}</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>All Users</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pendingUsers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No users found.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingUsers.map((pendingUser) => (
-                      <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <p className="font-medium">{pendingUser.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Registered: {formatDate(pendingUser.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <Badge variant={pendingUser.is_approved ? "default" : "secondary"}>
-                            {pendingUser.is_approved ? "Approved" : "Pending"}
-                          </Badge>
-                          
-                          {!pendingUser.is_approved && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleApproval(pendingUser.id, true, pendingUser.email, pendingUser.full_name)}
-                                disabled={processingUser === pendingUser.id}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Check className="h-3 w-3 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleApproval(pendingUser.id, false, pendingUser.email, pendingUser.full_name)}
-                                disabled={processingUser === pendingUser.id}
-                                className="border-red-600 text-red-600 hover:bg-red-50"
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                Deny
-                              </Button>
-                            </div>
-                          )}
+        <Card>
+          <CardHeader>
+            <CardTitle>User Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/20 border-t-primary"></div>
+              </div>
+            ) : pendingUsers.length === 0 ? (
+              <p className="text-gray-600 text-center py-8">No users found</p>
+            ) : (
+              <div className="space-y-4">
+                {pendingUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between p-4 border rounded-lg bg-card"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{user.full_name || 'No name'}</h3>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            Registered: {formatDate(user.created_at)}
+                          </span>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={user.is_approved ? "default" : "secondary"}>
+                        {user.is_approved ? "Approved" : "Pending"}
+                      </Badge>
+                      
+                      {!user.is_approved && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveUser(user.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRejectUser(user.id)}
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-
-          <TabsContent value="settings">
-            <SettingsTab 
-              onDeleteAllTelegramUsers={handleDeleteAllTelegramUsers}
-              onDeleteAllPeople={handleDeleteAllPeople}
-            />
-          </TabsContent>
-        </Tabs>
-      </main>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

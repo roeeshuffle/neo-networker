@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +15,7 @@ import { LogOut, Plus, CheckSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksTab } from "@/components/TasksTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
-import { CompaniesPanel } from "@/components/CompaniesPanel";
-import { CompanyForm } from "@/components/CompanyForm";
-import { EditableCompanyModal } from "@/components/EditableCompanyModal";
+import { SettingsTab } from "@/components/SettingsTab";
 import vcrmLogo from "@/assets/vcrm-logo.png";
 
 export interface Person {
@@ -39,39 +38,17 @@ export interface Person {
   owner_id?: string;
 }
 
-export interface Company {
-  id: string;
-  record: string;
-  tags?: string[];
-  categories?: string;
-  linkedin_profile?: string;
-  last_interaction?: string;
-  connection_strength?: string;
-  twitter_follower_count?: number;
-  twitter?: string;
-  domains?: string[];
-  description?: string;
-  notion_id?: string;
-  created_at: string;
-  updated_at: string;
-  owner_id?: string;
-}
 
 const Dashboard = () => {
   const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [todayTasks, setTodayTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
-  const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
   const [activeTab, setActiveTab] = useState("contacts");
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -92,7 +69,6 @@ const Dashboard = () => {
   const loadData = async () => {
     if (user) {
       await fetchPeople();
-      await fetchCompanies();
       await fetchTasksCount();
     }
   };
@@ -101,10 +77,12 @@ const Dashboard = () => {
   const fetchPeople = async () => {
     try {
       setLoading(true);
-      // For now, we'll use a simple mock data since the API client doesn't have getPeople yet
-      // This will be updated when we implement the people API endpoints
-      setPeople([]);
-      setFilteredPeople([]);
+      const { data, error } = await apiClient.getPeople();
+      
+      if (error) throw error;
+      
+      setPeople(data || []);
+      setFilteredPeople(data || []);
     } catch (error: any) {
       toast({
         title: "Error fetching data",
@@ -118,9 +96,7 @@ const Dashboard = () => {
 
   const fetchTasksCount = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, due_date', { count: 'exact' });
+      const { data, error } = await apiClient.getTasks();
 
       if (error) throw error;
       setTotalTasks(data?.length || 0);
@@ -142,69 +118,28 @@ const Dashboard = () => {
     }
   };
 
-  const fetchCompanies = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setCompanies(data || []);
-      setFilteredCompanies(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching companies",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSearch = (query: string) => {
-    if (activeTab === "contacts") {
-      if (!query.trim()) {
-        setFilteredPeople(people);
-        return;
-      }
-
-      const searchTerm = query.toLowerCase();
-      const filtered = people.filter(person => 
-        person.full_name.toLowerCase().includes(searchTerm) ||
-        person.company?.toLowerCase().includes(searchTerm) ||
-        person.categories?.toLowerCase().includes(searchTerm) ||
-        person.email?.toLowerCase().includes(searchTerm) ||
-        person.status?.toLowerCase().includes(searchTerm) ||
-        person.more_info?.toLowerCase().includes(searchTerm)
-      );
-
-      setFilteredPeople(filtered);
-    } else if (activeTab === "companies") {
-      if (!query.trim()) {
-        setFilteredCompanies(companies);
-        return;
-      }
-
-      const searchTerm = query.toLowerCase();
-      const filtered = companies.filter(company => 
-        company.record.toLowerCase().includes(searchTerm) ||
-        company.categories?.toLowerCase().includes(searchTerm) ||
-        company.description?.toLowerCase().includes(searchTerm) ||
-        company.twitter?.toLowerCase().includes(searchTerm) ||
-        company.domains?.some(domain => domain.toLowerCase().includes(searchTerm)) ||
-        company.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
-      );
-
-      setFilteredCompanies(filtered);
+    if (!query.trim()) {
+      setFilteredPeople(people);
+      return;
     }
+
+    const searchTerm = query.toLowerCase();
+    const filtered = people.filter(person => 
+      person.full_name.toLowerCase().includes(searchTerm) ||
+      person.company?.toLowerCase().includes(searchTerm) ||
+      person.categories?.toLowerCase().includes(searchTerm) ||
+      person.email?.toLowerCase().includes(searchTerm) ||
+      person.status?.toLowerCase().includes(searchTerm) ||
+      person.more_info?.toLowerCase().includes(searchTerm)
+    );
+
+    setFilteredPeople(filtered);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await apiClient.logout();
     navigate("/auth");
   };
 
@@ -215,10 +150,7 @@ const Dashboard = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('people')
-        .delete()
-        .eq('id', id);
+      const { error } = await apiClient.deletePerson(id);
 
       if (error) throw error;
 
@@ -243,39 +175,6 @@ const Dashboard = () => {
     fetchPeople();
   };
 
-  const handleCompanyFormClose = () => {
-    setShowCompanyForm(false);
-    setEditingCompany(null);
-    fetchCompanies();
-  };
-
-  const handleViewCompany = (company: Company) => {
-    setViewingCompany(company);
-  };
-
-  const handleDeleteCompany = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Company deleted successfully",
-      });
-
-      fetchCompanies();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting company",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -342,7 +241,7 @@ const Dashboard = () => {
         <div className="flex justify-start mb-8">
           <SearchBar 
             onSearch={handleSearch} 
-            placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "companies" ? "companies" : "items"}...`}
+            placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
           />
         </div>
 
@@ -402,13 +301,13 @@ const Dashboard = () => {
               <Plus className="w-4 h-4" />
               Contacts
             </TabsTrigger>
-            <TabsTrigger value="companies" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Companies
-            </TabsTrigger>
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
               Tasks
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Settings
             </TabsTrigger>
           </TabsList>
           
@@ -422,18 +321,12 @@ const Dashboard = () => {
             />
           </TabsContent>
           
-          <TabsContent value="companies">
-            <CompaniesPanel 
-              filteredCompanies={filteredCompanies}
-              onDelete={handleDeleteCompany}
-              onView={handleViewCompany}
-              onRefresh={fetchCompanies}
-              onShowForm={() => setShowCompanyForm(true)}
-            />
-          </TabsContent>
-          
           <TabsContent value="tasks">
             <TasksTab onTasksChange={fetchTasksCount} />
+          </TabsContent>
+          
+          <TabsContent value="settings">
+            <SettingsTab currentUser={user} />
           </TabsContent>
         </Tabs>
 
@@ -444,25 +337,11 @@ const Dashboard = () => {
           />
         )}
 
-        {showCompanyForm && (
-          <CompanyForm
-            company={editingCompany}
-            onClose={handleCompanyFormClose}
-          />
-        )}
-
         <EditablePersonModal
           person={viewingPerson}
           isOpen={!!viewingPerson}
           onClose={() => setViewingPerson(null)}
           onSave={fetchPeople}
-        />
-
-        <EditableCompanyModal
-          company={viewingCompany}
-          isOpen={!!viewingCompany}
-          onClose={() => setViewingCompany(null)}
-          onSave={fetchCompanies}
         />
       </main>
     </div>
