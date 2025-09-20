@@ -186,6 +186,40 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 except Exception as e:
                     return f"❌ Error deleting contact: {str(e)}"
             
+            elif telegram_user.current_state == 'waiting_task_delete_confirmation':
+                # User is selecting which task to delete
+                try:
+                    from models import Task
+                    selection = int(text.strip())
+                    if telegram_user.state_data and 'search_term' in telegram_user.state_data:
+                        search_term = telegram_user.state_data['search_term']
+                        tasks = Task.query.filter(
+                            Task.owner_id == telegram_user.user_id,
+                            Task.text.ilike(f'%{search_term}%')
+                        ).all()
+                        
+                        if 1 <= selection <= len(tasks):
+                            task = tasks[selection - 1]
+                            task_name = task.text
+                            task_id = task.task_id
+                            db.session.delete(task)
+                            db.session.commit()
+                            
+                            # Reset state
+                            telegram_user.current_state = 'idle'
+                            telegram_user.state_data = None
+                            db.session.commit()
+                            
+                            return f"✅ Task #{task_id} '{task_name}' deleted successfully."
+                        else:
+                            return f"❌ Invalid selection. Please choose a number between 1 and {len(tasks)}."
+                    else:
+                        return "❌ Error: No delete operation in progress. Please start over."
+                except ValueError:
+                    return "❌ Please enter a valid number to select the task to delete."
+                except Exception as e:
+                    return f"❌ Error deleting task: {str(e)}"
+            
             # Use OpenAI to process natural language requests
             elif telegram_user.is_authenticated and telegram_user.user_id:
                 telegram_logger.info(f"🤖 Processing natural language request for user {telegram_user.first_name}: '{text}'")

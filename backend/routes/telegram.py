@@ -289,35 +289,64 @@ def remove_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
-        # Extract task_id from args - could be a number or string
-        task_id = args
-        if isinstance(task_id, str):
-            # Try to convert to int if it's a numeric string
-            try:
-                task_id = int(task_id)
-            except ValueError:
-                # If it's not a number, search by text instead
-                task = Task.query.filter(
-                    Task.owner_id == user.id,
-                    Task.text.ilike(f"%{task_id}%")
-                ).first()
-                if task:
-                    task_id = task.task_id
-                else:
-                    return f"❌ Task not found: {task_id}"
-        
-        # Delete the task by task_id
-        deleted_count = Task.query.filter(
-            Task.owner_id == user.id,
-            Task.task_id == task_id
-        ).delete()
-        
-        if deleted_count == 0:
-            return f"❌ Task #{task_id} not found."
-        
-        db.session.commit()
-        return f"✅ Task #{task_id} removed successfully."
-        
+        # Extract task_id from args - handle different formats
+        if isinstance(args, dict):
+            # Handle dictionary format: {'task_id': 'call mom'}
+            search_term = args.get('task_id', '')
+        elif isinstance(args, str):
+            search_term = args
+        else:
+            search_term = str(args)
+
+        # Try to convert to int if it's a numeric string
+        try:
+            task_id = int(search_term)
+            # Direct delete by task_id
+            deleted_count = Task.query.filter(
+                Task.owner_id == user.id,
+                Task.task_id == task_id
+            ).delete()
+            
+            if deleted_count > 0:
+                db.session.commit()
+                return f"✅ Task #{task_id} removed successfully."
+            else:
+                return f"❌ Task #{task_id} not found."
+        except ValueError:
+            # Search by text instead
+            tasks = Task.query.filter(
+                Task.owner_id == user.id,
+                Task.text.ilike(f"%{search_term}%")
+            ).all()
+            
+            if not tasks:
+                return f"❌ No tasks found matching: {search_term}"
+            
+            if len(tasks) == 1:
+                # Single match, delete directly
+                task = tasks[0]
+                task_name = task.text
+                task_id = task.task_id
+                db.session.delete(task)
+                db.session.commit()
+                return f"✅ Task #{task_id} '{task_name}' removed successfully."
+            else:
+                # Multiple matches, show list and set state for confirmation
+                response = f"🔍 Found {len(tasks)} matching task(s). Reply with task number to delete:\n\n"
+                for i, task in enumerate(tasks):
+                    response += f"{i + 1}. Task #{task.task_id}: {task.text}"
+                    if task.due_date:
+                        response += f" (Due: {task.due_date.strftime('%Y-%m-%d %H:%M')})"
+                    response += "\n"
+                
+                # Set state to wait for user selection
+                telegram_user.current_state = 'waiting_task_delete_confirmation'
+                # Store the search term to recreate the list
+                telegram_user.state_data = {'search_term': search_term}
+                db.session.commit()
+                
+                return response
+            
     except Exception as e:
         return f"❌ Error removing task: {str(e)}"
 
@@ -648,9 +677,16 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
                 print(f"Error parsing due_date '{args.get('due_date')}': {e}")
                 # Continue without due_date if parsing fails
 
+        # Generate sequential task_id
+        max_task_id = db.session.query(db.func.max(Task.task_id)).filter(
+            Task.owner_id == user.id
+        ).scalar()
+        next_task_id = max_task_id + 1 if max_task_id else 1
+
         # Create the task
         task = Task(
             id=str(uuid.uuid4()),
+            task_id=next_task_id,
             text=args.get('text'),
             assign_to=args.get('assign_to'),
             due_date=due_date,
