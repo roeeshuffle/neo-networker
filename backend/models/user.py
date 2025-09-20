@@ -7,6 +7,7 @@ class User(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)
     full_name = db.Column(db.String(255))
     is_approved = db.Column(db.Boolean, default=False)
     approved_by = db.Column(db.String(36), db.ForeignKey('profiles.id'))

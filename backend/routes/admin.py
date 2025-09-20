@@ -4,6 +4,7 @@ from models import User, TelegramUser
 from database import db
 from datetime import datetime
 import logging
+from services.email_service import email_service
 
 admin_bp = Blueprint('admin', __name__)
 admin_logger = logging.getLogger('admin')
@@ -74,6 +75,18 @@ def approve_user(user_id):
         user.approved_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Send email notification (disabled for now)
+        # try:
+        #     if approved:
+        #         email_service.send_approval_notification(user.email, user.full_name or user.email)
+        #     else:
+        #         email_service.send_rejection_notification(user.email, user.full_name or user.email)
+        # except Exception as e:
+        #     admin_logger.error(f"Error sending email notification: {e}")
+        
+        # Log approval/rejection for now
+        admin_logger.info(f"User {user.email} {'approved' if approved else 'rejected'} by admin")
         
         return jsonify({
             'message': f'User {"approved" if approved else "denied"} successfully',

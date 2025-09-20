@@ -65,12 +65,49 @@ const Auth = () => {
           });
         }
       } else {
-        console.log("Registration not implemented yet");
-        toast({
-          title: "Registration Not Available",
-          description: "Registration is not yet implemented with the Flask backend.",
-          variant: "destructive",
+        console.log("Attempting registration with:", email);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            full_name: fullName,
+          }),
         });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.requires_approval) {
+            toast({
+              title: "Registration Successful!",
+              description: "Your account is pending admin approval. Please check back later or contact an administrator.",
+              variant: "default",
+            });
+            // Switch to login mode
+            setIsLogin(true);
+            setEmail("");
+            setPassword("");
+            setFullName("");
+          } else {
+            // Auto-approved user
+            toast({
+              title: "Welcome!",
+              description: "Account created and approved successfully.",
+              variant: "default",
+            });
+            navigate("/dashboard");
+          }
+        } else {
+          toast({
+            title: "Registration Failed",
+            description: data.error || "An error occurred during registration.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error: any) {
       console.error("Catch block error:", error);

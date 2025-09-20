@@ -188,3 +188,4 @@ The application includes test CRUD endpoints for users at `/api/users` that you 
 - Admin users are automatically approved (guy@wershuffle.com, roee2912@gmail.com)
 - The API maintains the same structure as the original Supabase app for frontend compatibility
 - CORS is enabled for frontend integration
+# Trigger deployment Sat Sep 20 23:32:56 IDT 2025

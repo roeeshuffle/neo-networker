@@ -22,8 +22,9 @@ def register():
         user = User(
             id=str(uuid.uuid4()),
             email=data['email'],
+            password_hash=generate_password_hash(data['password']),
             full_name=data.get('full_name', ''),
-            is_approved=data.get('is_approved', False)
+            is_approved=False  # Always start as not approved
         )
         
         # Auto-approve admin users and test users
@@ -35,35 +36,51 @@ def register():
             user.approved_at = datetime.utcnow()
             user.approved_by = user.id
         else:
-            print("DEBUG: User not auto-approved")
+            print("DEBUG: User not auto-approved - waiting for admin approval")
         
         db.session.add(user)
         db.session.commit()
         
-        # Create access token
-        access_token = create_access_token(identity=user.id)
-        
-        return jsonify({
-            'user': user.to_dict(),
-            'access_token': access_token
-        }), 201
+        if user.is_approved:
+            # Create access token for auto-approved users
+            access_token = create_access_token(identity=user.id)
+            return jsonify({
+                'user': user.to_dict(),
+                'access_token': access_token,
+                'message': 'Registration successful'
+            }), 201
+        else:
+            # User needs admin approval
+            return jsonify({
+                'message': 'Registration successful. Your account is pending admin approval. Please check back later or contact an administrator.',
+                'requires_approval': True
+            }), 201
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Login user (simplified - no password for now)"""
+    """Login user with email and password"""
     try:
         data = request.get_json()
         email = data.get('email')
+        password = data.get('password')
         
-        if not email:
-            return jsonify({'error': 'Email is required'}), 400
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
         
         user = User.query.filter_by(email=email).first()
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return jsonify({'error': 'Invalid email or password'}), 401
+        
+        # Check password
+        if not user.password_hash or not check_password_hash(user.password_hash, password):
+            return jsonify({'error': 'Invalid email or password'}), 401
+        
+        # Check if user is approved
+        if not user.is_approved:
+            return jsonify({'error': 'Your account is pending admin approval. Please wait for approval before logging in.'}), 403
         
         # Create access token
         access_token = create_access_token(identity=user.id)
