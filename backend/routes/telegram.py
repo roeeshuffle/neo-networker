@@ -825,6 +825,7 @@ def telegram_webhook():
                     telegram_user.is_authenticated = True
                     telegram_user.authenticated_at = datetime.utcnow()
                     telegram_user.current_state = 'idle'
+                    db.session.commit()  # Commit the authentication status
                     response_text = "Authentication successful! You can now use the bot."
                 else:
                     telegram_logger.warning(f"❌ User {telegram_user.first_name} failed authentication with password: '{text}'")
