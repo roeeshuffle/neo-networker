@@ -22,6 +22,62 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 # Admin user ID for notifications
 ADMIN_TELEGRAM_ID = 1001816902
 
+def answer_callback_query(callback_query_id, text):
+    """Answer a callback query"""
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return
+            
+        url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+        data = {
+            'callback_query_id': callback_query_id,
+            'text': text,
+            'show_alert': False
+        }
+        requests.post(url, json=data, timeout=5)
+    except Exception as e:
+        telegram_logger.error(f"❌ Error answering callback query: {e}")
+
+def handle_callback_query(callback_query):
+    """Handle callback queries from inline keyboards"""
+    try:
+        data = callback_query.get('data', '')
+        chat_id = callback_query['message']['chat']['id']
+        user_id = callback_query['from']['id']
+        first_name = callback_query['from'].get('first_name', 'Unknown')
+        
+        telegram_logger.info(f"🔘 Callback query from {first_name}: {data}")
+        
+        # Handle voice approval
+        if data.startswith('voice_approve:'):
+            transcription = data.replace('voice_approve:', '')
+            telegram_logger.info(f"✅ Voice approved by {first_name}: '{transcription}'")
+            
+            # Process the approved transcription
+            response_text = process_natural_language_request(transcription, user_id, first_name)
+            send_telegram_message(chat_id, response_text)
+            
+            # Answer the callback query
+            answer_callback_query(callback_query['id'], "Voice approved!")
+            return jsonify({'status': 'ok'})
+            
+        elif data == 'voice_reject':
+            telegram_logger.info(f"❌ Voice rejected by {first_name}")
+            send_telegram_message(chat_id, "❌ Voice message ignored.")
+            
+            # Answer the callback query
+            answer_callback_query(callback_query['id'], "Voice rejected!")
+            return jsonify({'status': 'ok'})
+        
+        # Answer unknown callback queries
+        answer_callback_query(callback_query['id'], "Unknown action")
+        return jsonify({'status': 'ok'})
+        
+    except Exception as e:
+        telegram_logger.error(f"💥 Error handling callback query: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 def handle_voice_message(message, chat_id, user_id, first_name, username):
     """Handle voice message from Telegram"""
     try:
@@ -61,7 +117,7 @@ def handle_voice_message(message, chat_id, user_id, first_name, username):
                 db.session.commit()
                 
                 # Send approval request with inline keyboard
-                response_text = f"🎤 **Voice Transcription:**\n\n\"{transcription}\"\n\n**Approve this transcription?**\n\n✅ Yes / ❌ No"
+                response_text = f"🎤 {transcription}"
                 
                 # Send message with inline keyboard
                 send_voice_approval_keyboard(chat_id, response_text, transcription)
@@ -160,8 +216,8 @@ def send_voice_approval_keyboard(chat_id, text, transcription):
         keyboard = {
             "inline_keyboard": [
                 [
-                    {"text": "✅ Yes", "callback_data": f"voice_approve:{transcription}"},
-                    {"text": "❌ No", "callback_data": "voice_reject"}
+                    {"text": "✅", "callback_data": f"voice_approve:{transcription}"},
+                    {"text": "❌", "callback_data": "voice_reject"}
                 ]
             ]
         }
@@ -169,7 +225,6 @@ def send_voice_approval_keyboard(chat_id, text, transcription):
         data = {
             'chat_id': chat_id,
             'text': text,
-            'parse_mode': 'HTML',
             'reply_markup': json.dumps(keyboard)
         }
         
@@ -1031,6 +1086,10 @@ def telegram_webhook():
         
         # Log incoming request
         telegram_logger.info(f"📨 Incoming Telegram webhook: {json.dumps(data, indent=2)}")
+        
+        # Handle callback queries (button clicks)
+        if 'callback_query' in data:
+            return handle_callback_query(data['callback_query'])
         
         if not data or 'message' not in data:
             telegram_logger.info("❌ No message in webhook data")
