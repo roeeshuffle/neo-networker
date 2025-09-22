@@ -401,11 +401,19 @@ For add_task, extract these fields from natural language:
 - notes: additional notes or details about the task
 - alert_time: when to alert about the task (format: YYYY-MM-DD HH:MM)
 
-IMPORTANT: When converting relative dates:
+IMPORTANT: When converting relative dates and times:
 - "tomorrow" = next day from today's date
 - "today" = current date
 - "next week" = 7 days from today
 - Always use the actual calculated date, not hardcoded examples
+
+TIME MAPPING RULES:
+- "morning" = 09:00
+- "noon" = 12:00
+- "afternoon" = 16:30
+- "evening" = 19:30
+- "night" = 21:00
+- If no time specified with "tomorrow", use 09:00 (morning)
 
 CONTACT vs TASK DETECTION:
 - "add contact", "new contact", "add person" → contact functions
@@ -1235,6 +1243,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 response_text = f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         else:
             # Handle state-based responses
+            telegram_logger.info(f"🔍 Current state for user {telegram_user.first_name}: '{telegram_user.current_state}'")
             if telegram_user.current_state == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
@@ -1263,7 +1272,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                     response_text = "❌ Please enter a valid number to select the contact to delete."
                 except Exception as e:
                     response_text = f"❌ Error deleting contact: {str(e)}"
-            if telegram_user.current_state == 'waiting_email':
+            elif telegram_user.current_state == 'waiting_email':
                 # User is trying to authenticate but needs to connect via webapp first
                 telegram_logger.info(f"📧 User {telegram_user.first_name} tried to authenticate but not connected to webapp")
                 response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
