@@ -76,6 +76,17 @@ def main():
         else:
             print("✅ state_data column already exists")
         
+        # Force add state_data column (in case the check failed)
+        try:
+            print("🔧 Force adding state_data column...")
+            cursor.execute("ALTER TABLE profiles ADD COLUMN state_data JSON;")
+            print("✅ state_data column force added")
+        except Exception as e:
+            if "already exists" in str(e):
+                print("✅ state_data column already exists (force check)")
+            else:
+                print(f"⚠️ Force add failed: {e}")
+        
         # Commit changes
         conn.commit()
         print("🎉 Database fix completed successfully!")
