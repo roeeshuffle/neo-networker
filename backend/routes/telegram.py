@@ -1306,64 +1306,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
         telegram_logger.error(f"💥 Error processing Telegram webhook for user {user_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@telegram_bp.route('/telegram/callback', methods=['POST'])
-def telegram_callback():
-    """Handle Telegram callback queries (inline keyboard buttons)"""
-    try:
-        data = request.get_json()
-        telegram_logger.info(f"📨 Incoming Telegram callback: {json.dumps(data, indent=2)}")
-        
-        if not data or 'callback_query' not in data:
-            return jsonify({'status': 'ok'})
-            
-        callback_query = data['callback_query']
-        chat_id = callback_query['message']['chat']['id']
-        user_id = callback_query['from']['id']
-        callback_data = callback_query['data']
-        
-        telegram_logger.info(f"🔘 Callback from user {user_id}: {callback_data}")
-        
-        # Get telegram user
-        telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
-        if not telegram_user:
-            telegram_logger.error(f"❌ Telegram user not found for callback: {user_id}")
-            return jsonify({'status': 'ok'})
-        
-        # Handle voice approval callbacks
-        if callback_data.startswith('voice_approve:'):
-            transcription = callback_data.replace('voice_approve:', '')
-            telegram_logger.info(f"✅ Voice approved by user {telegram_user.first_name}: '{transcription}'")
-            
-            # Reset state
-            telegram_user.current_state = 'idle'
-            telegram_user.state_data = {}
-            db.session.commit()
-            
-            # Process the approved transcription as a regular text message
-            response_text = process_natural_language_request(transcription, telegram_user)
-            
-            # Send response
-            send_telegram_message(chat_id, response_text)
-            
-            # Answer callback query
-            answer_callback_query(callback_query['id'], "✅ Voice message processed!")
-            
-        elif callback_data == 'voice_reject':
-            telegram_logger.info(f"❌ Voice rejected by user {telegram_user.first_name}")
-            
-            # Reset state
-            telegram_user.current_state = 'idle'
-            telegram_user.state_data = {}
-            db.session.commit()
-            
-            # Answer callback query
-            answer_callback_query(callback_query['id'], "❌ Voice message ignored.")
-            
-        return jsonify({'status': 'ok'})
-        
-    except Exception as e:
-        telegram_logger.error(f"💥 Error processing Telegram callback: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+# Old callback endpoint removed - callbacks are now handled in the main webhook
 
 def answer_callback_query(callback_query_id, text):
     """Answer a Telegram callback query"""
