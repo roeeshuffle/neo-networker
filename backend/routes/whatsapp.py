@@ -105,7 +105,8 @@ def convert_whatsapp_voice_to_text(audio_id):
         try:
             # Transcribe using OpenAI Whisper (auto-detect language)
             with open(temp_file_path, 'rb') as audio_file:
-                transcription = openai.Audio.transcribe(
+                client = openai.OpenAI(api_key=openai.api_key)
+                transcription = client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file
                     # No language specified - Whisper will auto-detect (supports 99+ languages including Hebrew)
