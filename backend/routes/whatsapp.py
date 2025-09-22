@@ -103,13 +103,13 @@ def convert_whatsapp_voice_to_text(audio_id):
             temp_file_path = temp_file.name
             
         try:
-            # Transcribe using OpenAI Whisper (auto-detect language)
+            # Transcribe using OpenAI Whisper (force English)
             with open(temp_file_path, 'rb') as audio_file:
                 client = openai.OpenAI(api_key=openai.api_key)
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
-                    file=audio_file
-                    # No language specified - Whisper will auto-detect (supports 99+ languages including Hebrew)
+                    file=audio_file,
+                    language="en"  # Force English transcription
                 )
                 
             transcription_text = transcription.text.strip()
@@ -200,7 +200,7 @@ def whatsapp_webhook():
             if user.state_data and 'pending_voice_transcription' in user.state_data:
                 transcription = user.state_data['pending_voice_transcription']
                 
-                if message_text.lower().strip() in ['yes', 'y', 'approve', 'ok', 'כן', 'אישור', 'בסדר']:
+                if message_text.lower().strip() in ['yes', 'y', 'approve', 'ok', 'sure', 'yeah', 'yep']:
                     whatsapp_logger.info(f"✅ Voice approved by user {user.email}: '{transcription}'")
                     
                     # Clear the pending transcription
@@ -223,7 +223,7 @@ def whatsapp_webhook():
                     whatsapp_service.send_message(from_phone, response_text)
                     return jsonify({'status': 'ok'})
                     
-                elif message_text.lower().strip() in ['no', 'n', 'reject', 'ignore', 'לא', 'דחה', 'התעלם']:
+                elif message_text.lower().strip() in ['no', 'n', 'reject', 'ignore', 'nope', 'nah', 'cancel']:
                     whatsapp_logger.info(f"❌ Voice rejected by user {user.email}")
                     
                     # Clear the pending transcription

@@ -228,13 +228,13 @@ def convert_voice_to_text(file_id):
             temp_file_path = temp_file.name
             
         try:
-            # Transcribe using OpenAI Whisper (auto-detect language)
+            # Transcribe using OpenAI Whisper (force English)
             with open(temp_file_path, 'rb') as audio_file:
                 client = openai.OpenAI(api_key=openai.api_key)
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
-                    file=audio_file
-                    # No language specified - Whisper will auto-detect (supports 99+ languages including Hebrew)
+                    file=audio_file,
+                    language="en"  # Force English transcription
                 )
                 
             transcription_text = transcription.text.strip()
