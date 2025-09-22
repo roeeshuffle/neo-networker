@@ -48,6 +48,7 @@ from routes import auth_bp, people_bp, companies_bp, tasks_bp, csv_bp, telegram_
 from routes.telegram_auth import telegram_auth_bp
 from routes.whatsapp import whatsapp_bp
 from routes.admin import admin_bp
+from routes.db_fix import db_fix_bp
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -59,6 +60,7 @@ app.register_blueprint(telegram_bp, url_prefix='/api')
 app.register_blueprint(telegram_auth_bp, url_prefix='/api')
 app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
+app.register_blueprint(db_fix_bp, url_prefix='/api')
 
 @app.route('/api/health')
 def health_check():
