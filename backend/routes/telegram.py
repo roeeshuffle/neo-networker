@@ -70,11 +70,9 @@ def handle_callback_query(callback_query):
         telegram_logger.info(f"🔘 Callback query from {first_name}: {data}")
         
         # Handle voice approval
-        if data.startswith('voice_approve:'):
-            transcription = data.replace('voice_approve:', '')
-            telegram_logger.info(f"✅ Voice approved by {first_name}: '{transcription}'")
+        if data == 'voice_approve':
+            telegram_logger.info(f"✅ Voice approved by {first_name}")
             
-            # Process the approved transcription
             # Find the telegram user first
             telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
             if not telegram_user:
@@ -82,8 +80,21 @@ def handle_callback_query(callback_query):
                 send_telegram_message(chat_id, "❌ User not found. Please connect your Telegram account via the web app first.")
                 return jsonify({'status': 'ok'})
             
-            response_text = process_natural_language_request(transcription, telegram_user)
-            send_telegram_message(chat_id, response_text)
+            # Get the transcription from the user's state data
+            if telegram_user.state_data and 'transcription' in telegram_user.state_data:
+                transcription = telegram_user.state_data['transcription']
+                telegram_logger.info(f"✅ Processing approved transcription: '{transcription}'")
+                
+                response_text = process_natural_language_request(transcription, telegram_user)
+                send_telegram_message(chat_id, response_text)
+                
+                # Clear the state data
+                telegram_user.state_data = None
+                telegram_user.current_state = None
+                db.session.commit()
+            else:
+                telegram_logger.error(f"❌ No pending transcription found for user {user_id}")
+                send_telegram_message(chat_id, "❌ No voice message to process.")
             
             # Delete the approval message
             delete_telegram_message(chat_id, callback_query['message']['message_id'])
@@ -94,9 +105,15 @@ def handle_callback_query(callback_query):
             
         elif data == 'voice_reject':
             telegram_logger.info(f"❌ Voice rejected by {first_name}")
-            send_telegram_message(chat_id, "❌ Voice message ignored.")
             
-            # Delete the approval message
+            # Clear any pending state data
+            telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+            if telegram_user:
+                telegram_user.state_data = None
+                telegram_user.current_state = None
+                db.session.commit()
+            
+            # Delete the approval message (no response message needed)
             delete_telegram_message(chat_id, callback_query['message']['message_id'])
             
             # Answer the callback query
@@ -245,11 +262,12 @@ def send_voice_approval_keyboard(chat_id, text, transcription):
             
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         
-        # Create inline keyboard
+        # Create inline keyboard with shorter callback data
+        # Use a simple ID instead of the full transcription to avoid 64-byte limit
         keyboard = {
             "inline_keyboard": [
                 [
-                    {"text": "✅", "callback_data": f"voice_approve:{transcription}"},
+                    {"text": "✅", "callback_data": "voice_approve"},
                     {"text": "❌", "callback_data": "voice_reject"}
                 ]
             ]
@@ -266,6 +284,12 @@ def send_voice_approval_keyboard(chat_id, text, transcription):
             telegram_logger.info(f"✅ Voice approval keyboard sent to chat {chat_id}")
         else:
             telegram_logger.error(f"❌ Failed to send voice approval keyboard: {response.status_code}")
+            # Log the response for debugging
+            try:
+                error_details = response.json()
+                telegram_logger.error(f"❌ Error details: {error_details}")
+            except:
+                telegram_logger.error(f"❌ Raw response: {response.text}")
             
     except Exception as e:
         telegram_logger.error(f"💥 Error sending voice approval keyboard: {str(e)}")
