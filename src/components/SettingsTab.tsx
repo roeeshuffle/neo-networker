@@ -433,57 +433,151 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
       )}
 
-      {/* Telegram Connection Section */}
+      {/* Messaging Platform Connection Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ArrowRight className="w-5 h-5" />
-            Telegram Bot Connection
+            Bot Connection
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Connect your Telegram account to use the bot features
+            Choose your preferred messaging platform and connect your account
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {telegramConnected ? (
-            <div className="flex items-center justify-between p-4 border border-green-200 rounded-lg bg-green-50">
-              <div>
-                <div className="font-medium text-green-800">Telegram Connected</div>
-                <div className="text-sm text-green-600">ID: {telegramId}</div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={disconnectTelegram}
-                disabled={telegramLoading}
-                className="border-red-300 text-red-600 hover:bg-red-50"
-              >
-                Disconnect
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Telegram User ID</label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  To get your Telegram ID, message @userinfobot on Telegram
-                </p>
-                <Input
-                  type="text"
-                  value={telegramId}
-                  onChange={(e) => setTelegramId(e.target.value)}
-                  placeholder="Enter your Telegram ID"
+        <CardContent className="space-y-6">
+          {/* Platform Selection */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Preferred Messaging Platform</label>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="platform"
+                  value="telegram"
+                  checked={preferredPlatform === 'telegram'}
+                  onChange={(e) => updatePreferredPlatform(e.target.value)}
+                  className="w-4 h-4"
                 />
+                <span className="text-sm">Telegram</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="platform"
+                  value="whatsapp"
+                  checked={preferredPlatform === 'whatsapp'}
+                  onChange={(e) => updatePreferredPlatform(e.target.value)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">WhatsApp</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Telegram Connection */}
+          {preferredPlatform === 'telegram' && (
+            <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="font-medium text-blue-800">Telegram Connection</span>
               </div>
-              <Button
-                onClick={connectTelegram}
-                disabled={telegramLoading || !telegramId.trim()}
-                className="w-full"
-              >
-                {telegramLoading ? 'Connecting...' : 'Connect Telegram'}
-              </Button>
+              {telegramConnected ? (
+                <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
+                  <div>
+                    <div className="font-medium text-green-800">Telegram Connected</div>
+                    <div className="text-sm text-green-600">ID: {telegramId}</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={disconnectTelegram}
+                    disabled={telegramLoading}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Telegram User ID</label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      To get your Telegram ID, message @userinfobot on Telegram
+                    </p>
+                    <Input
+                      type="text"
+                      value={telegramId}
+                      onChange={(e) => setTelegramId(e.target.value)}
+                      placeholder="Enter your Telegram ID"
+                    />
+                  </div>
+                  <Button
+                    onClick={connectTelegram}
+                    disabled={telegramLoading || !telegramId.trim()}
+                    className="w-full"
+                  >
+                    {telegramLoading ? 'Connecting...' : 'Connect Telegram'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
+
+          {/* WhatsApp Connection */}
+          {preferredPlatform === 'whatsapp' && (
+            <div className="space-y-4 p-4 border rounded-lg bg-green-50">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium text-green-800">WhatsApp Connection</span>
+              </div>
+              {whatsappConnected ? (
+                <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
+                  <div>
+                    <div className="font-medium text-green-800">WhatsApp Connected</div>
+                    <div className="text-sm text-green-600">Phone: {whatsappPhone}</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={disconnectWhatsapp}
+                    disabled={whatsappLoading}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">WhatsApp Phone Number</label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Enter your WhatsApp phone number (with country code, e.g., +972507372313)
+                    </p>
+                    <Input
+                      type="text"
+                      value={whatsappPhone}
+                      onChange={(e) => setWhatsappPhone(e.target.value)}
+                      placeholder="+972507372313"
+                    />
+                  </div>
+                  <Button
+                    onClick={connectWhatsapp}
+                    disabled={whatsappLoading || !whatsappPhone.trim()}
+                    className="w-full"
+                  >
+                    {whatsappLoading ? 'Connecting...' : 'Connect WhatsApp'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Connection Status */}
+          <div className="text-xs text-muted-foreground">
+            <p>• You can only be connected to one platform at a time</p>
+            <p>• To switch platforms, disconnect from the current one first</p>
+            <p>• Your bot messages will be sent via the connected platform</p>
+          </div>
         </CardContent>
       </Card>
       
