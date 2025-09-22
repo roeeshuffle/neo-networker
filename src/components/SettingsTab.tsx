@@ -46,10 +46,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [telegramId, setTelegramId] = useState('');
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+  const [preferredPlatform, setPreferredPlatform] = useState('telegram');
 
   useEffect(() => {
     fetchDuplicates();
     checkTelegramStatus();
+    checkWhatsappStatus();
   }, []);
 
   const checkTelegramStatus = async () => {
@@ -129,6 +134,111 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       });
     } finally {
       setTelegramLoading(false);
+    }
+  };
+
+  const checkWhatsappStatus = async () => {
+    try {
+      const { data: user } = await apiClient.getCurrentUser();
+      if (user?.whatsapp_phone) {
+        setWhatsappConnected(true);
+        setWhatsappPhone(user.whatsapp_phone);
+      } else {
+        setWhatsappConnected(false);
+        setWhatsappPhone('');
+      }
+      if (user?.preferred_messaging_platform) {
+        setPreferredPlatform(user.preferred_messaging_platform);
+      }
+    } catch (error) {
+      console.error('Error checking WhatsApp status:', error);
+      setWhatsappConnected(false);
+      setWhatsappPhone('');
+    }
+  };
+
+  const connectWhatsapp = async () => {
+    if (!whatsappPhone.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid WhatsApp phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setWhatsappLoading(true);
+    try {
+      const { error } = await apiClient.connectWhatsapp(whatsappPhone);
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "WhatsApp account connected successfully!",
+      });
+      
+      // Refresh the user data in the authentication context
+      await refreshUser();
+      // Also refresh the local state
+      await checkWhatsappStatus();
+    } catch (error) {
+      console.error('Error connecting WhatsApp:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect WhatsApp account",
+        variant: "destructive"
+      });
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
+  const disconnectWhatsapp = async () => {
+    setWhatsappLoading(true);
+    try {
+      const { error } = await apiClient.disconnectWhatsapp();
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "WhatsApp account disconnected successfully!",
+      });
+      
+      // Refresh the user data in the authentication context
+      await refreshUser();
+      // Also refresh the local state
+      await checkWhatsappStatus();
+    } catch (error) {
+      console.error('Error disconnecting WhatsApp:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect WhatsApp account",
+        variant: "destructive"
+      });
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
+  const updatePreferredPlatform = async (platform: string) => {
+    try {
+      const { error } = await apiClient.updatePreferredPlatform(platform);
+      if (error) throw error;
+
+      setPreferredPlatform(platform);
+      toast({
+        title: "Success",
+        description: `Preferred messaging platform updated to ${platform}`,
+      });
+      
+      await refreshUser();
+    } catch (error) {
+      console.error('Error updating preferred platform:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update preferred platform",
+        variant: "destructive"
+      });
     }
   };
 

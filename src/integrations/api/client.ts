@@ -171,20 +171,42 @@ class ApiClient {
     });
   }
 
+  async connectWhatsapp(whatsappPhone: string) {
+    return this.request('/whatsapp/connect', {
+      method: 'POST',
+      body: JSON.stringify({ whatsapp_phone: whatsappPhone }),
+    });
+  }
+
+  async disconnectWhatsapp() {
+    return this.request('/whatsapp/disconnect', {
+      method: 'POST',
+    });
+  }
+
+  async updatePreferredPlatform(platform: string) {
+    return this.request('/auth/preferred-platform', {
+      method: 'POST',
+      body: JSON.stringify({ preferred_messaging_platform: platform }),
+    });
+  }
+
   // Admin methods
   async getPendingUsers() {
     return this.request('/admin/pending-users');
   }
 
   async approveUser(userId: string) {
-    return this.request(`/admin/approve-user/${userId}`, {
+    return this.request(`/admin/users/${userId}/approve`, {
       method: 'POST',
+      body: JSON.stringify({ approved: true }),
     });
   }
 
   async rejectUser(userId: string) {
-    return this.request(`/admin/reject-user/${userId}`, {
+    return this.request(`/admin/users/${userId}/approve`, {
       method: 'POST',
+      body: JSON.stringify({ approved: false }),
     });
   }
 

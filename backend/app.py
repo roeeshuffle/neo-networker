@@ -46,6 +46,7 @@ from models import User, Person, Company, Task, SharedData, TelegramUser
 # Import routes
 from routes import auth_bp, people_bp, companies_bp, tasks_bp, csv_bp, telegram_bp
 from routes.telegram_auth import telegram_auth_bp
+from routes.whatsapp import whatsapp_bp
 from routes.admin import admin_bp
 
 # Register blueprints
@@ -56,6 +57,7 @@ app.register_blueprint(tasks_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api')
 app.register_blueprint(telegram_bp, url_prefix='/api')
 app.register_blueprint(telegram_auth_bp, url_prefix='/api')
+app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
 
 @app.route('/api/health')

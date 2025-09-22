@@ -15,6 +15,8 @@ class User(db.Model):
     avatar_url = db.Column(db.Text)
     provider = db.Column(db.String(50), default='email')
     telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
+    whatsapp_phone = db.Column(db.String(20), unique=True, nullable=True)
+    preferred_messaging_platform = db.Column(db.String(20), default='telegram')  # 'telegram' or 'whatsapp'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -40,6 +42,8 @@ class User(db.Model):
             'avatar_url': self.avatar_url,
             'provider': self.provider,
             'telegram_id': self.telegram_id,
+            'whatsapp_phone': self.whatsapp_phone,
+            'preferred_messaging_platform': self.preferred_messaging_platform,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

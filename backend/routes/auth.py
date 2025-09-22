@@ -153,3 +153,31 @@ def get_all_users():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/preferred-platform', methods=['POST'])
+@jwt_required()
+def update_preferred_platform():
+    """Update user's preferred messaging platform"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        platform = data.get('preferred_messaging_platform')
+        
+        if platform not in ['telegram', 'whatsapp']:
+            return jsonify({'error': 'Invalid platform. Must be telegram or whatsapp'}), 400
+        
+        user.preferred_messaging_platform = platform
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Preferred platform updated successfully',
+            'preferred_messaging_platform': platform
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
