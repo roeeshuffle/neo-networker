@@ -46,11 +46,11 @@ def main():
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'profiles' 
-            AND column_name IN ('whatsapp_phone', 'preferred_messaging_platform')
+            AND column_name IN ('whatsapp_phone', 'preferred_messaging_platform', 'state_data')
         """)
         
         existing_columns = [row[0] for row in cursor.fetchall()]
-        print(f"📋 Existing WhatsApp columns: {existing_columns}")
+        print(f"📋 Existing columns: {existing_columns}")
         
         # Add whatsapp_phone column if missing
         if 'whatsapp_phone' not in existing_columns:
@@ -68,6 +68,14 @@ def main():
         else:
             print("✅ preferred_messaging_platform column already exists")
         
+        # Add state_data column if missing
+        if 'state_data' not in existing_columns:
+            print("➕ Adding state_data column...")
+            cursor.execute("ALTER TABLE profiles ADD COLUMN state_data JSON;")
+            print("✅ state_data column added")
+        else:
+            print("✅ state_data column already exists")
+        
         # Commit changes
         conn.commit()
         print("🎉 Database fix completed successfully!")
@@ -77,12 +85,12 @@ def main():
             SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns 
             WHERE table_name = 'profiles' 
-            AND column_name IN ('whatsapp_phone', 'preferred_messaging_platform')
+            AND column_name IN ('whatsapp_phone', 'preferred_messaging_platform', 'state_data')
             ORDER BY column_name
         """)
         
         new_columns = cursor.fetchall()
-        print("\n📊 WhatsApp columns in profiles table:")
+        print("\n📊 Voice support columns in profiles table:")
         for col in new_columns:
             print(f"  ✅ {col[0]}: {col[1]} (nullable: {col[2]}, default: {col[3]})")
         
