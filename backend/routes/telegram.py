@@ -55,7 +55,14 @@ def handle_callback_query(callback_query):
             telegram_logger.info(f"✅ Voice approved by {first_name}: '{transcription}'")
             
             # Process the approved transcription
-            response_text = process_natural_language_request(transcription, user_id, first_name)
+            # Find the telegram user first
+            telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+            if not telegram_user:
+                telegram_logger.error(f"❌ Telegram user not found: {user_id}")
+                send_telegram_message(chat_id, "❌ User not found. Please connect your Telegram account via the web app first.")
+                return jsonify({'status': 'ok'})
+            
+            response_text = process_natural_language_request(transcription, telegram_user)
             send_telegram_message(chat_id, response_text)
             
             # Answer the callback query
