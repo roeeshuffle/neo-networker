@@ -55,7 +55,7 @@ def whatsapp_webhook():
             
             if not user:
                 whatsapp_logger.info(f"❌ No user found with WhatsApp phone: {from_phone}")
-                response_text = f"🔐 **Connection Required**\n\nTo use this WhatsApp bot, you need to connect your WhatsApp account to your webapp account.\n\n**Your WhatsApp Phone:** `{from_phone}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
+                response_text = f"🔐 **Connection Required**\n\nTo use this WhatsApp bot, you need to connect your WhatsApp account to your webapp account.\n\n**Your WhatsApp Phone:** `{from_phone}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'\n\nOnce connected, you can use natural language commands like:\n• 'Add contact'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
                 
                 whatsapp_service.send_message(from_phone, response_text)
                 return jsonify({'status': 'ok'})

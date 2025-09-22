@@ -52,6 +52,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [preferredPlatform, setPreferredPlatform] = useState('telegram');
 
   useEffect(() => {
+    console.log('🔧 SettingsTab loaded with WhatsApp support!');
     fetchDuplicates();
     checkTelegramStatus();
     checkWhatsappStatus();
@@ -551,13 +552,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <div>
                     <label className="text-sm font-medium">WhatsApp Phone Number</label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Enter your WhatsApp phone number (with country code, e.g., +972507372313)
+                      Enter your WhatsApp phone number (with country code, e.g., +1234567890)
                     </p>
                     <Input
                       type="text"
                       value={whatsappPhone}
                       onChange={(e) => setWhatsappPhone(e.target.value)}
-                      placeholder="+972507372313"
+                      placeholder="+1234567890"
                     />
                   </div>
                   <Button
