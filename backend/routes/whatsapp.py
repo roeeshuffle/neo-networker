@@ -109,7 +109,8 @@ def convert_whatsapp_voice_to_text(audio_id):
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,
-                    language="en"  # Force English transcription
+                    language="en",  # Force English transcription
+                    prompt="This is a business task management voice command. Please transcribe in English only."  # Additional prompt to force English
                 )
                 
             transcription_text = transcription.text.strip()
