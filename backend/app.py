@@ -50,6 +50,7 @@ from routes.whatsapp import whatsapp_bp
 from routes.admin import admin_bp
 from routes.db_fix import db_fix_bp
 from routes.db_fix_state_data import db_fix_bp as db_fix_state_data_bp
+from routes.add_state_data import add_state_data_bp
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -63,6 +64,7 @@ app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
 app.register_blueprint(db_fix_bp, url_prefix='/api')
 app.register_blueprint(db_fix_state_data_bp, url_prefix='/api')
+app.register_blueprint(add_state_data_bp, url_prefix='/api')
 
 @app.route('/api/health')
 def health_check():
