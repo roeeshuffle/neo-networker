@@ -39,6 +39,26 @@ def answer_callback_query(callback_query_id, text):
     except Exception as e:
         telegram_logger.error(f"❌ Error answering callback query: {e}")
 
+def delete_telegram_message(chat_id, message_id):
+    """Delete a message from Telegram"""
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return
+            
+        url = f"https://api.telegram.org/bot{bot_token}/deleteMessage"
+        data = {
+            'chat_id': chat_id,
+            'message_id': message_id
+        }
+        response = requests.post(url, json=data, timeout=5)
+        if response.status_code == 200:
+            telegram_logger.info(f"✅ Message {message_id} deleted from chat {chat_id}")
+        else:
+            telegram_logger.error(f"❌ Failed to delete message: {response.status_code}")
+    except Exception as e:
+        telegram_logger.error(f"❌ Error deleting message: {e}")
+
 def handle_callback_query(callback_query):
     """Handle callback queries from inline keyboards"""
     try:
@@ -65,6 +85,9 @@ def handle_callback_query(callback_query):
             response_text = process_natural_language_request(transcription, telegram_user)
             send_telegram_message(chat_id, response_text)
             
+            # Delete the approval message
+            delete_telegram_message(chat_id, callback_query['message']['message_id'])
+            
             # Answer the callback query
             answer_callback_query(callback_query['id'], "Voice approved!")
             return jsonify({'status': 'ok'})
@@ -72,6 +95,9 @@ def handle_callback_query(callback_query):
         elif data == 'voice_reject':
             telegram_logger.info(f"❌ Voice rejected by {first_name}")
             send_telegram_message(chat_id, "❌ Voice message ignored.")
+            
+            # Delete the approval message
+            delete_telegram_message(chat_id, callback_query['message']['message_id'])
             
             # Answer the callback query
             answer_callback_query(callback_query['id'], "Voice rejected!")
