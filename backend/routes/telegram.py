@@ -22,6 +22,188 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 # Admin user ID for notifications
 ADMIN_TELEGRAM_ID = 1001816902
 
+def handle_voice_message(message, chat_id, user_id, first_name, username):
+    """Handle voice message from Telegram"""
+    try:
+        voice = message['voice']
+        file_id = voice['file_id']
+        
+        telegram_logger.info(f"🎤 Processing voice message from {first_name} (file_id: {file_id})")
+        
+        # Get or create telegram user
+        telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+        
+        if not telegram_user:
+            telegram_logger.info(f"🆕 Creating new Telegram user for voice: {first_name} ID: {user_id}")
+            telegram_user = TelegramUser(
+                id=str(uuid.uuid4()),
+                telegram_id=user_id,
+                telegram_username=username,
+                first_name=first_name,
+                current_state='idle'
+            )
+            db.session.add(telegram_user)
+            db.session.commit()
+        
+        # Check if user's Telegram ID is connected in the web app
+        webapp_user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        
+        if not webapp_user:
+            response_text = f"🔐 **Connection Required**\n\nTo use voice commands, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'"
+        else:
+            # Convert voice to text using OpenAI Whisper
+            transcription = convert_voice_to_text(file_id)
+            
+            if transcription:
+                # Set state to waiting for voice approval
+                telegram_user.current_state = 'waiting_voice_approval'
+                telegram_user.state_data = {'transcription': transcription}
+                db.session.commit()
+                
+                # Send approval request with inline keyboard
+                response_text = f"🎤 **Voice Transcription:**\n\n\"{transcription}\"\n\n**Approve this transcription?**\n\n✅ Yes / ❌ No"
+                
+                # Send message with inline keyboard
+                send_voice_approval_keyboard(chat_id, response_text, transcription)
+                return jsonify({'status': 'ok', 'response': 'Voice approval sent'})
+            else:
+                response_text = "❌ Sorry, I couldn't process your voice message. Please try again or send a text message."
+        
+        # Send response
+        send_telegram_message(chat_id, response_text)
+        return jsonify({'status': 'ok', 'response': response_text})
+        
+    except Exception as e:
+        telegram_logger.error(f"💥 Error processing voice message from {first_name}: {str(e)}")
+        send_telegram_message(chat_id, "❌ Sorry, there was an error processing your voice message.")
+        return jsonify({'error': str(e)}), 500
+
+def convert_voice_to_text(file_id):
+    """Convert Telegram voice message to text using OpenAI Whisper"""
+    try:
+        # Get file path from Telegram
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            telegram_logger.error("❌ Telegram bot token not configured")
+            return None
+            
+        # Get file info
+        file_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
+        file_response = requests.get(file_url, timeout=10)
+        
+        if file_response.status_code != 200:
+            telegram_logger.error(f"❌ Failed to get file info: {file_response.status_code}")
+            return None
+            
+        file_info = file_response.json()
+        if not file_info.get('ok'):
+            telegram_logger.error(f"❌ File info error: {file_info}")
+            return None
+            
+        file_path = file_info['result']['file_path']
+        file_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        
+        # Download the voice file
+        voice_response = requests.get(file_url, timeout=30)
+        if voice_response.status_code != 200:
+            telegram_logger.error(f"❌ Failed to download voice file: {voice_response.status_code}")
+            return None
+            
+        # Convert to text using OpenAI Whisper
+        openai.api_key = os.getenv('OPENAI_API_KEY')
+        if not openai.api_key:
+            telegram_logger.error("❌ OpenAI API key not configured")
+            return None
+            
+        # Create a temporary file for the audio
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as temp_file:
+            temp_file.write(voice_response.content)
+            temp_file_path = temp_file.name
+            
+        try:
+            # Transcribe using OpenAI Whisper (auto-detect language)
+            with open(temp_file_path, 'rb') as audio_file:
+                transcription = openai.Audio.transcribe(
+                    model="whisper-1",
+                    file=audio_file
+                    # No language specified - Whisper will auto-detect (supports 99+ languages including Hebrew)
+                )
+                
+            transcription_text = transcription.text.strip()
+            telegram_logger.info(f"🎤 Voice transcribed: '{transcription_text}'")
+            return transcription_text
+            
+        finally:
+            # Clean up temporary file
+            import os as os_module
+            try:
+                os_module.unlink(temp_file_path)
+            except:
+                pass
+                
+    except Exception as e:
+        telegram_logger.error(f"💥 Error converting voice to text: {str(e)}")
+        return None
+
+def send_voice_approval_keyboard(chat_id, text, transcription):
+    """Send message with inline keyboard for voice approval"""
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return
+            
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        
+        # Create inline keyboard
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Yes", "callback_data": f"voice_approve:{transcription}"},
+                    {"text": "❌ No", "callback_data": "voice_reject"}
+                ]
+            ]
+        }
+        
+        data = {
+            'chat_id': chat_id,
+            'text': text,
+            'parse_mode': 'HTML',
+            'reply_markup': json.dumps(keyboard)
+        }
+        
+        response = requests.post(url, data=data, timeout=10)
+        if response.status_code == 200:
+            telegram_logger.info(f"✅ Voice approval keyboard sent to chat {chat_id}")
+        else:
+            telegram_logger.error(f"❌ Failed to send voice approval keyboard: {response.status_code}")
+            
+    except Exception as e:
+        telegram_logger.error(f"💥 Error sending voice approval keyboard: {str(e)}")
+
+def send_telegram_message(chat_id, text):
+    """Send a text message to Telegram"""
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return
+            
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = {
+            'chat_id': chat_id,
+            'text': text,
+            'parse_mode': 'HTML'
+        }
+        
+        response = requests.post(url, data=data, timeout=10)
+        if response.status_code == 200:
+            telegram_logger.info(f"✅ Message sent to chat {chat_id}")
+        else:
+            telegram_logger.error(f"❌ Failed to send message: {response.status_code}")
+            
+    except Exception as e:
+        telegram_logger.error(f"💥 Error sending message: {str(e)}")
+
 def send_admin_notification(user_id: str, prompt: str, response: str, success: bool):
     """Send notification to admin about user requests"""
     try:
@@ -855,10 +1037,21 @@ def telegram_webhook():
         
         message = data['message']
         chat_id = message['chat']['id']
-        text = message['text']
         user_id = message['from']['id']
         username = message['from'].get('username', 'Unknown')
         first_name = message['from'].get('first_name', 'Unknown')
+        
+        # Check if it's a voice message
+        if 'voice' in message:
+            telegram_logger.info(f"🎤 Voice message received from user {first_name}")
+            return handle_voice_message(message, chat_id, user_id, first_name, username)
+        
+        # Check if it's a text message
+        if 'text' not in message:
+            telegram_logger.info(f"❌ No text or voice in message from user {first_name}")
+            return jsonify({'status': 'ok'})
+            
+        text = message['text']
         
         # Log user and message details
         telegram_logger.info(f"👤 User: {first_name} (@{username}) ID: {user_id}")
@@ -995,6 +1188,88 @@ To use this bot, you need to connect your Telegram account via the webapp first.
     except Exception as e:
         telegram_logger.error(f"💥 Error processing Telegram webhook for user {user_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@telegram_bp.route('/telegram/callback', methods=['POST'])
+def telegram_callback():
+    """Handle Telegram callback queries (inline keyboard buttons)"""
+    try:
+        data = request.get_json()
+        telegram_logger.info(f"📨 Incoming Telegram callback: {json.dumps(data, indent=2)}")
+        
+        if not data or 'callback_query' not in data:
+            return jsonify({'status': 'ok'})
+            
+        callback_query = data['callback_query']
+        chat_id = callback_query['message']['chat']['id']
+        user_id = callback_query['from']['id']
+        callback_data = callback_query['data']
+        
+        telegram_logger.info(f"🔘 Callback from user {user_id}: {callback_data}")
+        
+        # Get telegram user
+        telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+        if not telegram_user:
+            telegram_logger.error(f"❌ Telegram user not found for callback: {user_id}")
+            return jsonify({'status': 'ok'})
+        
+        # Handle voice approval callbacks
+        if callback_data.startswith('voice_approve:'):
+            transcription = callback_data.replace('voice_approve:', '')
+            telegram_logger.info(f"✅ Voice approved by user {telegram_user.first_name}: '{transcription}'")
+            
+            # Reset state
+            telegram_user.current_state = 'idle'
+            telegram_user.state_data = {}
+            db.session.commit()
+            
+            # Process the approved transcription as a regular text message
+            response_text = process_natural_language_request(transcription, telegram_user)
+            
+            # Send response
+            send_telegram_message(chat_id, response_text)
+            
+            # Answer callback query
+            answer_callback_query(callback_query['id'], "✅ Voice message processed!")
+            
+        elif callback_data == 'voice_reject':
+            telegram_logger.info(f"❌ Voice rejected by user {telegram_user.first_name}")
+            
+            # Reset state
+            telegram_user.current_state = 'idle'
+            telegram_user.state_data = {}
+            db.session.commit()
+            
+            # Answer callback query
+            answer_callback_query(callback_query['id'], "❌ Voice message ignored.")
+            
+        return jsonify({'status': 'ok'})
+        
+    except Exception as e:
+        telegram_logger.error(f"💥 Error processing Telegram callback: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def answer_callback_query(callback_query_id, text):
+    """Answer a Telegram callback query"""
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return
+            
+        url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+        data = {
+            'callback_query_id': callback_query_id,
+            'text': text,
+            'show_alert': False
+        }
+        
+        response = requests.post(url, data=data, timeout=5)
+        if response.status_code == 200:
+            telegram_logger.info(f"✅ Callback query answered: {text}")
+        else:
+            telegram_logger.error(f"❌ Failed to answer callback query: {response.status_code}")
+            
+    except Exception as e:
+        telegram_logger.error(f"💥 Error answering callback query: {str(e)}")
 
 @telegram_bp.route('/linkedin-profile-image', methods=['POST'])
 def linkedin_profile_image():

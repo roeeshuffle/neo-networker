@@ -86,15 +86,52 @@ class WhatsAppService:
             
             # Extract message data
             from_phone = message.get('from')
-            message_text = message.get('text', {}).get('body', '')
             message_id = message.get('id')
             
-            return {
-                'from_phone': from_phone,
-                'message_text': message_text,
-                'message_id': message_id,
-                'platform': 'whatsapp'
-            }
+            # Check for text message
+            if 'text' in message:
+                message_text = message.get('text', {}).get('body', '')
+                message_type = 'text'
+                return {
+                    'from_phone': from_phone,
+                    'message_text': message_text,
+                    'message_id': message_id,
+                    'message_type': message_type,
+                    'platform': 'whatsapp'
+                }
+            
+            # Check for voice/audio message
+            elif 'audio' in message:
+                audio = message.get('audio', {})
+                audio_id = audio.get('id')
+                message_type = 'audio'
+                return {
+                    'from_phone': from_phone,
+                    'message_text': '',  # No text for voice messages
+                    'message_id': message_id,
+                    'message_type': message_type,
+                    'audio_id': audio_id,
+                    'platform': 'whatsapp'
+                }
+            
+            # Check for voice message (alternative format)
+            elif 'voice' in message:
+                voice = message.get('voice', {})
+                audio_id = voice.get('id')
+                message_type = 'audio'
+                return {
+                    'from_phone': from_phone,
+                    'message_text': '',  # No text for voice messages
+                    'message_id': message_id,
+                    'message_type': message_type,
+                    'audio_id': audio_id,
+                    'platform': 'whatsapp'
+                }
+            
+            # Unknown message type
+            else:
+                whatsapp_logger.info(f"Unknown message type from {from_phone}: {message.keys()}")
+                return None
             
         except Exception as e:
             whatsapp_logger.error(f"Error processing WhatsApp webhook: {e}", exc_info=True)

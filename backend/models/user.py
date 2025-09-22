@@ -17,6 +17,7 @@ class User(db.Model):
     telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
     whatsapp_phone = db.Column(db.String(20), unique=True, nullable=True)
     preferred_messaging_platform = db.Column(db.String(20), default='telegram')  # 'telegram' or 'whatsapp'
+    state_data = db.Column(db.JSON, nullable=True)  # For storing temporary state like voice transcriptions
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -44,6 +45,7 @@ class User(db.Model):
             'telegram_id': self.telegram_id,
             'whatsapp_phone': self.whatsapp_phone,
             'preferred_messaging_platform': self.preferred_messaging_platform,
+            'state_data': self.state_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
