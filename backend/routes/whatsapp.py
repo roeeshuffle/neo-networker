@@ -71,6 +71,8 @@ def handle_whatsapp_voice_message(message_data, from_phone):
 def convert_whatsapp_voice_to_text(audio_id):
     """Convert WhatsApp voice message to text using OpenAI Whisper"""
     try:
+        whatsapp_logger.info(f"🎤 Converting voice to text for audio_id: {audio_id}")
+        
         # Get access token
         access_token = os.getenv('WHATSAPP_ACCESS_TOKEN')
         if not access_token:
@@ -81,9 +83,12 @@ def convert_whatsapp_voice_to_text(audio_id):
         media_url = f"https://graph.facebook.com/v18.0/{audio_id}"
         headers = {"Authorization": f"Bearer {access_token}"}
         
+        whatsapp_logger.info(f"🎤 Getting media info from: {media_url}")
         media_response = requests.get(media_url, headers=headers, timeout=10)
+        whatsapp_logger.info(f"🎤 Media response status: {media_response.status_code}")
+        
         if media_response.status_code != 200:
-            whatsapp_logger.error(f"❌ Failed to get media info: {media_response.status_code}")
+            whatsapp_logger.error(f"❌ Failed to get media info: {media_response.status_code} - {media_response.text}")
             return None
             
         media_info = media_response.json()
@@ -179,9 +184,19 @@ def whatsapp_webhook():
                 return jsonify({'status': 'ok'})
             
             # Handle voice messages
-            if message_type == 'audio' and 'audio_id' in message_data:
+            if message_type == 'audio':
                 whatsapp_logger.info(f"🎤 Voice message received from {from_phone}")
-                return handle_whatsapp_voice_message(message_data, from_phone)
+                whatsapp_logger.info(f"🎤 Voice message data: {message_data}")
+                # Check for different possible audio ID fields
+                audio_id = message_data.get('audio_id') or message_data.get('id') or message_data.get('audio', {}).get('id')
+                if audio_id:
+                    message_data['audio_id'] = audio_id
+                    return handle_whatsapp_voice_message(message_data, from_phone)
+                else:
+                    whatsapp_logger.error(f"❌ No audio ID found in voice message data: {message_data}")
+                    response_text = "❌ Sorry, I couldn't process your voice message. Please try again or send a text message."
+                    whatsapp_service.send_message(from_phone, response_text)
+                    return jsonify({'status': 'ok'})
             
             # Handle text messages
             if not message_text:
