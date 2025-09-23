@@ -20,10 +20,18 @@ def handle_whatsapp_voice_message(message_data, from_phone):
         whatsapp_logger.info(f"🎤 Processing WhatsApp voice message from {from_phone} (audio_id: {audio_id})")
         
         # Find user by WhatsApp phone
+        whatsapp_logger.info(f"🔍 [VOICE] Looking for user with WhatsApp phone: '{from_phone}'")
+        
+        # Debug: Check all users with WhatsApp phones
+        all_whatsapp_users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+        whatsapp_logger.info(f"📱 [VOICE] All users with WhatsApp phones:")
+        for u in all_whatsapp_users:
+            whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone='{u.whatsapp_phone}'")
+        
         user = User.query.filter_by(whatsapp_phone=from_phone).first()
         
         if not user:
-            whatsapp_logger.info(f"❌ No user found with WhatsApp phone: {from_phone}")
+            whatsapp_logger.info(f"❌ [VOICE] No user found with WhatsApp phone: {from_phone}")
             response_text = f"🔐 **Connection Required**\n\nTo use voice commands, you need to connect your WhatsApp account to your webapp account.\n\n**Your WhatsApp Phone:** `{from_phone}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'"
             whatsapp_service.send_message(from_phone, response_text)
             return jsonify({'status': 'ok'})
@@ -181,6 +189,14 @@ def whatsapp_webhook():
                 return jsonify({'status': 'ok'})
             
             # Find user by WhatsApp phone
+            whatsapp_logger.info(f"🔍 Looking for user with WhatsApp phone: '{from_phone}'")
+            
+            # Debug: Check all users with WhatsApp phones
+            all_whatsapp_users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+            whatsapp_logger.info(f"📱 All users with WhatsApp phones:")
+            for u in all_whatsapp_users:
+                whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone='{u.whatsapp_phone}'")
+            
             user = User.query.filter_by(whatsapp_phone=from_phone).first()
             
             if not user:
