@@ -19,6 +19,10 @@ logging.basicConfig(
     ]
 )
 
+# Reduce Werkzeug (Flask's built-in server) logging to reduce noise
+werkzeug_logger = logging.getLogger('werkzeug')
+werkzeug_logger.setLevel(logging.WARNING)
+
 # Load environment variables
 load_dotenv()
 
@@ -72,14 +76,16 @@ def health_check():
 
 @app.before_request
 def log_request_info():
-    # Only log important requests, skip repetitive auth checks
-    if '/api/auth/me' not in request.url and '/api/health' not in request.url:
+    # Only log important requests, skip repetitive auth checks and user management
+    skip_patterns = ['/api/auth/me', '/api/health', '/api/auth/users']
+    if not any(pattern in request.url for pattern in skip_patterns):
         app.logger.info(f'{request.method} {request.url} from {request.remote_addr}')
 
 @app.after_request
 def log_response_info(response):
-    # Only log important responses, skip repetitive auth checks
-    if '/api/auth/me' not in request.url and '/api/health' not in request.url:
+    # Only log important responses, skip repetitive auth checks and user management
+    skip_patterns = ['/api/auth/me', '/api/health', '/api/auth/users']
+    if not any(pattern in request.url for pattern in skip_patterns):
         app.logger.info(f'Response: {response.status_code}')
     return response
 
