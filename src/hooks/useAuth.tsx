@@ -66,15 +66,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiClient.login(email, password);
       
       if (response.data) {
-        const { user: userData, access_token } = response.data;
+        const { access_token } = response.data;
         
-        // Store token and user data
+        // Store token
         localStorage.setItem('auth_token', access_token);
-        localStorage.setItem('auth_user', JSON.stringify(userData));
-        
-        setToken(access_token);
-        setUser(userData);
         apiClient.setToken(access_token);
+        setToken(access_token);
+        
+        // Refresh user data to get the latest information
+        await refreshUser();
         
         return true;
       }
