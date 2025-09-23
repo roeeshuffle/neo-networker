@@ -72,29 +72,15 @@ def health_check():
 
 @app.before_request
 def log_request_info():
-    print(f"🌐 REQUEST: {request.method} {request.url} from {request.remote_addr}")
-    print(f"🌐 HEADERS: {dict(request.headers)}")
-    if request.is_json and request.get_data():
-        try:
-            body = request.get_json()
-            print(f"🌐 BODY: {body}")
-        except Exception as e:
-            print(f"🌐 BODY parsing error: {e}")
-    app.logger.info(f'Request: {request.method} {request.url} from {request.remote_addr}')
-    app.logger.info(f'Headers: {dict(request.headers)}')
-    if request.is_json and request.get_data():
-        try:
-            app.logger.info(f'Body: {request.get_json()}')
-        except Exception as e:
-            app.logger.info(f'Body parsing error: {e}')
-
-# Add debug print to see if the app is running
-print("🚀 APP STARTED - Debug prints should work now!")
+    # Only log important requests, skip repetitive auth checks
+    if '/api/auth/me' not in request.url and '/api/health' not in request.url:
+        app.logger.info(f'{request.method} {request.url} from {request.remote_addr}')
 
 @app.after_request
 def log_response_info(response):
-    print(f"🌐 RESPONSE: {response.status_code}")
-    app.logger.info(f'Response: {response.status_code}')
+    # Only log important responses, skip repetitive auth checks
+    if '/api/auth/me' not in request.url and '/api/health' not in request.url:
+        app.logger.info(f'Response: {response.status_code}')
     return response
 
 @app.route('/api/users', methods=['GET'])
