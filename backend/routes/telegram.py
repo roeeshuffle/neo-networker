@@ -668,9 +668,16 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     """Show tasks from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        # Handle both Telegram and WhatsApp users
+        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        else:
+            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
+            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        
         if not user:
-            return "❌ User not found. Please connect your Telegram account in the webapp first."
+            return "❌ User not found. Please connect your account in the webapp first."
 
         # Get tasks for the user
         tasks = Task.query.filter_by(owner_id=user.id).limit(20).all()
@@ -706,9 +713,16 @@ def add_people_from_telegram(args: list, telegram_user: TelegramUser) -> str:
     """Add people from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        # Handle both Telegram and WhatsApp users
+        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        else:
+            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
+            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        
         if not user:
-            return "❌ User not found. Please connect your Telegram account in the webapp first."
+            return "❌ User not found. Please connect your account in the webapp first."
 
         results = []
         for person_data in args:
@@ -966,9 +980,16 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     """Add a task from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        # Handle both Telegram and WhatsApp users
+        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        else:
+            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
+            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        
         if not user:
-            return "❌ User not found. Please connect your Telegram account in the webapp first."
+            return "❌ User not found. Please connect your account in the webapp first."
 
         # Parse due_date if provided
         due_date = None
@@ -1022,9 +1043,16 @@ def search_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
         search_type = args.get('type', 'people')
         
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        # Handle both Telegram and WhatsApp users
+        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        else:
+            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
+            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        
         if not user:
-            return "❌ User not found. Please connect your Telegram account in the webapp first."
+            return "❌ User not found. Please connect your account in the webapp first."
 
         results = []
         
