@@ -115,19 +115,26 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const checkWhatsappStatus = async () => {
     try {
+      console.log('🔍 Checking WhatsApp status...');
       const { data: user } = await apiClient.getCurrentUser();
+      console.log('👤 User data:', user);
+      console.log('👤 User whatsapp_phone:', user?.whatsapp_phone);
+      
       if (user?.whatsapp_phone) {
+        console.log('✅ WhatsApp phone found:', user.whatsapp_phone);
         setWhatsappConnected(true);
         setWhatsappPhone(user.whatsapp_phone);
       } else {
+        console.log('❌ No WhatsApp phone found');
         setWhatsappConnected(false);
         setWhatsappPhone('');
       }
       if (user?.preferred_messaging_platform) {
+        console.log('📱 Preferred platform:', user.preferred_messaging_platform);
         setPreferredPlatform(user.preferred_messaging_platform);
       }
     } catch (error) {
-      console.error('Error checking WhatsApp status:', error);
+      console.error('❌ Error checking WhatsApp status:', error);
       setWhatsappConnected(false);
       setWhatsappPhone('');
     }
@@ -143,10 +150,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       return;
     }
 
+    // Remove + prefix and clean the phone number
+    const cleanPhone = whatsappPhone.replace(/^\+/, '').replace(/\s+/g, '').replace(/-/g, '');
+    
+    console.log('🔧 Connecting WhatsApp with phone:', cleanPhone);
+    
     setWhatsappLoading(true);
     try {
-      const { error } = await apiClient.connectWhatsapp(whatsappPhone);
+      const { error } = await apiClient.connectWhatsapp(cleanPhone);
       if (error) throw error;
+
+      console.log('✅ WhatsApp connected successfully, refreshing user data...');
 
       toast({
         title: "Success",
@@ -157,8 +171,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       await refreshUser();
       // Also refresh the local state
       await checkWhatsappStatus();
+      
+      console.log('✅ User data refreshed, WhatsApp status checked');
     } catch (error) {
-      console.error('Error connecting WhatsApp:', error);
+      console.error('❌ Error connecting WhatsApp:', error);
       toast({
         title: "Error",
         description: "Failed to connect WhatsApp account",
@@ -229,7 +245,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             Bot Connection
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Choose your preferred messaging platform and connect your account
+            Connect your Telegram and WhatsApp accounts to receive bot messages
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -260,111 +276,110 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <span className="text-sm">WhatsApp</span>
               </label>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Choose which platform to use for bot messages (you can connect both)
+            </p>
           </div>
 
           {/* Telegram Connection */}
-          {preferredPlatform === 'telegram' && (
-            <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="font-medium text-blue-800">Telegram Connection</span>
-              </div>
-              {telegramConnected ? (
-                <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
-                  <div>
-                    <div className="font-medium text-green-800">Telegram Connected</div>
-                    <div className="text-sm text-green-600">ID: {telegramId}</div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={disconnectTelegram}
-                    disabled={telegramLoading}
-                    className="border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Telegram User ID</label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      To get your Telegram ID, message @userinfobot on Telegram
-                    </p>
-                    <Input
-                      type="text"
-                      value={telegramId}
-                      onChange={(e) => setTelegramId(e.target.value)}
-                      placeholder="Enter your Telegram ID"
-                    />
-                  </div>
-                  <Button
-                    onClick={connectTelegram}
-                    disabled={telegramLoading || !telegramId.trim()}
-                    className="w-full"
-                  >
-                    {telegramLoading ? 'Connecting...' : 'Connect Telegram'}
-                  </Button>
-                </div>
-              )}
+          <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="font-medium text-blue-800">Telegram Connection</span>
             </div>
-          )}
+            {telegramConnected ? (
+              <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
+                <div>
+                  <div className="font-medium text-green-800">Telegram Connected</div>
+                  <div className="text-sm text-green-600">ID: {telegramId}</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={disconnectTelegram}
+                  disabled={telegramLoading}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Telegram User ID</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    To get your Telegram ID, message @userinfobot on Telegram
+                  </p>
+                  <Input
+                    type="text"
+                    value={telegramId}
+                    onChange={(e) => setTelegramId(e.target.value)}
+                    placeholder="Enter your Telegram ID"
+                  />
+                </div>
+                <Button
+                  onClick={connectTelegram}
+                  disabled={telegramLoading || !telegramId.trim()}
+                  className="w-full"
+                >
+                  {telegramLoading ? 'Connecting...' : 'Connect Telegram'}
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* WhatsApp Connection */}
-          {preferredPlatform === 'whatsapp' && (
-            <div className="space-y-4 p-4 border rounded-lg bg-green-50">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="font-medium text-green-800">WhatsApp Connection</span>
-              </div>
-              {whatsappConnected ? (
-                <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
-                  <div>
-                    <div className="font-medium text-green-800">WhatsApp Connected</div>
-                    <div className="text-sm text-green-600">Phone: {whatsappPhone}</div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={disconnectWhatsapp}
-                    disabled={whatsappLoading}
-                    className="border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">WhatsApp Phone Number</label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Enter your WhatsApp phone number (with country code, e.g., +1234567890)
-                    </p>
-                    <Input
-                      type="text"
-                      value={whatsappPhone}
-                      onChange={(e) => setWhatsappPhone(e.target.value)}
-                      placeholder="+1234567890"
-                    />
-                  </div>
-                  <Button
-                    onClick={connectWhatsapp}
-                    disabled={whatsappLoading || !whatsappPhone.trim()}
-                    className="w-full"
-                  >
-                    {whatsappLoading ? 'Connecting...' : 'Connect WhatsApp'}
-                  </Button>
-                </div>
-              )}
+          <div className="space-y-4 p-4 border rounded-lg bg-green-50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-green-800">WhatsApp Connection</span>
             </div>
-          )}
+            {whatsappConnected ? (
+              <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
+                <div>
+                  <div className="font-medium text-green-800">WhatsApp Connected</div>
+                  <div className="text-sm text-green-600">Phone: {whatsappPhone}</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={disconnectWhatsapp}
+                  disabled={whatsappLoading}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">WhatsApp Phone Number</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Enter your WhatsApp phone number (with country code, e.g., +1234567890)
+                  </p>
+                  <Input
+                    type="text"
+                    value={whatsappPhone}
+                    onChange={(e) => setWhatsappPhone(e.target.value)}
+                    placeholder="+1234567890"
+                  />
+                </div>
+                <Button
+                  onClick={connectWhatsapp}
+                  disabled={whatsappLoading || !whatsappPhone.trim()}
+                  className="w-full"
+                >
+                  {whatsappLoading ? 'Connecting...' : 'Connect WhatsApp'}
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* Connection Status */}
           <div className="text-xs text-muted-foreground">
-            <p>• You can only be connected to one platform at a time</p>
-            <p>• To switch platforms, disconnect from the current one first</p>
-            <p>• Your bot messages will be sent via the connected platform</p>
+            <p>• You can connect both Telegram and WhatsApp simultaneously</p>
+            <p>• Choose your preferred platform for bot messages using the radio buttons above</p>
+            <p>• Phone numbers are automatically cleaned (removes + prefix and spaces)</p>
           </div>
         </CardContent>
       </Card>
