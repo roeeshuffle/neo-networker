@@ -298,28 +298,43 @@ def connect_whatsapp():
     """Connect WhatsApp phone number to user account"""
     try:
         current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
+        whatsapp_logger.info(f"🔧 [CONNECT] User ID: {current_user_id}")
         
-        if not user or not user.is_approved:
+        user = User.query.get(current_user_id)
+        if not user:
+            whatsapp_logger.error(f"❌ [CONNECT] User not found for ID: {current_user_id}")
+            return jsonify({'error': 'User not found'}), 404
+            
+        if not user.is_approved:
+            whatsapp_logger.error(f"❌ [CONNECT] User {user.email} not approved")
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
+        whatsapp_logger.info(f"🔧 [CONNECT] Request data: {data}")
+        
         whatsapp_phone = data.get('whatsapp_phone')
+        whatsapp_logger.info(f"🔧 [CONNECT] WhatsApp phone from request: '{whatsapp_phone}'")
         
         if not whatsapp_phone:
+            whatsapp_logger.error(f"❌ [CONNECT] No WhatsApp phone provided")
             return jsonify({'error': 'WhatsApp phone number is required'}), 400
         
         # Check if phone number is already in use
         existing_user = User.query.filter_by(whatsapp_phone=whatsapp_phone).first()
         if existing_user and existing_user.id != user.id:
+            whatsapp_logger.error(f"❌ [CONNECT] Phone {whatsapp_phone} already used by user {existing_user.email}")
             return jsonify({'error': 'WhatsApp phone number already in use'}), 400
         
         # Update user
+        whatsapp_logger.info(f"🔧 [CONNECT] Updating user {user.email} with WhatsApp phone: {whatsapp_phone}")
         user.whatsapp_phone = whatsapp_phone
         user.preferred_messaging_platform = 'whatsapp'
         db.session.commit()
         
-        whatsapp_logger.info(f"User {user.email} connected WhatsApp phone: {whatsapp_phone}")
+        # Verify the save
+        updated_user = User.query.get(current_user_id)
+        whatsapp_logger.info(f"✅ [CONNECT] User {user.email} connected WhatsApp phone: {whatsapp_phone}")
+        whatsapp_logger.info(f"✅ [CONNECT] Verification - User's whatsapp_phone: '{updated_user.whatsapp_phone}'")
         
         return jsonify({
             'message': 'WhatsApp connected successfully',
@@ -327,7 +342,7 @@ def connect_whatsapp():
         })
         
     except Exception as e:
-        whatsapp_logger.error(f"Error connecting WhatsApp: {e}", exc_info=True)
+        whatsapp_logger.error(f"💥 [CONNECT] Error connecting WhatsApp: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @whatsapp_bp.route('/whatsapp/disconnect', methods=['POST'])
