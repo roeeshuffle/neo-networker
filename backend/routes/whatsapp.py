@@ -233,6 +233,7 @@ def whatsapp_webhook():
                             self.first_name = user.full_name or "User"
                             self.current_state = 'idle'
                             self.state_data = None
+                            self.is_whatsapp_user = True  # Flag to identify WhatsApp users
                     
                     mock_user = MockTelegramUser(user)
                     response_text = process_natural_language_request(transcription, mock_user)
@@ -261,6 +262,7 @@ def whatsapp_webhook():
                     self.first_name = user.full_name or "User"
                     self.current_state = 'idle'
                     self.state_data = None
+                    self.is_whatsapp_user = True  # Flag to identify WhatsApp users
             
             mock_user = MockTelegramUser(user)
             response_text = process_natural_language_request(message_text, mock_user)

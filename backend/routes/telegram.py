@@ -669,12 +669,12 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     try:
         # Find the user associated with this telegram user
         # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        else:
+        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
             # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
             user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        else:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         
         if not user:
             return "❌ User not found. Please connect your account in the webapp first."
@@ -714,12 +714,12 @@ def add_people_from_telegram(args: list, telegram_user: TelegramUser) -> str:
     try:
         # Find the user associated with this telegram user
         # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        else:
+        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
             # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
             user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        else:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         
         if not user:
             return "❌ User not found. Please connect your account in the webapp first."
@@ -981,12 +981,12 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     try:
         # Find the user associated with this telegram user
         # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        else:
+        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
             # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
             user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        else:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         
         if not user:
             return "❌ User not found. Please connect your account in the webapp first."
@@ -1044,12 +1044,12 @@ def search_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
         
         # Find the user associated with this telegram user
         # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'telegram_id') and telegram_user.telegram_id:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        else:
+        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
             # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
             user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
+        else:
+            # This is a real Telegram user
+            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
         
         if not user:
             return "❌ User not found. Please connect your account in the webapp first."
