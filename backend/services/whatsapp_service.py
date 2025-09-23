@@ -34,6 +34,8 @@ class WhatsAppService:
         """Refresh the WhatsApp access token using refresh token"""
         if not self.refresh_token or not self.app_id:
             whatsapp_logger.warning("Refresh token or App ID not configured. Cannot refresh token automatically.")
+            whatsapp_logger.warning(f"Refresh token present: {bool(self.refresh_token)}")
+            whatsapp_logger.warning(f"App ID present: {bool(self.app_id)}")
             return False
             
         try:
@@ -45,6 +47,9 @@ class WhatsAppService:
                 'fb_exchange_token': self.refresh_token
             }
             
+            whatsapp_logger.info("🔄 Refreshing WhatsApp access token...")
+            whatsapp_logger.info(f"🔄 Using App ID: {self.app_id}")
+            whatsapp_logger.info(f"🔄 Using refresh token: {self.refresh_token[:10]}...")
             response = requests.get(url, params=params, timeout=10)
             
             if response.status_code == 200:
@@ -71,13 +76,19 @@ class WhatsAppService:
     def ensure_valid_token(self) -> bool:
         """Ensure we have a valid access token, refresh if needed"""
         if not self.enabled:
+            whatsapp_logger.warning("WhatsApp service is disabled")
             return False
             
+        whatsapp_logger.info(f"🔑 Current token expires at: {self.token_expires_at}")
+        whatsapp_logger.info(f"🔑 Refresh token configured: {bool(self.refresh_token)}")
+        whatsapp_logger.info(f"🔑 App ID configured: {bool(self.app_id)}")
+        
         # Check if token is expired or will expire in the next 5 minutes
         if self.token_expires_at and datetime.now() + timedelta(minutes=5) >= self.token_expires_at:
             whatsapp_logger.info("WhatsApp token is expired or expiring soon, refreshing...")
             return self.refresh_access_token()
         
+        whatsapp_logger.info("WhatsApp token is still valid")
         return True
     
     def send_message(self, to_phone: str, message: str) -> bool:
