@@ -21,7 +21,7 @@ logging.basicConfig(
 
 # Reduce Werkzeug (Flask's built-in server) logging to reduce noise
 werkzeug_logger = logging.getLogger('werkzeug')
-werkzeug_logger.setLevel(logging.WARNING)
+werkzeug_logger.setLevel(logging.ERROR)  # Only show errors, not INFO requests
 
 # Load environment variables
 load_dotenv()
