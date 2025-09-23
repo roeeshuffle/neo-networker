@@ -92,10 +92,9 @@ class WhatsAppService:
             return False
             
         try:
-            # Format phone number (remove + and ensure it starts with country code)
+            # Format phone number (remove + and spaces/dashes, but don't add country code)
             formatted_phone = to_phone.replace('+', '').replace(' ', '').replace('-', '')
-            if not formatted_phone.startswith('1'):  # Assuming US numbers, adjust as needed
-                formatted_phone = '1' + formatted_phone
+            # Don't add country code - use the phone number as provided
                 
             payload = {
                 "messaging_product": "whatsapp",
