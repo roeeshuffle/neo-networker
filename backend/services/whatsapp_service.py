@@ -27,6 +27,8 @@ class WhatsAppService:
             self.enabled = True
             # Set initial token expiry (assume 1 hour from now)
             self.token_expires_at = datetime.now() + timedelta(hours=1)
+            # Debug: Log the token being used (first 20 chars for security)
+            whatsapp_logger.info(f"🔑 WhatsApp service initialized with token: {self.access_token[:20]}...")
             
         self.base_url = f"https://graph.facebook.com/v18.0/{self.phone_number_id}/messages"
     
