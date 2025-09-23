@@ -82,6 +82,7 @@ class WhatsAppService:
         whatsapp_logger.info(f"🔑 Current token expires at: {self.token_expires_at}")
         whatsapp_logger.info(f"🔑 Refresh token configured: {bool(self.refresh_token)}")
         whatsapp_logger.info(f"🔑 App ID configured: {bool(self.app_id)}")
+        whatsapp_logger.info(f"🔑 Current access token: {self.access_token[:20]}..." if self.access_token else "🔑 No access token")
         
         # Check if token is expired or will expire in the next 5 minutes
         if self.token_expires_at and datetime.now() + timedelta(minutes=5) >= self.token_expires_at:
