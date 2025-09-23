@@ -695,15 +695,15 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
             response += f"Status: {task.status}\n"
             response += f"Priority: {task.priority}\n"
             if task.assign_to:
-                response += f"   👤 {task.assign_to}\n"
+                response += f"👤 {task.assign_to}\n"
             if task.due_date:
-                response += f"   📅 {task.due_date}\n"
+                response += f"📅 {task.due_date}\n"
             if task.label:
-                response += f"   🏷️ {task.label}\n"
+                response += f"🏷️ {task.label}\n"
             if task.notes:
-                response += f"   📝 Notes: {task.notes}\n"
+                response += f"📝 Notes: {task.notes}\n"
             if task.alert_time:
-                response += f"   ⏰ Alert: {task.alert_time}\n"
+                response += f"⏰ Alert: {task.alert_time}\n"
             response += "\n"
         
         return response

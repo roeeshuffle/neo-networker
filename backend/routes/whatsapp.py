@@ -49,7 +49,7 @@ def handle_whatsapp_voice_message(message_data, from_phone):
         if transcription:
             # Store transcription in user's state (we'll use a simple approach for WhatsApp)
             # Since WhatsApp doesn't have inline keyboards, we'll use a different approach
-            response_text = f"🎤 **Voice Transcription:**\n\n\"{transcription}\"\n\n**Reply with 'yes' to approve or 'no' to ignore.**\n\n✅ Yes / ❌ No"
+            response_text = f"🎤 *{transcription}*\n\n'yes' to approve or 'no' to ignore.\n\n✅ Yes / ❌ No"
             whatsapp_service.send_message(from_phone, response_text)
             
             # Store the transcription in a temporary way (you could use Redis or database)
