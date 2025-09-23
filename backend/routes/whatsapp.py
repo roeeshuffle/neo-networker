@@ -274,6 +274,24 @@ def whatsapp_webhook():
         whatsapp_logger.error(f"💥 Error processing WhatsApp webhook: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@whatsapp_bp.route('/whatsapp/debug-users', methods=['GET'])
+def debug_whatsapp_users():
+    """Debug endpoint to see all users with WhatsApp phones"""
+    try:
+        users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+        result = []
+        for user in users:
+            result.append({
+                'email': user.email,
+                'whatsapp_phone': user.whatsapp_phone,
+                'is_approved': user.is_approved,
+                'preferred_messaging_platform': user.preferred_messaging_platform
+            })
+        return jsonify({'users': result})
+    except Exception as e:
+        whatsapp_logger.error(f"Error in debug endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @whatsapp_bp.route('/whatsapp/connect', methods=['POST'])
 @jwt_required()
 def connect_whatsapp():
