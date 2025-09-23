@@ -105,7 +105,10 @@ def get_current_user():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        return jsonify(user.to_dict())
+        user_data = user.to_dict()
+        print(f"🔍 [AUTH/ME] Returning user data for {user.email}: whatsapp_phone='{user_data.get('whatsapp_phone')}'")
+        
+        return jsonify(user_data)
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
