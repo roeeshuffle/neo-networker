@@ -122,8 +122,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       
       if (user?.whatsapp_phone) {
         console.log('✅ WhatsApp phone found:', user.whatsapp_phone);
+        console.log('🔧 Setting whatsappConnected to true');
         setWhatsappConnected(true);
+        console.log('🔧 Setting whatsappPhone to:', user.whatsapp_phone);
         setWhatsappPhone(user.whatsapp_phone);
+        console.log('✅ State should now be updated');
       } else {
         console.log('❌ No WhatsApp phone found');
         setWhatsappConnected(false);
@@ -234,6 +237,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
+
+  // Debug current state before rendering
+  console.log('🎨 Rendering SettingsTab with state:', {
+    whatsappConnected,
+    whatsappPhone,
+    preferredPlatform
+  });
 
   return (
     <div className="space-y-6">
