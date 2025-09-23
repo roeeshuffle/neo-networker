@@ -691,7 +691,9 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
             priority_emoji = "🔥" if task.priority == "high" else "🔹" if task.priority == "low" else "📌"
             
             response += f"{status_emoji} {priority_emoji} {task.text}\n"
-            response += f"   ID: {task.task_id} | Status: {task.status} | Priority: {task.priority}\n"
+            response += f"ID: {task.task_id}\n"
+            response += f"Status: {task.status}\n"
+            response += f"Priority: {task.priority}\n"
             if task.assign_to:
                 response += f"   👤 {task.assign_to}\n"
             if task.due_date:
@@ -1100,7 +1102,11 @@ def search_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
             results = [f"📝 {t.text}" for t in tasks]
         
         if results:
-            return f"🔍 Found {len(results)} results:\n" + "\n".join(results)
+            if search_type == 'people':
+                # Add empty line between contacts
+                return f"🔍 Found {len(results)} results:\n" + "\n\n".join(results)
+            else:
+                return f"🔍 Found {len(results)} results:\n" + "\n".join(results)
         else:
             return f"🔍 No {search_type} found matching '{query}'"
             
