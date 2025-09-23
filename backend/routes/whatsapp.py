@@ -73,11 +73,12 @@ def convert_whatsapp_voice_to_text(audio_id):
     try:
         whatsapp_logger.info(f"🎤 Converting voice to text for audio_id: {audio_id}")
         
-        # Get access token (use the same token that text messages use)
-        access_token = os.getenv('WHATSAPP_ACCESS_TOKEN')
-        whatsapp_logger.info(f"🎤 Voice processing using token: {access_token[:20]}..." if access_token else "🎤 No token from env")
+        # Get access token from WhatsApp service (same as text messages)
+        from services.whatsapp_service import whatsapp_service
+        access_token = whatsapp_service.access_token
+        whatsapp_logger.info(f"🎤 Voice processing using token: {access_token[:20]}..." if access_token else "🎤 No token from service")
         if not access_token:
-            whatsapp_logger.error("❌ WhatsApp access token not configured")
+            whatsapp_logger.error("❌ WhatsApp access token not available from service")
             return None
             
         # Get media URL from WhatsApp API
