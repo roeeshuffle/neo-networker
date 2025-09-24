@@ -17,7 +17,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
 
   const handleGoogleAuth = async () => {
     setLoading(true);
@@ -56,7 +56,7 @@ const Auth = () => {
       }, 1000);
 
       // Listen for messages from the popup
-      const messageListener = (event: MessageEvent) => {
+      const messageListener = async (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
         
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
@@ -68,6 +68,9 @@ const Auth = () => {
           const { user, access_token } = event.data;
           localStorage.setItem('auth_token', access_token);
           localStorage.setItem('auth_user', JSON.stringify(user));
+          
+          // Update the auth context
+          await refreshUser();
           
           toast({
             title: "Welcome!",
