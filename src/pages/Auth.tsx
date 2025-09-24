@@ -23,11 +23,75 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      toast({
-        title: "Google Auth Not Available",
-        description: "Google authentication is not yet implemented with the Flask backend. Please use email/password authentication.",
-        variant: "destructive",
+      // Get Google OAuth authorization URL
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate Google authentication');
+      }
+
+      const data = await response.json();
+      const { authorization_url } = data;
+
+      // Open Google OAuth in a popup window
+      const popup = window.open(
+        authorization_url,
+        'googleAuth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+
+      // Listen for the popup to close or receive a message
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          setLoading(false);
+          // Check if user was authenticated by refreshing user data
+          // The actual authentication will be handled by the callback
+        }
+      }, 1000);
+
+      // Listen for messages from the popup
+      const messageListener = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageListener);
+          popup?.close();
+          
+          // Store the auth data
+          const { user, access_token } = event.data;
+          localStorage.setItem('auth_token', access_token);
+          localStorage.setItem('auth_user', JSON.stringify(user));
+          
+          toast({
+            title: "Welcome!",
+            description: "Successfully signed in with Google.",
+          });
+          
+          navigate("/dashboard");
+          setLoading(false);
+        } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageListener);
+          popup?.close();
+          
+          toast({
+            title: "Google Auth Failed",
+            description: event.data.error || "Authentication failed",
+            variant: "destructive",
+          });
+          setLoading(false);
+        }
+      };
+
+      window.addEventListener('message', messageListener);
+
     } catch (error: any) {
       console.error("Google Auth error:", error);
       toast({
@@ -35,7 +99,6 @@ const Auth = () => {
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };

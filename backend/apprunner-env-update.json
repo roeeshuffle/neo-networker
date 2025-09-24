@@ -1,0 +1,14 @@
+{
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "587842257084.dkr.ecr.us-east-1.amazonaws.com/neo-networker-backend:latest",
+      "ImageConfiguration": {
+        "RuntimeEnvironmentVariables": {
+          "WHATSAPP_APP_ID": "1574280303734899",
+          "WHATSAPP_APP_SECRET": "5cbe9b86cd8d2c0b2512f731b45f1d2b",
+          "WHATSAPP_REFRESH_TOKEN": "EAAWXzLJH8HMBPnigzkcZBlfbHEpqM1Qv31Ws6ZCDX9HMnD0UZAQasXYHyeGKtXWi5BnVd3MR1RjVgL5aHsedfIe8efl9XV20g54hNjZCcqNVsaAfnytC1v2uZB1BXhCU70rCjSEorZBoGZAHlvY8EODp5LI5639BIKZA53L4QcxnjQ7qSTWMzZCbLZAkrlLwZDZD"
+        }
+      }
+    }
+  }
+}
