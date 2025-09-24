@@ -69,10 +69,13 @@ def google_auth_callback():
         # Create JWT token
         access_token = create_access_token(identity=user.id)
         
-        # Redirect to frontend callback page with success message
-        from flask import redirect
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-        return redirect(f"{frontend_url}/auth/google/callback?success=true&token={access_token}")
+        # Return JSON response instead of redirect
+        return jsonify({
+            'success': True,
+            'access_token': access_token,
+            'user': user.to_dict(),
+            'message': 'Google authentication successful'
+        })
         
     except Exception as e:
         logger.error(f"Error in Google auth callback: {str(e)}")
