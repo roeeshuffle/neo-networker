@@ -35,7 +35,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     console.log('🔧 SettingsTab loaded with WhatsApp and Google support!');
     checkTelegramStatus();
     checkWhatsappStatus();
-    checkGoogleStatus();
+    // checkGoogleStatus(); // Temporarily disabled - Google Auth routes commented out
   }, []);
 
   const checkTelegramStatus = async () => {
