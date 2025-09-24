@@ -18,15 +18,6 @@ class User(db.Model):
     whatsapp_phone = db.Column(db.String(20), unique=True, nullable=True)
     preferred_messaging_platform = db.Column(db.String(20), default='telegram')  # 'telegram' or 'whatsapp'
     state_data = db.Column(db.JSON, nullable=True)  # For storing temporary state like voice transcriptions
-    
-    # Google OAuth fields (nullable to avoid migration issues)
-    google_id = db.Column(db.String(100), unique=True, nullable=True)
-    google_refresh_token = db.Column(db.Text, nullable=True)
-    google_access_token = db.Column(db.Text, nullable=True)
-    google_token_expires_at = db.Column(db.DateTime, nullable=True)
-    google_contacts_synced_at = db.Column(db.DateTime, nullable=True)
-    google_calendar_synced_at = db.Column(db.DateTime, nullable=True)
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
