@@ -78,6 +78,35 @@ app.register_blueprint(migration_bp, url_prefix='/api')
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
+@app.route('/api/add-google-columns', methods=['POST'])
+def add_google_columns():
+    """Add Google OAuth columns to the database"""
+    try:
+        from sqlalchemy import text
+        
+        # SQL to add Google OAuth columns
+        sql_commands = [
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_id VARCHAR(100);",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_access_token TEXT;",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_token_expires_at TIMESTAMP;",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_contacts_synced_at TIMESTAMP;",
+            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_calendar_synced_at TIMESTAMP;",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_google_id ON profiles(google_id);"
+        ]
+        
+        # Execute each command
+        for sql in sql_commands:
+            print(f"🔧 Executing: {sql}")
+            db.session.execute(text(sql))
+            db.session.commit()
+        
+        return jsonify({'status': 'success', 'message': 'Google OAuth columns added successfully'})
+        
+    except Exception as e:
+        print(f"❌ Error adding Google OAuth columns: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.before_request
 def log_request_info():
     # Only log important requests, skip repetitive auth checks and user management
