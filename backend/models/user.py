@@ -46,9 +46,6 @@ class User(db.Model):
             'whatsapp_phone': self.whatsapp_phone,
             'preferred_messaging_platform': self.preferred_messaging_platform,
             'state_data': self.state_data,
-            'google_id': getattr(self, 'google_id', None),
-            'google_contacts_synced_at': getattr(self, 'google_contacts_synced_at', None).isoformat() if getattr(self, 'google_contacts_synced_at', None) else None,
-            'google_calendar_synced_at': getattr(self, 'google_calendar_synced_at', None).isoformat() if getattr(self, 'google_calendar_synced_at', None) else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
