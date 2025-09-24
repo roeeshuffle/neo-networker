@@ -33,14 +33,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   useEffect(() => {
     console.log('🔧 SettingsTab loaded with WhatsApp and Google support!');
-    checkTelegramStatus();
-    checkWhatsappStatus();
-    // checkGoogleStatus(); // Temporarily disabled - Google Auth routes commented out
+    checkAllStatus();
   }, []);
 
-  const checkTelegramStatus = async () => {
+  const checkAllStatus = async () => {
     try {
+      console.log('🔍 Checking all status...');
       const { data: user } = await apiClient.getCurrentUser();
+      console.log('👤 User data:', user);
+      
+      // Update Telegram status
       if (user?.telegram_id) {
         setTelegramConnected(true);
         setTelegramId(user.telegram_id.toString());
@@ -48,12 +50,37 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         setTelegramConnected(false);
         setTelegramId('');
       }
+      
+      // Update WhatsApp status
+      if (user?.whatsapp_phone) {
+        console.log('✅ WhatsApp phone found:', user.whatsapp_phone);
+        setWhatsappConnected(true);
+        setWhatsappPhone(user.whatsapp_phone);
+      } else {
+        console.log('❌ No WhatsApp phone found');
+        setWhatsappConnected(false);
+        setWhatsappPhone('');
+      }
+      
+      // Update preferred platform
+      if (user?.preferred_messaging_platform) {
+        console.log('📱 Preferred platform:', user.preferred_messaging_platform);
+        setPreferredPlatform(user.preferred_messaging_platform);
+      }
+      
+      // Check Google status separately (this might fail if Google Auth is not configured)
+      checkGoogleStatus();
+      
     } catch (error) {
-      console.error('Error checking Telegram status:', error);
+      console.error('❌ Error checking status:', error);
       setTelegramConnected(false);
       setTelegramId('');
+      setWhatsappConnected(false);
+      setWhatsappPhone('');
     }
   };
+
+  // checkTelegramStatus removed - now handled by checkAllStatus
 
   const connectTelegram = async () => {
     if (!telegramId.trim()) {
@@ -78,7 +105,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       // Refresh the user data in the authentication context
       await refreshUser();
       // Also refresh the local state
-      await checkTelegramStatus();
+      await checkAllStatus();
     } catch (error) {
       console.error('Error connecting Telegram:', error);
       toast({
@@ -105,7 +132,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       // Refresh the user data in the authentication context
       await refreshUser();
       // Also refresh the local state
-      await checkTelegramStatus();
+      await checkAllStatus();
     } catch (error) {
       console.error('Error disconnecting Telegram:', error);
       toast({
@@ -118,35 +145,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  const checkWhatsappStatus = async () => {
-    try {
-      console.log('🔍 Checking WhatsApp status...');
-      const { data: user } = await apiClient.getCurrentUser();
-      console.log('👤 User data:', user);
-      console.log('👤 User whatsapp_phone:', user?.whatsapp_phone);
-      
-      if (user?.whatsapp_phone) {
-        console.log('✅ WhatsApp phone found:', user.whatsapp_phone);
-        console.log('🔧 Setting whatsappConnected to true');
-        setWhatsappConnected(true);
-        console.log('🔧 Setting whatsappPhone to:', user.whatsapp_phone);
-        setWhatsappPhone(user.whatsapp_phone);
-        console.log('✅ State should now be updated');
-      } else {
-        console.log('❌ No WhatsApp phone found');
-        setWhatsappConnected(false);
-        setWhatsappPhone('');
-      }
-      if (user?.preferred_messaging_platform) {
-        console.log('📱 Preferred platform:', user.preferred_messaging_platform);
-        setPreferredPlatform(user.preferred_messaging_platform);
-      }
-    } catch (error) {
-      console.error('❌ Error checking WhatsApp status:', error);
-      setWhatsappConnected(false);
-      setWhatsappPhone('');
-    }
-  };
+  // checkWhatsappStatus removed - now handled by checkAllStatus
 
   const connectWhatsapp = async () => {
     if (!whatsappPhone.trim()) {
@@ -178,7 +177,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       // Refresh the user data in the authentication context
       await refreshUser();
       // Also refresh the local state
-      await checkWhatsappStatus();
+      await checkAllStatus();
       
       console.log('✅ User data refreshed, WhatsApp status checked');
     } catch (error) {
@@ -207,7 +206,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       // Refresh the user data in the authentication context
       await refreshUser();
       // Also refresh the local state
-      await checkWhatsappStatus();
+      await checkAllStatus();
     } catch (error) {
       console.error('Error disconnecting WhatsApp:', error);
       toast({
