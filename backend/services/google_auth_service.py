@@ -28,11 +28,14 @@ class GoogleAuthService:
         self.client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
         self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
         
-        if not all([self.client_id, self.client_secret, self.redirect_uri]):
-            raise ValueError("Google OAuth credentials not configured")
+        self.enabled = all([self.client_id, self.client_secret, self.redirect_uri])
+        if not self.enabled:
+            logger.warning("Google OAuth credentials not configured - Google Auth disabled")
     
     def get_authorization_url(self, state=None):
         """Generate Google OAuth authorization URL"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
         try:
             flow = Flow.from_client_config(
                 {
