@@ -19,6 +19,7 @@ interface Event {
   start_datetime: string;
   end_datetime: string;
   location: string;
+  event_type: 'meeting' | 'event';
   participants: Array<{ name: string; email: string }>;
   alert_minutes: number;
   repeat_pattern: string;
@@ -38,6 +39,7 @@ interface EventFormData {
   start_datetime: string;
   end_datetime: string;
   location: string;
+  event_type: 'meeting' | 'event';
   participants: Array<{ name: string; email: string }>;
   alert_minutes: number;
   repeat_pattern: string;
@@ -50,6 +52,7 @@ interface EventFormData {
 const EventsTab: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>('weekly');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -60,6 +63,7 @@ const EventsTab: React.FC = () => {
     start_datetime: '',
     end_datetime: '',
     location: '',
+    event_type: 'event',
     participants: [],
     alert_minutes: 15,
     repeat_pattern: 'none',
@@ -255,6 +259,16 @@ const EventsTab: React.FC = () => {
           <p className="text-muted-foreground">Manage your scheduled events and meetings</p>
         </div>
         <div className="flex gap-2">
+          <Select value={viewMode} onValueChange={(value: 'weekly' | 'daily' | 'monthly') => setViewMode(value)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -275,6 +289,19 @@ const EventsTab: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Enter event title"
                   />
+                </div>
+                
+                <div>
+                  <Label htmlFor="event_type">Event Type</Label>
+                  <Select value={formData.event_type} onValueChange={(value: 'meeting' | 'event') => setFormData({ ...formData, event_type: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div>

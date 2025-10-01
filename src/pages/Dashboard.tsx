@@ -46,6 +46,8 @@ const Dashboard = () => {
   const [filteredPeople, setFilteredPeople] = useState<Person[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [todayTasks, setTodayTasks] = useState(0);
+  const [todayEvents, setTodayEvents] = useState(0);
+  const [totalOpenTasks, setTotalOpenTasks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
@@ -71,6 +73,7 @@ const Dashboard = () => {
     if (user) {
       await fetchPeople();
       await fetchTasksCount();
+      await fetchEventsCount();
     }
   };
 
@@ -114,8 +117,33 @@ const Dashboard = () => {
       }).length || 0;
       
       setTodayTasks(todayTasksCount);
+      
+      // Calculate total open tasks (not completed or cancelled)
+      const openTasksCount = data?.filter(task => 
+        task.status !== 'completed' && task.status !== 'cancelled'
+      ).length || 0;
+      
+      setTotalOpenTasks(openTasksCount);
     } catch (error: any) {
       console.error('Error fetching tasks count:', error);
+    }
+  };
+
+  const fetchEventsCount = async () => {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      
+      const { data, error } = await apiClient.getEvents(
+        todayStart.toISOString(),
+        todayEnd.toISOString()
+      );
+
+      if (error) throw error;
+      setTodayEvents(data?.length || 0);
+    } catch (error: any) {
+      console.error('Error fetching events count:', error);
     }
   };
 
@@ -252,11 +280,11 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Total Contacts</p>
-                  <p className="text-2xl font-bold text-foreground">{filteredPeople.length}</p>
+                  <p className="text-sm font-medium text-foreground/80">Today Events</p>
+                  <p className="text-2xl font-bold text-foreground">{todayEvents}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Plus className="h-6 w-6 text-primary" />
+                  <Calendar className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardHeader>
@@ -266,9 +294,9 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Total Tasks</p>
+                  <p className="text-sm font-medium text-foreground/80">Today Tasks</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {totalTasks}
+                    {todayTasks}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
@@ -282,9 +310,9 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Today Tasks</p>
+                  <p className="text-sm font-medium text-foreground/80">Total Open Tasks</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {todayTasks}
+                    {totalOpenTasks}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
