@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, CalendarDays } from 'lucide-react';
 import { apiClient } from '@/integrations/api/client';
 import { toast } from '@/hooks/use-toast';
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfMonth } from 'date-fns';
 
 interface Event {
   id: number;
@@ -57,6 +57,8 @@ const EventsTab: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentDay, setCurrentDay] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
     description: '',
@@ -80,13 +82,29 @@ const EventsTab: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, [currentWeek]);
+  }, [currentWeek, currentDay, currentMonth, viewMode]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const startDate = weekStart.toISOString();
-      const endDate = weekEnd.toISOString();
+      let startDate: string;
+      let endDate: string;
+      
+      switch (viewMode) {
+        case 'daily':
+          startDate = startOfDay(currentDay).toISOString();
+          endDate = endOfDay(currentDay).toISOString();
+          break;
+        case 'monthly':
+          startDate = startOfMonth(currentMonth).toISOString();
+          endDate = endOfMonth(currentMonth).toISOString();
+          break;
+        case 'weekly':
+        default:
+          startDate = weekStart.toISOString();
+          endDate = weekEnd.toISOString();
+          break;
+      }
       
       const { data, error } = await apiClient.getEvents(startDate, endDate);
       
@@ -245,6 +263,26 @@ const EventsTab: React.FC = () => {
         ? subDays(prev, 7)
         : addDays(prev, 7)
     );
+  };
+
+  const navigateDay = (direction: 'prev' | 'next') => {
+    setCurrentDay(prev => 
+      direction === 'prev' 
+        ? subDays(prev, 1)
+        : addDays(prev, 1)
+    );
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      return newDate;
+    });
   };
 
   if (loading) {
@@ -461,57 +499,169 @@ const EventsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Week Navigation */}
+      {/* Calendar Navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => navigateWeek('prev')}>
-          Previous Week
+        <Button variant="outline" onClick={() => {
+          if (viewMode === 'daily') navigateDay('prev');
+          else if (viewMode === 'weekly') navigateWeek('prev');
+          else if (viewMode === 'monthly') navigateMonth('prev');
+        }}>
+          Previous {viewMode === 'daily' ? 'Day' : viewMode === 'weekly' ? 'Week' : 'Month'}
         </Button>
         <h3 className="text-lg font-semibold">
-          {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
+          {viewMode === 'daily' && format(currentDay, 'EEEE, MMM d, yyyy')}
+          {viewMode === 'weekly' && `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`}
+          {viewMode === 'monthly' && format(currentMonth, 'MMMM yyyy')}
         </h3>
-        <Button variant="outline" onClick={() => navigateWeek('next')}>
-          Next Week
+        <Button variant="outline" onClick={() => {
+          if (viewMode === 'daily') navigateDay('next');
+          else if (viewMode === 'weekly') navigateWeek('next');
+          else if (viewMode === 'monthly') navigateMonth('next');
+        }}>
+          Next {viewMode === 'daily' ? 'Day' : viewMode === 'weekly' ? 'Week' : 'Month'}
         </Button>
       </div>
 
-      {/* Weekly Calendar View */}
-      <div className="grid grid-cols-7 gap-4">
-        {weekDates.map((date, index) => {
-          const dayEvents = getEventsForDate(date);
-          return (
-            <Card key={index} className="min-h-[200px]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">
-                  {weekDays[index]}
-                </CardTitle>
-                <div className="text-xs text-muted-foreground">
-                  {format(date, 'MMM d')}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {dayEvents.map((event) => (
+      {/* Calendar Views */}
+      {viewMode === 'daily' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {format(currentDay, 'EEEE, MMMM d, yyyy')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {events.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No events scheduled for this day</p>
+              ) : (
+                events.map((event) => (
                   <div
                     key={event.id}
-                    className="p-2 bg-blue-50 rounded text-xs cursor-pointer hover:bg-blue-100"
+                    className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50"
                     onClick={() => openEditDialog(event)}
                   >
-                    <div className="font-medium truncate">{event.title}</div>
-                    <div className="text-muted-foreground">
-                      {format(parseISO(event.start_datetime), 'HH:mm')}
-                    </div>
-                    {event.location && (
-                      <div className="text-muted-foreground truncate">
-                        <MapPin className="w-3 h-3 inline mr-1" />
-                        {event.location}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">{event.title}</h4>
+                        <p className="text-sm text-muted-foreground">{event.description}</p>
                       </div>
-                    )}
+                      <div className="text-right">
+                        <div className="text-sm font-medium">
+                          {format(parseISO(event.start_datetime), 'HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}
+                        </div>
+                        {event.location && (
+                          <div className="text-xs text-muted-foreground flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {event.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {viewMode === 'weekly' && (
+        <div className="grid grid-cols-7 gap-4">
+          {weekDates.map((date, index) => {
+            const dayEvents = getEventsForDate(date);
+            return (
+              <Card key={index} className="min-h-[200px]">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">
+                    {weekDays[index]}
+                  </CardTitle>
+                  <div className="text-xs text-muted-foreground">
+                    {format(date, 'MMM d')}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {dayEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="p-2 bg-blue-50 rounded text-xs cursor-pointer hover:bg-blue-100"
+                      onClick={() => openEditDialog(event)}
+                    >
+                      <div className="font-medium truncate">{event.title}</div>
+                      <div className="text-muted-foreground">
+                        {format(parseISO(event.start_datetime), 'HH:mm')}
+                      </div>
+                      {event.location && (
+                        <div className="text-muted-foreground truncate">
+                          <MapPin className="w-3 h-3 inline mr-1" />
+                          {event.location}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {viewMode === 'monthly' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {format(currentMonth, 'MMMM yyyy')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {weekDays.map((day) => (
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                    {day}
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 35 }, (_, i) => {
+                  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i - 6);
+                  const dayEvents = getEventsForDate(date);
+                  const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+                  
+                  return (
+                    <div
+                      key={i}
+                      className={`min-h-[80px] p-2 border rounded ${
+                        isCurrentMonth ? 'bg-background' : 'bg-muted/30'
+                      }`}
+                    >
+                      <div className={`text-sm ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {format(date, 'd')}
+                      </div>
+                      <div className="space-y-1 mt-1">
+                        {dayEvents.slice(0, 2).map((event) => (
+                          <div
+                            key={event.id}
+                            className="text-xs bg-blue-100 text-blue-800 rounded px-1 truncate cursor-pointer hover:bg-blue-200"
+                            onClick={() => openEditDialog(event)}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{dayEvents.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Edit Event Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
