@@ -105,41 +105,71 @@ def migration_test():
 def migrate_database():
     """Run database migration to update production database structure"""
     try:
-        import subprocess
-        import os
-        
         logger.info("🚀 Starting production database migration...")
         
-        # Run the migration script
-        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrate_production_db.py')
+        # Execute SQL migration directly
+        migration_sql = """
+        -- Add new columns to users table
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(255);
         
-        try:
-            result = subprocess.run([
-                'python', script_path
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result.returncode == 0:
-                logger.info("✅ Database migration completed successfully")
-                return jsonify({
-                    'message': 'Database migration completed successfully',
-                    'output': result.stdout
-                }), 200
-            else:
-                logger.error(f"❌ Migration failed: {result.stderr}")
-                return jsonify({
-                    'error': 'Database migration failed',
-                    'details': result.stderr
-                }), 500
-                
-        except subprocess.TimeoutExpired:
-            logger.error("❌ Migration timed out")
-            return jsonify({'error': 'Migration timed out'}), 500
-        except Exception as e:
-            logger.error(f"❌ Migration error: {e}")
-            return jsonify({'error': str(e)}), 500
+        -- Rename columns to match simplified model
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') 
+               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
+                ALTER TABLE users RENAME COLUMN name TO full_name;
+            END IF;
+        END $$;
+        
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'fullname') 
+               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
+                ALTER TABLE users RENAME COLUMN fullname TO full_name;
+            END IF;
+        END $$;
+        
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') 
+               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash') THEN
+                ALTER TABLE users RENAME COLUMN password TO password_hash;
+            END IF;
+        END $$;
+        
+        -- Migrate data from telegram_users table if it exists
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'telegram_users') THEN
+                UPDATE users 
+                SET telegram_id = tu.telegram_id,
+                    telegram_username = tu.telegram_username
+                FROM telegram_users tu 
+                WHERE users.id = tu.user_id;
+            END IF;
+        END $$;
+        
+        -- Drop unnecessary tables
+        DROP TABLE IF EXISTS telegram_users CASCADE;
+        DROP TABLE IF EXISTS companies CASCADE;
+        DROP TABLE IF EXISTS shared_data CASCADE;
+        """
+        
+        # Execute the migration SQL
+        db.session.execute(migration_sql)
+        db.session.commit()
+        
+        logger.info("✅ Database migration completed successfully")
+        return jsonify({
+            'message': 'Database migration completed successfully',
+            'status': 'success'
+        }), 200
         
     except Exception as e:
         logger.error(f"💥 Error in migration endpoint: {e}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Removed Google OAuth endpoint - Google OAuth fields removed from User model
