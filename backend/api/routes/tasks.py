@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import Task, User, SharedData
+from dal.models import Task, User
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -226,49 +226,4 @@ def delete_task(task_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@tasks_bp.route('/tasks/<task_id>/share', methods=['POST'])
-@jwt_required()
-def share_task(task_id):
-    """Share a task with another user"""
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user or not current_user.is_approved:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        task = Task.query.get(task_id)
-        if not task:
-            return jsonify({'error': 'Task not found'}), 404
-        
-        # Check if user owns this task
-        if task.owner_id != current_user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        data = request.get_json()
-        shared_with_user_id = data.get('shared_with_user_id')
-        
-        if not shared_with_user_id:
-            return jsonify({'error': 'shared_with_user_id is required'}), 400
-        
-        # Check if user exists
-        shared_with_user = User.query.get(shared_with_user_id)
-        if not shared_with_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Create shared data record
-        shared_data = SharedData(
-            id=str(uuid.uuid4()),
-            owner_id=current_user_id,
-            shared_with_user_id=shared_with_user_id,
-            table_name='tasks',
-            record_id=task_id
-        )
-        
-        db.session.add(shared_data)
-        db.session.commit()
-        
-        return jsonify(shared_data.to_dict()), 201
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Share functionality removed - SharedData model deleted

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import Person, User, SharedData
+from dal.models import Person, User
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -18,15 +18,9 @@ def get_people():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Get people owned by user or shared with user
+        # Get people owned by user
         people = Person.query.filter(
-            (Person.owner_id == current_user_id) |
-            (Person.id.in_(
-                db.session.query(SharedData.record_id).filter(
-                    SharedData.shared_with_user_id == current_user_id,
-                    SharedData.table_name == 'people'
-                )
-            ))
+            Person.owner_id == current_user_id
         ).order_by(Person.created_at.desc()).all()
         
         return jsonify([person.to_dict() for person in people])
@@ -174,49 +168,4 @@ def delete_all_people():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@people_bp.route('/people/<person_id>/share', methods=['POST'])
-@jwt_required()
-def share_person(person_id):
-    """Share a person with another user"""
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user or not current_user.is_approved:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        person = Person.query.get(person_id)
-        if not person:
-            return jsonify({'error': 'Person not found'}), 404
-        
-        # Check if user owns this person
-        if person.owner_id != current_user_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        data = request.get_json()
-        shared_with_user_id = data.get('shared_with_user_id')
-        
-        if not shared_with_user_id:
-            return jsonify({'error': 'shared_with_user_id is required'}), 400
-        
-        # Check if user exists
-        shared_with_user = User.query.get(shared_with_user_id)
-        if not shared_with_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Create shared data record
-        shared_data = SharedData(
-            id=str(uuid.uuid4()),
-            owner_id=current_user_id,
-            shared_with_user_id=shared_with_user_id,
-            table_name='people',
-            record_id=person_id
-        )
-        
-        db.session.add(shared_data)
-        db.session.commit()
-        
-        return jsonify(shared_data.to_dict()), 201
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Share functionality removed - SharedData model deleted

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import Person, Company, User
+from dal.models import Person, User
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -205,110 +205,4 @@ def process_csv():
         print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
-@csv_bp.route('/company-csv-processor', methods=['POST'])
-@jwt_required()
-def process_company_csv():
-    """Process CSV data for companies"""
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user or not current_user.is_approved:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        data = request.get_json()
-        csv_data = data.get('csvData')
-        custom_mapping = data.get('customMapping', {})
-        
-        if not csv_data:
-            return jsonify({'error': 'CSV data is required'}), 400
-        
-        # Parse CSV data - detect delimiter (comma or tab)
-        lines = csv_data.strip().split('\n')
-        if '\t' in lines[0]:
-            delimiter = '\t'
-        else:
-            delimiter = ','
-        reader = csv.DictReader(lines, delimiter=delimiter)
-        
-        # Default column mapping for companies
-        default_mapping = {
-            'Company Name': 'record',
-            'Tags': 'tags',
-            'Categories': 'categories',
-            'LinkedIn Profile': 'linkedin_profile',
-            'Last Interaction': 'last_interaction',
-            'Connection Strength': 'connection_strength',
-            'Twitter Follower Count': 'twitter_follower_count',
-            'Twitter': 'twitter',
-            'Domains': 'domains',
-            'Description': 'description',
-            'Notion ID': 'notion_id'
-        }
-        
-        # Merge with custom mapping
-        column_mapping = {**default_mapping, **custom_mapping}
-        
-        created_companies = []
-        
-        for row in reader:
-            company_data = {}
-            
-            for csv_column, db_column in column_mapping.items():
-                if csv_column in row and row[csv_column]:
-                    value = row[csv_column].strip()
-                    
-                    # Handle array fields
-                    if db_column == 'tags' and value:
-                        company_data[db_column] = [tag.strip() for tag in value.split(',')]
-                    elif db_column == 'domains' and value:
-                        company_data[db_column] = [domain.strip() for domain in value.split(',')]
-                    # Handle integer fields
-                    elif db_column == 'twitter_follower_count' and value:
-                        try:
-                            company_data[db_column] = int(value)
-                        except ValueError:
-                            pass
-                    # Handle datetime fields
-                    elif db_column == 'last_interaction' and value:
-                        try:
-                            company_data[db_column] = datetime.fromisoformat(value)
-                        except ValueError:
-                            pass
-                    else:
-                        company_data[db_column] = value
-            
-            # Create company if we have at least a record name
-            if company_data.get('record'):
-                company = Company(
-                    id=str(uuid.uuid4()),
-                    record=company_data['record'],
-                    tags=company_data.get('tags'),
-                    categories=company_data.get('categories'),
-                    linkedin_profile=company_data.get('linkedin_profile'),
-                    last_interaction=company_data.get('last_interaction'),
-                    connection_strength=company_data.get('connection_strength'),
-                    twitter_follower_count=company_data.get('twitter_follower_count'),
-                    twitter=company_data.get('twitter'),
-                    domains=company_data.get('domains'),
-                    description=company_data.get('description'),
-                    notion_id=company_data.get('notion_id'),
-                    owner_id=current_user_id,
-                    created_by=current_user_id
-                )
-                
-                db.session.add(company)
-                created_companies.append(company)
-        
-        db.session.commit()
-        
-        return jsonify({
-            'message': f'Successfully created {len(created_companies)} companies',
-            'companies': [company.to_dict() for company in created_companies]
-        })
-        
-    except Exception as e:
-        import traceback
-        print(f"Error processing CSV: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
-        return jsonify({'error': str(e)}), 500
+# Company CSV processing removed - Company model deleted

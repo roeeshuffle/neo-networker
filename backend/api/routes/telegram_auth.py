@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import TelegramUser, User
+from dal.models import User
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -30,39 +30,30 @@ def connect_telegram():
             return jsonify({'error': 'Telegram ID is required'}), 400
         
         # Check if this Telegram ID is already connected to another user
-        existing_telegram_user = TelegramUser.query.filter_by(telegram_id=telegram_id).first()
+        existing_user = User.query.filter_by(telegram_id=telegram_id).first()
         
-        if existing_telegram_user:
-            if existing_telegram_user.user_id == current_user_id:
+        if existing_user:
+            if existing_user.id == current_user_id:
                 # Already connected to this user
                 return jsonify({
                     'message': 'Telegram account already connected',
-                    'telegram_user': existing_telegram_user.to_dict()
+                    'user': existing_user.to_dict()
                 })
             else:
                 # Connected to a different user
                 return jsonify({'error': 'This Telegram account is already connected to another user'}), 400
         
-        # Create new Telegram user connection
-        telegram_user = TelegramUser(
-            id=str(uuid.uuid4()),
-            telegram_id=telegram_id,
-            telegram_username=data.get('telegram_username', 'Unknown'),
-            first_name=data.get('first_name', 'Unknown'),
-            user_id=current_user_id,
-            is_authenticated=True,
-            authenticated_at=datetime.utcnow(),
-            current_state='idle'
-        )
+        # Update current user with Telegram ID
+        current_user.telegram_id = telegram_id
+        current_user.telegram_username = data.get('telegram_username', 'Unknown')
         
-        db.session.add(telegram_user)
         db.session.commit()
         
         telegram_auth_logger.info(f"✅ Connected Telegram user {telegram_id} to user {current_user.email}")
         
         return jsonify({
             'message': 'Telegram account connected successfully',
-            'telegram_user': telegram_user.to_dict()
+            'user': current_user.to_dict()
         })
         
     except Exception as e:
@@ -80,20 +71,19 @@ def disconnect_telegram():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Find Telegram user connected to this account
-        telegram_user = TelegramUser.query.filter_by(user_id=current_user_id).first()
-        
-        if not telegram_user:
+        # Check if user has Telegram connected
+        if not current_user.telegram_id:
             return jsonify({'error': 'No Telegram account connected'}), 404
         
-        # Store the telegram_id before deleting
-        old_telegram_id = telegram_user.telegram_id
+        # Store the telegram_id before clearing
+        old_telegram_id = current_user.telegram_id
         
-        # Delete the entire TelegramUser record to allow reconnection with same ID
-        db.session.delete(telegram_user)
+        # Clear Telegram connection
+        current_user.telegram_id = None
+        current_user.telegram_username = None
         db.session.commit()
         
-        telegram_auth_logger.info(f"✅ Deleted Telegram user {old_telegram_id} from user {current_user.email}")
+        telegram_auth_logger.info(f"✅ Disconnected Telegram user {old_telegram_id} from user {current_user.email}")
         
         return jsonify({'message': f'Telegram account {old_telegram_id} disconnected successfully'})
         
@@ -112,18 +102,18 @@ def get_telegram_status():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Find Telegram user connected to this account
-        telegram_user = TelegramUser.query.filter_by(user_id=current_user_id).first()
-        
-        if telegram_user:
+        # Check if user has Telegram connected
+        if current_user.telegram_id:
             return jsonify({
                 'connected': True,
-                'telegram_user': telegram_user.to_dict()
+                'telegram_id': current_user.telegram_id,
+                'telegram_username': current_user.telegram_username
             })
         else:
             return jsonify({
                 'connected': False,
-                'telegram_user': None
+                'telegram_id': None,
+                'telegram_username': None
             })
         
     except Exception as e:

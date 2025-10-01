@@ -1,4 +1,4 @@
-from dal.models import Person, User, SharedData
+from dal.models import Person, User
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -8,13 +8,7 @@ class PersonService:
     def get_people_for_user(user_id):
         """Get all people accessible to a user (owned or shared)"""
         return Person.query.filter(
-            (Person.owner_id == user_id) |
-            (Person.id.in_(
-                db.session.query(SharedData.record_id).filter(
-                    SharedData.shared_with_user_id == user_id,
-                    SharedData.table_name == 'people'
-                )
-            ))
+            Person.owner_id == user_id
         ).order_by(Person.created_at.desc()).all()
     
     @staticmethod
@@ -90,43 +84,4 @@ class PersonService:
         
         return True
     
-    @staticmethod
-    def share_person(person_id, owner_id, shared_with_user_id):
-        """Share a person with another user"""
-        person = Person.query.get(person_id)
-        if not person:
-            raise ValueError('Person not found')
-        
-        # Check if user owns this person
-        if person.owner_id != owner_id:
-            raise ValueError('Unauthorized')
-        
-        # Check if user exists
-        shared_with_user = User.query.get(shared_with_user_id)
-        if not shared_with_user:
-            raise ValueError('User not found')
-        
-        # Check if already shared
-        existing_share = SharedData.query.filter_by(
-            owner_id=owner_id,
-            shared_with_user_id=shared_with_user_id,
-            table_name='people',
-            record_id=person_id
-        ).first()
-        
-        if existing_share:
-            raise ValueError('Person already shared with this user')
-        
-        # Create shared data record
-        shared_data = SharedData(
-            id=str(uuid.uuid4()),
-            owner_id=owner_id,
-            shared_with_user_id=shared_with_user_id,
-            table_name='people',
-            record_id=person_id
-        )
-        
-        db.session.add(shared_data)
-        db.session.commit()
-        
-        return shared_data
+    # Share functionality removed - SharedData model deleted

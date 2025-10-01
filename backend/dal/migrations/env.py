@@ -15,7 +15,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models to get metadata
-from models import User, Person, Company, Task, SharedData, TelegramUser
+from models import User, Person, Task, Event
 from app import db
 
 # this is the Alembic Config object, which provides

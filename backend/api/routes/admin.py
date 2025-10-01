@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import User, TelegramUser
+from dal.models import User
 from dal.database import db
 from datetime import datetime
 import logging
@@ -64,7 +64,7 @@ def get_all_users():
         # Get telegram users for each user
         user_data = []
         for user in users:
-            telegram_user = TelegramUser.query.filter_by(user_id=user.id).first()
+            # Telegram info is now directly in User model
             user_data.append({
                 'id': user.id,
                 'email': user.email,
@@ -142,12 +142,17 @@ def delete_all_telegram_users():
         if not check_admin_access(current_user_id):
             return jsonify({'error': 'Admin access required'}), 403
         
-        # Delete all telegram users
-        deleted_count = TelegramUser.query.delete()
+        # Clear telegram_id from all users
+        users = User.query.filter(User.telegram_id.isnot(None)).all()
+        deleted_count = 0
+        for user in users:
+            user.telegram_id = None
+            user.telegram_username = None
+            deleted_count += 1
         db.session.commit()
         
         return jsonify({
-            'message': f'Deleted {deleted_count} telegram users successfully'
+            'message': f'Cleared telegram connection from {deleted_count} users successfully'
         }), 200
         
     except Exception as e:
