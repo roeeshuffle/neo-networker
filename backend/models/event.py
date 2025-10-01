@@ -13,6 +13,7 @@ class Event(db.Model):
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime, nullable=False)
     location = db.Column(db.String(255))
+    event_type = db.Column(db.String(50), default='event')  # 'meeting' or 'event'
     participants = db.Column(db.JSON)  # List of participant objects with name, email, etc.
     alert_minutes = db.Column(db.Integer, default=15)  # Minutes before event to alert
     repeat_pattern = db.Column(db.String(50))  # 'daily', 'weekly', 'monthly', 'yearly', 'none'
@@ -36,6 +37,7 @@ class Event(db.Model):
             'start_datetime': self.start_datetime.isoformat() if self.start_datetime else None,
             'end_datetime': self.end_datetime.isoformat() if self.end_datetime else None,
             'location': self.location,
+            'event_type': self.event_type,
             'participants': self.participants or [],
             'alert_minutes': self.alert_minutes,
             'repeat_pattern': self.repeat_pattern,

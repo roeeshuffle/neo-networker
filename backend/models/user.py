@@ -35,7 +35,6 @@ class User(db.Model):
     people = db.relationship('Person', foreign_keys='Person.owner_id', backref='owner', lazy='dynamic')
     companies = db.relationship('Company', foreign_keys='Company.owner_id', backref='owner', lazy='dynamic')
     tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
-    events = db.relationship('Event', foreign_keys='Event.user_id', backref='user', lazy='dynamic')
     shared_data_owned = db.relationship('SharedData', foreign_keys='SharedData.owner_id', backref='owner', lazy='dynamic')
     shared_data_shared_with = db.relationship('SharedData', foreign_keys='SharedData.shared_with_user_id', backref='shared_with_user', lazy='dynamic')
     

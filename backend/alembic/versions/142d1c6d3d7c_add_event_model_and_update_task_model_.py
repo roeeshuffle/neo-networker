@@ -42,12 +42,23 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_events_id'), 'events', ['id'], unique=False)
-    op.add_column('tasks', sa.Column('title', sa.String(length=255), nullable=False))
+    op.add_column('tasks', sa.Column('title', sa.String(length=255), nullable=True))
     op.add_column('tasks', sa.Column('description', sa.Text(), nullable=True))
-    op.add_column('tasks', sa.Column('project', sa.String(length=100), nullable=False))
+    op.add_column('tasks', sa.Column('project', sa.String(length=100), nullable=True))
     op.add_column('tasks', sa.Column('scheduled_date', sa.DateTime(), nullable=True))
     op.add_column('tasks', sa.Column('is_scheduled', sa.Boolean(), nullable=True))
     op.add_column('tasks', sa.Column('is_active', sa.Boolean(), nullable=True))
+    
+    # Populate existing data
+    connection = op.get_bind()
+    connection.execute(
+        sa.text("UPDATE tasks SET title = COALESCE(text, 'Untitled Task'), project = 'personal', is_scheduled = false, is_active = true WHERE title IS NULL")
+    )
+    
+    # Now make the columns NOT NULL
+    op.alter_column('tasks', 'title', nullable=False)
+    op.alter_column('tasks', 'project', nullable=False)
+    
     op.drop_column('tasks', 'assign_to')
     op.drop_column('tasks', 'alert_time')
     op.drop_column('tasks', 'label')
