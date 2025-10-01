@@ -11,9 +11,10 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TasksTab } from "@/components/TasksTab";
+import TasksTab from "@/components/TasksTab";
+import EventsTab from "@/components/EventsTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
 import { SettingsTab } from "@/components/SettingsTab";
 import vcrmLogo from "@/assets/vcrm-logo.png";
@@ -296,7 +297,7 @@ const Dashboard = () => {
 
         {/* Main content with tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-fit grid-cols-3 bg-muted">
+          <TabsList className="grid w-fit grid-cols-4 bg-muted">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Contacts
@@ -304,6 +305,10 @@ const Dashboard = () => {
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
               Tasks
+            </TabsTrigger>
+            <TabsTrigger value="events" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Events
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
@@ -323,6 +328,10 @@ const Dashboard = () => {
           
           <TabsContent value="tasks">
             <TasksTab onTasksChange={fetchTasksCount} />
+          </TabsContent>
+          
+          <TabsContent value="events">
+            <EventsTab />
           </TabsContent>
           
           <TabsContent value="settings">

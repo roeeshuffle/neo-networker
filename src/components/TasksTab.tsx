@@ -3,212 +3,275 @@ import { apiClient } from '@/integrations/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Edit, Calendar, User, Tag, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, parseISO, isAfter, isBefore } from 'date-fns';
 
 interface Task {
   id: string;
-  task_id: number;
-  text: string;
-  assign_to?: string;
-  due_date?: string;
+  title: string;
+  description: string;
+  project: string;
   status: string;
-  label?: string;
   priority: string;
+  scheduled_date?: string;
+  due_date?: string;
+  is_scheduled: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-interface NewTask {
-  text: string;
-  assign_to: string;
-  due_date: string;
+interface TaskFormData {
+  title: string;
+  description: string;
+  project: string;
   status: string;
-  label: string;
   priority: string;
+  scheduled_date: string;
+  due_date: string;
 }
 
-interface TasksTabProps {
-  onTasksChange?: () => void;
-}
-
-export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+const TasksTab: React.FC = () => {
+  const [projects, setProjects] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTask, setNewTask] = useState<NewTask>({
-    text: '',
-    assign_to: '',
-    due_date: '',
-    status: 'pending',
-    label: '',
-    priority: 'medium'
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [formData, setFormData] = useState<TaskFormData>({
+    title: '',
+    description: '',
+    project: '',
+    status: 'todo',
+    priority: 'medium',
+    scheduled_date: '',
+    due_date: ''
   });
+
+  const projectsList = [
+    'Personal',
+    'Work',
+    'Company',
+    'Health',
+    'Finance',
+    'Learning',
+    'Home',
+    'Travel'
+  ];
+
+  const statusOptions = [
+    { value: 'todo', label: 'To Do', icon: Circle },
+    { value: 'in_progress', label: 'In Progress', icon: Clock },
+    { value: 'completed', label: 'Completed', icon: CheckCircle },
+    { value: 'cancelled', label: 'Cancelled', icon: AlertCircle }
+  ];
+
+  const priorityOptions = [
+    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
+    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'high', label: 'High', color: 'bg-red-100 text-red-800' }
+  ];
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
   const fetchTasks = async () => {
-    setLoading(true);
     try {
-      const { data, error } = await apiClient.getTasks();
-
-      if (error) throw error;
-      setTasks((data as any[]) || []);
+      setLoading(true);
+      const response = await apiClient.get('/tasks');
+      setProjects(response.data.projects || {});
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
         title: "Error",
         description: "Failed to fetch tasks",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const addTask = async () => {
-    if (!newTask.text.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Task text is required",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsAddingTask(true);
+  const handleCreateTask = async () => {
     try {
-      const { data: user } = await apiClient.getCurrentUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Handle timezone properly - store datetime-local as-is (local time)
-      let dueDateISO = null;
-      if (newTask.due_date) {
-        // The datetime-local input gives us a string like "2025-09-20T21:00"
-        // Store it as-is without timezone conversion to avoid confusion
-        dueDateISO = newTask.due_date + ':00'; // Add seconds to make it a valid ISO string
-      }
-
-      const taskData = {
-        text: newTask.text,
-        assign_to: newTask.assign_to || null,
-        due_date: dueDateISO,
-        status: newTask.status,
-        label: newTask.label || null,
-        priority: newTask.priority,
-        owner_id: user.id
-      };
-
-      const { error } = await apiClient.createTask(taskData);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Task added successfully"
-      });
-
-      setNewTask({
-        text: '',
-        assign_to: '',
-        due_date: '',
-        status: 'pending',
-        label: '',
-        priority: 'medium'
-      });
+      const response = await apiClient.post('/tasks', formData);
+      
+      // Update local state
+      const newTask = response.data.task;
+      const projectName = newTask.project;
+      
+      setProjects(prev => ({
+        ...prev,
+        [projectName]: [...(prev[projectName] || []), newTask]
+      }));
+      
       setIsAddDialogOpen(false);
-      fetchTasks();
-      onTasksChange?.();
-    } catch (error) {
-      console.error('Error adding task:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add task",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAddingTask(false);
-    }
-  };
-
-  const deleteTask = async (taskId: string) => {
-    try {
-      const { error } = await apiClient.deleteTask(taskId);
-
-      if (error) throw error;
-
+      resetForm();
       toast({
         title: "Success",
-        description: "Task deleted successfully"
+        description: "Task created successfully",
       });
-      fetchTasks();
-      onTasksChange?.();
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error('Error creating task:', error);
       toast({
         title: "Error",
-        description: "Failed to delete task",
-        variant: "destructive"
+        description: "Failed to create task",
+        variant: "destructive",
       });
     }
   };
 
-  const updateTaskStatus = async (taskId: string, newStatus: string) => {
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+    
     try {
-      const { error } = await apiClient.updateTask(taskId, { status: newStatus });
-
-      if (error) throw error;
-
+      const response = await apiClient.put(`/tasks/${editingTask.id}`, formData);
+      
+      // Update local state
+      const updatedTask = response.data.task;
+      const oldProject = editingTask.project;
+      const newProject = updatedTask.project;
+      
+      setProjects(prev => {
+        const newProjects = { ...prev };
+        
+        // Remove from old project
+        if (oldProject !== newProject) {
+          newProjects[oldProject] = newProjects[oldProject]?.filter(task => task.id !== editingTask.id) || [];
+        }
+        
+        // Add to new project
+        if (!newProjects[newProject]) {
+          newProjects[newProject] = [];
+        }
+        
+        if (oldProject === newProject) {
+          newProjects[newProject] = newProjects[newProject].map(task => 
+            task.id === editingTask.id ? updatedTask : task
+          );
+        } else {
+          newProjects[newProject] = [...newProjects[newProject], updatedTask];
+        }
+        
+        return newProjects;
+      });
+      
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+      resetForm();
       toast({
         title: "Success",
-        description: "Task status updated"
+        description: "Task updated successfully",
       });
-      fetchTasks();
     } catch (error) {
       console.error('Error updating task:', error);
       toast({
         title: "Error",
         description: "Failed to update task",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'default';
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await apiClient.delete(`/tasks/${taskId}`);
+      
+      // Update local state
+      setProjects(prev => {
+        const newProjects = { ...prev };
+        Object.keys(newProjects).forEach(project => {
+          newProjects[project] = newProjects[project].filter(task => task.id !== taskId);
+        });
+        return newProjects;
+      });
+      
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'outline';
-      case 'in_progress': return 'default';
-      case 'pending': return 'secondary';
-      default: return 'secondary';
-    }
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      project: '',
+      status: 'todo',
+      priority: 'medium',
+      scheduled_date: '',
+      due_date: ''
+    });
+  };
+
+  const openEditDialog = (task: Task) => {
+    setEditingTask(task);
+    setFormData({
+      title: task.title,
+      description: task.description,
+      project: task.project,
+      status: task.status,
+      priority: task.priority,
+      scheduled_date: task.scheduled_date || '',
+      due_date: task.due_date || ''
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const getStatusIcon = (status: string) => {
+    const statusOption = statusOptions.find(s => s.value === status);
+    return statusOption ? statusOption.icon : Circle;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusOption = statusOptions.find(s => s.value === status);
+    return statusOption ? statusOption.label : status;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    const priorityOption = priorityOptions.find(p => p.value === priority);
+    return priorityOption ? priorityOption.color : 'bg-gray-100 text-gray-800';
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    const priorityOption = priorityOptions.find(p => p.value === priority);
+    return priorityOption ? priorityOption.label : priority;
+  };
+
+  const isTaskDisabled = (task: Task) => {
+    if (!task.is_scheduled || !task.scheduled_date) return false;
+    return isAfter(parseISO(task.scheduled_date), new Date());
+  };
+
+  const getTotalTasks = () => {
+    return Object.values(projects).reduce((total, tasks) => total + tasks.length, 0);
+  };
+
+  const getCompletedTasks = () => {
+    return Object.values(projects).reduce((total, tasks) => 
+      total + tasks.filter(task => task.status === 'completed').length, 0
+    );
   };
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading tasks...</div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="text-lg">Loading tasks...</div>
+      </div>
     );
   }
 
@@ -217,202 +280,372 @@ export const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Tasks Management</h2>
-          <p className="text-muted-foreground">Manage and track your tasks</p>
+          <p className="text-muted-foreground">Manage your project-based tasks</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Task</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="task-text">Task Description *</Label>
-                <Textarea
-                  id="task-text"
-                  placeholder="Enter task description..."
-                  value={newTask.text}
-                  onChange={(e) => setNewTask({ ...newTask, text: e.target.value })}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="assign-to">Assign To</Label>
+        <div className="flex gap-2">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Task Title</Label>
                   <Input
-                    id="assign-to"
-                    placeholder="Person name"
-                    value={newTask.assign_to}
-                    onChange={(e) => setNewTask({ ...newTask, assign_to: e.target.value })}
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Enter task title"
                   />
                 </div>
                 
-                 <div className="space-y-2">
-                   <Label htmlFor="due-date">Due Date</Label>
-                   <Input
-                     id="due-date"
-                     type="datetime-local"
-                     value={newTask.due_date}
-                     onChange={(e) => {
-                       // Store the datetime-local value as-is (local time)
-                       const localDate = e.target.value;
-                       setNewTask({ ...newTask, due_date: localDate });
-                     }}
-                   />
-                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select value={newTask.priority} onValueChange={(value) => setNewTask({ ...newTask, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Enter task description"
+                  />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={newTask.status} onValueChange={(value) => setNewTask({ ...newTask, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="label">Label</Label>
-                <Input
-                  id="label"
-                  placeholder="Optional label"
-                  value={newTask.label}
-                  onChange={(e) => setNewTask({ ...newTask, label: e.target.value })}
-                />
-              </div>
-              
-              <Button onClick={addTask} className="w-full" disabled={isAddingTask}>
-                {isAddingTask ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary/20 border-t-primary mr-2"></div>
-                    Adding Task...
-                  </>
-                ) : (
-                  "Add Task"
-                )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">ID</TableHead>
-                <TableHead>Task</TableHead>
-                <TableHead className="w-32">Assigned To</TableHead>
-                <TableHead className="w-32">Due Date</TableHead>
-                <TableHead className="w-24">Priority</TableHead>
-                <TableHead className="w-28">Status</TableHead>
-                <TableHead className="w-24">Label</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.task_id}</TableCell>
-                  <TableCell className="max-w-md">
-                    <div className="truncate" title={task.text}>
-                      {task.text}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {task.assign_to && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <User className="w-3 h-3" />
-                        {task.assign_to}
-                      </div>
-                    )}
-                  </TableCell>
-                   <TableCell>
-                     {task.due_date && (
-                       <div className="flex items-center gap-1 text-sm">
-                         <Calendar className="w-3 h-3" />
-                         {format(new Date(task.due_date), 'dd-MM-yyyy HH:mm')}
-                       </div>
-                     )}
-                   </TableCell>
-                  <TableCell>
-                    <Badge variant={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
+                <div>
+                  <Label htmlFor="project">Project</Label>
+                  <Select
+                    value={formData.project}
+                    onValueChange={(value) => setFormData({ ...formData, project: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectsList.map((project) => (
+                        <SelectItem key={project} value={project}>
+                          {project}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
                     <Select
-                      value={task.status}
-                      onValueChange={(value) => updateTaskStatus(task.id, value)}
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                  <TableCell>
-                    {task.label && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Tag className="w-3 h-3" />
-                        {task.label}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteTask(task.id)}
-                      className="w-8 h-8 p-0"
+                  </div>
+                  <div>
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value) => setFormData({ ...formData, priority: value })}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {tasks.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No tasks found. Add your first task to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priorityOptions.map((priority) => (
+                          <SelectItem key={priority.value} value={priority.value}>
+                            {priority.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="scheduled_date">Schedule Date (optional)</Label>
+                    <Input
+                      id="scheduled_date"
+                      type="datetime-local"
+                      value={formData.scheduled_date}
+                      onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="due_date">Due Date (optional)</Label>
+                    <Input
+                      id="due_date"
+                      type="datetime-local"
+                      value={formData.due_date}
+                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateTask}>
+                    Create Task
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{getTotalTasks()}</div>
+            <div className="text-sm text-muted-foreground">Total Tasks</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{getCompletedTasks()}</div>
+            <div className="text-sm text-muted-foreground">Completed</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{Object.keys(projects).length}</div>
+            <div className="text-sm text-muted-foreground">Projects</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Projects */}
+      {Object.keys(projects).length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-lg text-muted-foreground">No tasks yet</div>
+            <div className="text-sm text-muted-foreground mt-2">
+              Create your first task to get started
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(projects).map(([projectName, tasks]) => (
+            <Card key={projectName}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{projectName}</span>
+                  <Badge variant="secondary">{tasks.length} tasks</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {tasks.map((task) => {
+                    const StatusIcon = getStatusIcon(task.status);
+                    const isDisabled = isTaskDisabled(task);
+                    
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isDisabled ? 'bg-gray-50 opacity-60' : 'bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <StatusIcon className="w-4 h-4 text-muted-foreground" />
+                          <div className="flex-1">
+                            <div className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}>
+                              {task.title}
+                            </div>
+                            {task.description && (
+                              <div className={`text-sm text-muted-foreground ${isDisabled ? 'text-gray-400' : ''}`}>
+                                {task.description}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {getPriorityLabel(task.priority)}
+                              </Badge>
+                              <Badge variant="outline">
+                                {getStatusLabel(task.status)}
+                              </Badge>
+                              {task.scheduled_date && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
+                                </Badge>
+                              )}
+                              {task.due_date && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {format(parseISO(task.due_date), 'MMM d, yyyy')}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(task)}
+                            disabled={isDisabled}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteTask(task.id)}
+                            disabled={isDisabled}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-title">Task Title</Label>
+              <Input
+                id="edit-title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter task title"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter task description"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-project">Project</Label>
+              <Select
+                value={formData.project}
+                onValueChange={(value) => setFormData({ ...formData, project: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectsList.map((project) => (
+                    <SelectItem key={project} value={project}>
+                      {project}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-priority">Priority</Label>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorityOptions.map((priority) => (
+                      <SelectItem key={priority.value} value={priority.value}>
+                        {priority.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-scheduled_date">Schedule Date (optional)</Label>
+                <Input
+                  id="edit-scheduled_date"
+                  type="datetime-local"
+                  value={formData.scheduled_date}
+                  onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-due_date">Due Date (optional)</Label>
+                <Input
+                  id="edit-due_date"
+                  type="datetime-local"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => editingTask && handleDeleteTask(editingTask.id)}>
+                Delete
+              </Button>
+              <Button onClick={handleUpdateTask}>
+                Update Task
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+export default TasksTab;

@@ -1,7 +1,7 @@
 // API client for Flask backend
 // This replaces the Supabase client with our Flask backend
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5002/api" : "https://dkdrn34xpx.us-east-1.awsapprunner.com/api");
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
 
 interface ApiResponse<T> {
   data: T | null;
@@ -151,6 +151,37 @@ class ApiClient {
     return this.request(`/tasks/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Events methods
+  async getEvents(params?: { start_date?: string; end_date?: string }) {
+    const queryParams = params ? new URLSearchParams(params).toString() : '';
+    const endpoint = queryParams ? `/events?${queryParams}` : '/events';
+    return this.request(endpoint);
+  }
+
+  async createEvent(eventData: any) {
+    return this.request('/events', {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  }
+
+  async updateEvent(id: number, eventData: any) {
+    return this.request(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(eventData),
+    });
+  }
+
+  async deleteEvent(id: number) {
+    return this.request(`/events/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getUpcomingEvents() {
+    return this.request('/events/upcoming');
   }
 
   // Telegram methods
