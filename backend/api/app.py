@@ -77,11 +77,28 @@ from api.routes.admin import admin_bp
 from api.routes.db_fix import db_fix_bp
 from api.routes.db_fix_state_data import db_fix_bp as db_fix_state_data_bp
 from api.routes.add_state_data import add_state_data_bp
-from scripts.apply_migration_endpoint import migration_bp
+# Optional admin/debug endpoints - only import if available
+try:
+    from scripts.apply_migration_endpoint import migration_bp
+except ImportError:
+    migration_bp = None
+
 from api.routes.schema_fix import schema_fix_bp
-from scripts.quick_schema_fix import quick_fix_bp
-from scripts.safe_migration import safe_migration_bp
-from scripts.comprehensive_db_fix import comprehensive_fix_bp
+
+try:
+    from scripts.quick_schema_fix import quick_fix_bp
+except ImportError:
+    quick_fix_bp = None
+
+try:
+    from scripts.safe_migration import safe_migration_bp
+except ImportError:
+    safe_migration_bp = None
+
+try:
+    from scripts.comprehensive_db_fix import comprehensive_fix_bp
+except ImportError:
+    comprehensive_fix_bp = None
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -98,11 +115,17 @@ app.register_blueprint(admin_bp, url_prefix='/api')
 app.register_blueprint(db_fix_bp, url_prefix='/api')
 app.register_blueprint(db_fix_state_data_bp, url_prefix='/api')
 app.register_blueprint(add_state_data_bp, url_prefix='/api')
-app.register_blueprint(migration_bp, url_prefix='/api')
+
+# Register optional admin/debug blueprints only if available
+if migration_bp:
+    app.register_blueprint(migration_bp, url_prefix='/api')
 app.register_blueprint(schema_fix_bp, url_prefix='/api')
-app.register_blueprint(quick_fix_bp, url_prefix='/api')
-app.register_blueprint(safe_migration_bp, url_prefix='/api')
-app.register_blueprint(comprehensive_fix_bp, url_prefix='/api')
+if quick_fix_bp:
+    app.register_blueprint(quick_fix_bp, url_prefix='/api')
+if safe_migration_bp:
+    app.register_blueprint(safe_migration_bp, url_prefix='/api')
+if comprehensive_fix_bp:
+    app.register_blueprint(comprehensive_fix_bp, url_prefix='/api')
 
 @app.route('/api/health')
 def health_check():
