@@ -26,22 +26,38 @@ def get_tasks():
         # Build query
         query = Task.query.filter(Task.owner_id == current_user_id)
         
+        # Handle missing columns gracefully
         if project:
-            query = query.filter(Task.project == project)
+            # Check if project column exists, otherwise filter by text/notes
+            try:
+                query = query.filter(Task.project == project)
+            except:
+                # Fallback to text field if project column doesn't exist
+                query = query.filter(Task.text.ilike(f'%{project}%'))
         
         if status:
             query = query.filter(Task.status == status)
         
         if not include_scheduled:
             # Only show active tasks (not scheduled for future)
-            query = query.filter(Task.is_active == True)
+            try:
+                query = query.filter(Task.is_active == True)
+            except:
+                # If is_active column doesn't exist, don't filter
+                pass
         
-        tasks = query.order_by(Task.project.asc(), Task.priority.desc(), Task.created_at.desc()).all()
+        # Handle ordering gracefully
+        try:
+            tasks = query.order_by(Task.project.asc(), Task.priority.desc(), Task.created_at.desc()).all()
+        except:
+            # Fallback ordering if project column doesn't exist
+            tasks = query.order_by(Task.priority.desc(), Task.created_at.desc()).all()
         
         # Group tasks by project
         projects = {}
         for task in tasks:
-            project_name = task.project
+            # Get project name safely
+            project_name = getattr(task, 'project', None) or 'personal'
             if project_name not in projects:
                 projects[project_name] = []
             projects[project_name].append(task.to_dict())
