@@ -65,10 +65,10 @@ except Exception as e:
 
 
 # Import models after db initialization
-from dal.models import User, Person, Company, Task, Event, SharedData, TelegramUser
+from dal.models import User, Person, Task, Event
 
 # Import routes
-from api.routes import auth_bp, people_bp, companies_bp, tasks_bp, csv_bp, telegram_bp
+from api.routes import auth_bp, people_bp, tasks_bp, csv_bp, telegram_bp
 from api.routes.events import events_bp
 from api.routes.telegram_auth import telegram_auth_bp
 from api.routes.whatsapp import whatsapp_bp
@@ -103,7 +103,7 @@ except ImportError:
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(people_bp, url_prefix='/api')
-app.register_blueprint(companies_bp, url_prefix='/api')
+# app.register_blueprint(companies_bp, url_prefix='/api')  # Removed - Company model deleted
 app.register_blueprint(tasks_bp, url_prefix='/api')
 app.register_blueprint(events_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api')
