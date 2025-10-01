@@ -4,10 +4,10 @@ run:
   runtime-version: latest
   command: python main.py
   network:
-    port: 5002
+    port: 8080
     env: PORT
   env:
     - name: ENVIRONMENT
       value: production
     - name: PORT
-      value: "5002"
+      value: "8080"
