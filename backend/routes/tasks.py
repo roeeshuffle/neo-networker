@@ -122,7 +122,8 @@ def create_task():
             is_scheduled=is_scheduled,
             is_active=is_active,
             owner_id=current_user_id,
-            created_by=current_user_id
+            created_by=current_user_id,
+            text=data['title']  # Set text field to avoid NOT NULL constraint violation
         )
         
         db.session.add(task)

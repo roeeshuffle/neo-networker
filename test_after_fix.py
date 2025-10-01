@@ -32,8 +32,8 @@ def test_apis_after_fix():
     print("\n2. Testing unauthenticated requests...")
     
     endpoints = [
-        ("Tasks GET", f"{TASKS_URL}"),
-        ("Events GET", f"{EVENTS_URL}"),
+        ("Tasks GET", f"{TASKS_URL}", "GET"),
+        ("Events GET", f"{EVENTS_URL}", "GET"),
         ("Tasks POST", f"{TASKS_URL}", "POST")
     ]
     
