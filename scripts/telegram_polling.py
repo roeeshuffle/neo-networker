@@ -8,8 +8,8 @@ import time
 import json
 import logging
 from datetime import datetime
-from models import TelegramUser, User
-from database import db
+from backend.dal.models import TelegramUser, User
+from backend.dal.database import db
 from app import app
 import uuid
 
@@ -144,7 +144,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
             if telegram_user.current_state == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
-                    from models import Person
+                    from backend.dal.models import Person
                     selection = int(text.strip())
                     if telegram_user.state_data and 'search_term' in telegram_user.state_data:
                         search_term = telegram_user.state_data['search_term']
@@ -174,7 +174,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
             elif telegram_user.current_state == 'waiting_task_delete_confirmation':
                 # User is selecting which task to delete
                 try:
-                    from models import Task
+                    from backend.dal.models import Task
                     selection = int(text.strip())
                     if telegram_user.state_data and 'search_term' in telegram_user.state_data:
                         search_term = telegram_user.state_data['search_term']

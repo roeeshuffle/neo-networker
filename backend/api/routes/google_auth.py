@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, redirect, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from services.google_auth_service import GoogleAuthService
+from bl.services.google_auth_service import GoogleAuthService
 from dal.models import User
 from dal.database import db
 from datetime import datetime

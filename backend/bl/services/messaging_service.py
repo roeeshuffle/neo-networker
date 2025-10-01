@@ -1,8 +1,8 @@
 import logging
 from typing import Optional, Dict, Any
-from models import User
-from services.telegram_service import telegram_service
-from services.whatsapp_service import whatsapp_service
+from dal.models import User
+from bl.services.telegram_service import telegram_service
+from bl.services.whatsapp_service import whatsapp_service
 
 messaging_logger = logging.getLogger('messaging_service')
 

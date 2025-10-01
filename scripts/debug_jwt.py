@@ -23,8 +23,8 @@ import os
 import sys
 sys.path.append('/Users/roeefeingold/neo-networker/backend')
 
-from database import db
-from models import User
+from backend.dal.database import db
+from backend.dal.models import User
 from app import app
 
 with app.app_context():

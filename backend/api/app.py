@@ -5,9 +5,13 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
+import sys
 import logging
 from dotenv import load_dotenv
 from dal.database import db
+
+# Add parent directory to Python path for scripts
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Configure logging
 logging.basicConfig(

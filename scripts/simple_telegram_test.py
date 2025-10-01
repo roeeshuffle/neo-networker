@@ -8,8 +8,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import app
-from models import User, Person, Company, Task, TelegramUser
-from database import db
+from backend.dal.models import User, Person, Company, Task, TelegramUser
+from backend.dal.database import db
 from routes.telegram import process_natural_language_request
 import uuid
 from datetime import datetime, timedelta

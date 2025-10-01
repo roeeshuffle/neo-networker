@@ -1,4 +1,5 @@
-from models import Person, User, SharedData, db
+from dal.models import Person, User, SharedData
+from dal.database import db
 from datetime import datetime
 import uuid
 

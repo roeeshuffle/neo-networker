@@ -6,8 +6,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from models import User
-from database import db
+from dal.models import User
+from dal.database import db
 import logging
 import uuid
 

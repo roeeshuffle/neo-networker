@@ -4,7 +4,7 @@ Comprehensive database fix to ensure all required columns exist
 """
 
 from flask import Blueprint, jsonify
-from database import db
+from backend.dal.database import db
 import sqlalchemy as sa
 from sqlalchemy import text
 

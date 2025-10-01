@@ -15,7 +15,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import app, db
-from models import User, Person, Company, Task, SharedData, TelegramUser
+from backend.dal.models import User, Person, Company, Task, SharedData, TelegramUser
 
 def setup_database():
     """Set up the database schema"""

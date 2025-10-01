@@ -2,8 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from dal.models import User, TelegramUser
 from dal.database import db
-from services.whatsapp_service import whatsapp_service
-from services.messaging_service import messaging_service
+from bl.services.whatsapp_service import whatsapp_service
+from bl.services.messaging_service import messaging_service
 import logging
 import json
 import requests
@@ -74,7 +74,7 @@ def convert_whatsapp_voice_to_text(audio_id):
         whatsapp_logger.info(f"🎤 Converting voice to text for audio_id: {audio_id}")
         
         # Get access token from WhatsApp service (same as text messages)
-        from services.whatsapp_service import whatsapp_service
+        from bl.services.whatsapp_service import whatsapp_service
         access_token = whatsapp_service.access_token
         whatsapp_logger.info(f"🎤 Voice processing using token: {access_token[:20]}..." if access_token else "🎤 No token from service")
         if not access_token:

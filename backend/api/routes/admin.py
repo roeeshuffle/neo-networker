@@ -4,7 +4,7 @@ from dal.models import User, TelegramUser
 from dal.database import db
 from datetime import datetime
 import logging
-from services.email_service import email_service
+from bl.services.email_service import email_service
 
 admin_bp = Blueprint('admin', __name__)
 admin_logger = logging.getLogger('admin')
