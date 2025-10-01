@@ -135,10 +135,10 @@ const Dashboard = () => {
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
       
-      const { data, error } = await apiClient.getEvents({
-        start_date: todayStart.toISOString(),
-        end_date: todayEnd.toISOString()
-      });
+      const { data, error } = await apiClient.getEvents(
+        todayStart.toISOString(),
+        todayEnd.toISOString()
+      );
 
       if (error) throw error;
       setTodayEvents(data?.length || 0);
