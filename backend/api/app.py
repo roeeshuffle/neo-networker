@@ -74,6 +74,7 @@ from api.routes.telegram_auth import telegram_auth_bp
 from api.routes.whatsapp import whatsapp_bp
 from api.routes.google_auth import google_auth_bp
 from api.routes.admin import admin_bp
+from api.routes.db_migration import migration_bp
 # Removed temporary fix routes - no longer needed
 
 # Register blueprints
@@ -88,6 +89,7 @@ app.register_blueprint(telegram_auth_bp, url_prefix='/api')
 app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(google_auth_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
+app.register_blueprint(migration_bp, url_prefix='/api')
 # Removed temporary fix blueprint registrations - no longer needed
 
 @app.route('/api/health')
