@@ -347,6 +347,16 @@ def send_admin_notification(user_id: str, prompt: str, response: str, success: b
     except Exception as e:
         telegram_logger.error(f"💥 Error sending admin notification: {e}")
 
+def load_bot_prompt():
+    """Load the bot prompt from external file"""
+    try:
+        prompt_path = os.path.join(os.path.dirname(__file__), '..', '..', 'prompts', 'bot_router.txt')
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except Exception as e:
+        telegram_logger.error(f"❌ Error loading bot prompt: {e}")
+        return "You are a function router. Return ONLY a JSON array [function_number, parameters]."
+
 def process_natural_language_request(text: str, telegram_user: TelegramUser) -> str:
     """Process natural language requests using OpenAI and map to functions"""
     telegram_logger.info(f"🧠 Processing natural language request: '{text}' for user {telegram_user.first_name}")
@@ -358,6 +368,9 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
     try:
         import requests
         
+        # Load prompt from external file
+        system_prompt = load_bot_prompt()
+        
         response = requests.post('https://api.openai.com/v1/chat/completions', 
             headers={
                 'Authorization': f'Bearer {os.getenv("OPENAI_API_KEY")}',
@@ -368,66 +381,7 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
                 'messages': [
                     { 
                         'role': 'system', 
-                        'content': '''You are a function router. Return ONLY a JSON array [function_number, parameters].
-
-Functions:
-1. search_information(words: array)
-2. add_task(task: object with text, assign_to, due_date, status, label, priority, repeat)
-3. remove_task(task_id: string/number)
-4. add_alert_to_task(task_id: string/number)
-5. show_all_tasks(period: "daily"|"weekly"|"monthly"|"all", filter?: object)
-6. add_new_people(people_data: array)
-7. show_all_meetings(period: "today"|"weekly"|"monthly")
-8. update_task_request(words: array, field: string, new_value: string)
-9. update_person(person_identifier: string/number, updates: object)
-10. delete_person(person_identifier: string/number)
-
-For add_new_people (contacts), extract these fields from natural language:
-- full_name: person's name
-- email: email address
-- company: company name
-- status: job title/position/role
-- skills: skills, expertise, or specializations
-- categories: tags, interests, hobbies, or skills (same as skills)
-- linkedin_profile: LinkedIn URL if mentioned
-
-For add_task, extract these fields from natural language:
-- text: task description
-- assign_to: person/company to assign to
-- due_date: when the task is due (format: YYYY-MM-DD HH:MM) - convert relative dates like "tomorrow" to actual dates
-- priority: low/medium/high
-- status: todo/in-progress/completed
-- label: task category/label
-- notes: additional notes or details about the task
-- alert_time: when to alert about the task (format: YYYY-MM-DD HH:MM)
-
-IMPORTANT: When converting relative dates and times:
-- "tomorrow" = next day from today's date
-- "today" = current date
-- "next week" = 7 days from today
-- Always use the actual calculated date, not hardcoded examples
-
-TIME MAPPING RULES:
-- "morning" = 09:00
-- "noon" = 12:00
-- "afternoon" = 16:30
-- "evening" = 19:30
-- "night" = 21:00
-- If no time specified with "tomorrow", use 09:00 (morning)
-
-CONTACT vs TASK DETECTION:
-- "add contact", "new contact", "add person" → contact functions
-- "add task", "new task", "call", "meeting", "schedule" → task functions
-- "call [person]" → task (unless it's "add contact [person]")
-
-Examples (use actual calculated dates, not hardcoded ones):
-"Find AI info" → [1, ["AI"]]
-"add task call John tomorrow" → [2, {"text":"call John","due_date":"[CALCULATE: tomorrow's date] 09:00","status":"todo","priority":"medium"}]
-"add task call Alon from puzzlesoft tomorrow at 15:00 note for the meeting: talk with guy before" → [2, {"text":"call Alon","assign_to":"puzzlesoft","due_date":"[CALCULATE: tomorrow's date] 15:00","status":"todo","priority":"medium","notes":"talk with guy before"}]
-"add contact sachar caspi works as ceo in Shuffle, sachar@shuffel.com, skills - marketing and music" → [6, [{"full_name":"sachar caspi","email":"sachar@shuffel.com","company":"Shuffle","status":"ceo","skills":"marketing and music","categories":"marketing and music"}]]
-"show weekly tasks" → [5, {"period":"weekly"}]
-"delete person 123" → [10, {"person_id":"123"}]
-'''
+                        'content': system_prompt
                     },
                     { 'role': 'user', 'content': text }
                 ],
