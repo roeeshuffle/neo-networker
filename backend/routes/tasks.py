@@ -142,12 +142,37 @@ def update_task(task_id):
         
         data = request.get_json()
         
-        task.text = data.get('text', task.text)
-        task.assign_to = data.get('assign_to', task.assign_to)
-        task.due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else task.due_date
-        task.status = data.get('status', task.status)
-        task.label = data.get('label', task.label)
-        task.priority = data.get('priority', task.priority)
+        # Update fields that exist in the new model
+        if 'title' in data:
+            task.title = data['title']
+        if 'description' in data:
+            task.description = data['description']
+        if 'project' in data:
+            task.project = data['project']
+        if 'status' in data:
+            task.status = data['status']
+        if 'priority' in data:
+            task.priority = data['priority']
+        if 'due_date' in data and data['due_date']:
+            try:
+                date_str = data['due_date'].replace('Z', '') if data['due_date'].endswith('Z') else data['due_date']
+                task.due_date = datetime.fromisoformat(date_str)
+            except ValueError:
+                return jsonify({'error': f'Invalid due_date format: {data["due_date"]}'}), 400
+        if 'scheduled_date' in data:
+            if data['scheduled_date']:
+                try:
+                    date_str = data['scheduled_date'].replace('Z', '') if data['scheduled_date'].endswith('Z') else data['scheduled_date']
+                    task.scheduled_date = datetime.fromisoformat(date_str)
+                except ValueError:
+                    return jsonify({'error': f'Invalid scheduled_date format: {data["scheduled_date"]}'}), 400
+            else:
+                task.scheduled_date = None
+        
+        # Update is_scheduled and is_active based on scheduled_date
+        task.is_scheduled = task.scheduled_date is not None
+        task.is_active = not task.is_scheduled or (task.scheduled_date and task.scheduled_date <= datetime.utcnow())
+        
         task.updated_at = datetime.utcnow()
         
         db.session.commit()

@@ -160,10 +160,13 @@ class ApiClient {
   }
 
   // Events methods
-  async getEvents(params?: { start_date?: string; end_date?: string }) {
-    const queryParams = params ? new URLSearchParams(params).toString() : '';
-    const endpoint = queryParams ? `/events?${queryParams}` : '/events';
-    return this.request(endpoint);
+  async getEvents(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    
+    const queryString = params.toString();
+    return this.request(queryString ? `/events?${queryString}` : '/events');
   }
 
   async createEvent(eventData: any) {

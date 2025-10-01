@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from database import db
 from models import Event, User
 from datetime import datetime, timedelta
@@ -8,13 +9,15 @@ import json
 events_bp = Blueprint('events', __name__)
 
 @events_bp.route('/events', methods=['GET'])
+@jwt_required()
 def get_events():
     """Get all events for the authenticated user"""
     try:
-        # Get user from session (you'll need to implement authentication)
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         # Get query parameters
         start_date = request.args.get('start_date')
@@ -22,7 +25,7 @@ def get_events():
         project = request.args.get('project')
         
         # Build query
-        query = Event.query.filter(Event.user_id == user_id, Event.is_active == True)
+        query = Event.query.filter(Event.user_id == current_user_id, Event.is_active == True)
         
         if start_date:
             start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
@@ -43,12 +46,15 @@ def get_events():
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('/events', methods=['POST'])
+@jwt_required()
 def create_event():
     """Create a new event"""
     try:
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
         
@@ -76,7 +82,7 @@ def create_event():
             repeat_days=data.get('repeat_days', []),
             repeat_end_date=datetime.fromisoformat(data['repeat_end_date'].replace('Z', '+00:00')) if data.get('repeat_end_date') else None,
             notes=data.get('notes', ''),
-            user_id=user_id
+            user_id=current_user_id
         )
         
         db.session.add(event)
@@ -92,16 +98,19 @@ def create_event():
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('/events/<int:event_id>', methods=['GET'])
+@jwt_required()
 def get_event(event_id):
     """Get a specific event"""
     try:
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == user_id
+            Event.user_id == current_user_id
         ).first()
         
         if not event:
@@ -113,16 +122,19 @@ def get_event(event_id):
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('/events/<int:event_id>', methods=['PUT'])
+@jwt_required()
 def update_event(event_id):
     """Update an event"""
     try:
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == user_id
+            Event.user_id == current_user_id
         ).first()
         
         if not event:
@@ -170,16 +182,19 @@ def update_event(event_id):
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('/events/<int:event_id>', methods=['DELETE'])
+@jwt_required()
 def delete_event(event_id):
     """Delete an event"""
     try:
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == user_id
+            Event.user_id == current_user_id
         ).first()
         
         if not event:
@@ -198,18 +213,21 @@ def delete_event(event_id):
         return jsonify({'error': str(e)}), 500
 
 @events_bp.route('/events/upcoming', methods=['GET'])
+@jwt_required()
 def get_upcoming_events():
     """Get upcoming events for the next 7 days"""
     try:
-        user_id = request.headers.get('X-User-ID')  # Temporary - replace with proper auth
-        if not user_id:
-            return jsonify({'error': 'User not authenticated'}), 401
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         now = datetime.utcnow()
         next_week = now + timedelta(days=7)
         
         events = Event.query.filter(
-            Event.user_id == user_id,
+            Event.user_id == current_user_id,
             Event.is_active == True,
             Event.start_datetime >= now,
             Event.start_datetime <= next_week
