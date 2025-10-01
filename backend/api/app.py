@@ -74,31 +74,7 @@ from api.routes.telegram_auth import telegram_auth_bp
 from api.routes.whatsapp import whatsapp_bp
 from api.routes.google_auth import google_auth_bp
 from api.routes.admin import admin_bp
-from api.routes.db_fix import db_fix_bp
-from api.routes.db_fix_state_data import db_fix_bp as db_fix_state_data_bp
-from api.routes.add_state_data import add_state_data_bp
-# Optional admin/debug endpoints - only import if available
-try:
-    from scripts.apply_migration_endpoint import migration_bp
-except ImportError:
-    migration_bp = None
-
-from api.routes.schema_fix import schema_fix_bp
-
-try:
-    from scripts.quick_schema_fix import quick_fix_bp
-except ImportError:
-    quick_fix_bp = None
-
-try:
-    from scripts.safe_migration import safe_migration_bp
-except ImportError:
-    safe_migration_bp = None
-
-try:
-    from scripts.comprehensive_db_fix import comprehensive_fix_bp
-except ImportError:
-    comprehensive_fix_bp = None
+# Removed temporary fix routes - no longer needed
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -112,53 +88,13 @@ app.register_blueprint(telegram_auth_bp, url_prefix='/api')
 app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(google_auth_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
-app.register_blueprint(db_fix_bp, url_prefix='/api')
-app.register_blueprint(db_fix_state_data_bp, url_prefix='/api')
-app.register_blueprint(add_state_data_bp, url_prefix='/api')
-
-# Register optional admin/debug blueprints only if available
-if migration_bp:
-    app.register_blueprint(migration_bp, url_prefix='/api')
-app.register_blueprint(schema_fix_bp, url_prefix='/api')
-if quick_fix_bp:
-    app.register_blueprint(quick_fix_bp, url_prefix='/api')
-if safe_migration_bp:
-    app.register_blueprint(safe_migration_bp, url_prefix='/api')
-if comprehensive_fix_bp:
-    app.register_blueprint(comprehensive_fix_bp, url_prefix='/api')
+# Removed temporary fix blueprint registrations - no longer needed
 
 @app.route('/api/health')
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
-@app.route('/api/add-google-columns', methods=['POST'])
-def add_google_columns():
-    """Add Google OAuth columns to the database"""
-    try:
-        from sqlalchemy import text
-        
-        # SQL to add Google OAuth columns
-        sql_commands = [
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_id VARCHAR(100);",
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;",
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_access_token TEXT;",
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_token_expires_at TIMESTAMP;",
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_contacts_synced_at TIMESTAMP;",
-            "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS google_calendar_synced_at TIMESTAMP;",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_google_id ON profiles(google_id);"
-        ]
-        
-        # Execute each command
-        for sql in sql_commands:
-            print(f"🔧 Executing: {sql}")
-            db.session.execute(text(sql))
-            db.session.commit()
-        
-        return jsonify({'status': 'success', 'message': 'Google OAuth columns added successfully'})
-        
-    except Exception as e:
-        print(f"❌ Error adding Google OAuth columns: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+# Removed Google OAuth endpoint - Google OAuth fields removed from User model
 
 @app.before_request
 def log_request_info():
