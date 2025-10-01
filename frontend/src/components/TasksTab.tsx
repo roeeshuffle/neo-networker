@@ -37,7 +37,11 @@ interface TaskFormData {
   due_date: string;
 }
 
-const TasksTab: React.FC = () => {
+interface TasksTabProps {
+  onTasksChange?: () => void;
+}
+
+const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const [projects, setProjects] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
@@ -119,6 +123,7 @@ const TasksTab: React.FC = () => {
       
       setIsAddDialogOpen(false);
       resetForm();
+      onTasksChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Task created successfully",
@@ -171,6 +176,7 @@ const TasksTab: React.FC = () => {
       setIsEditDialogOpen(false);
       setEditingTask(null);
       resetForm();
+      onTasksChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -202,6 +208,7 @@ const TasksTab: React.FC = () => {
         return newProjects;
       });
       
+      onTasksChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Task marked as completed",
@@ -231,6 +238,7 @@ const TasksTab: React.FC = () => {
         return newProjects;
       });
       
+      onTasksChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Task deleted successfully",

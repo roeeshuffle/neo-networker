@@ -49,7 +49,11 @@ interface EventFormData {
   notes: string;
 }
 
-const EventsTab: React.FC = () => {
+interface EventsTabProps {
+  onEventsChange?: () => void;
+}
+
+const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>('weekly');
@@ -130,6 +134,7 @@ const EventsTab: React.FC = () => {
       setEvents([...events, data.event]);
       setIsAddDialogOpen(false);
       resetForm();
+      onEventsChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Event created successfully",
@@ -155,6 +160,7 @@ const EventsTab: React.FC = () => {
       setIsEditDialogOpen(false);
       setEditingEvent(null);
       resetForm();
+      onEventsChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Event updated successfully",
@@ -173,6 +179,7 @@ const EventsTab: React.FC = () => {
     try {
       await apiClient.delete(`/events/${eventId}`);
       setEvents(events.filter(event => event.id !== eventId));
+      onEventsChange?.(); // Trigger count update
       toast({
         title: "Success",
         description: "Event deleted successfully",

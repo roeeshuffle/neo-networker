@@ -359,7 +359,7 @@ const Dashboard = () => {
           </TabsContent>
           
           <TabsContent value="events">
-            <EventsTab />
+            <EventsTab onEventsChange={fetchEventsCount} />
           </TabsContent>
           
           <TabsContent value="settings">
