@@ -35,8 +35,15 @@ app = Flask(__name__)
 
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-# Use local PostgreSQL database to access existing data
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:123456@localhost:5432/neo_networker')
+
+# Database configuration - use environment variable or default
+database_url = os.getenv('DATABASE_URL')
+if not database_url:
+    # Try to use a default production database URL
+    database_url = 'postgresql://postgres:123456@localhost:5432/neo_networker'
+    print(f"⚠️  WARNING: DATABASE_URL not set, using default: {database_url}")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
@@ -46,6 +53,15 @@ db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app)
+
+# Test database connection
+try:
+    with app.app_context():
+        db.engine.connect()
+        print("✅ Database connection successful")
+except Exception as e:
+    print(f"❌ Database connection failed: {e}")
+    print("⚠️  Application will start but database operations may fail")
 
 
 # Import models after db initialization

@@ -11,3 +11,5 @@ run:
       value: production
     - name: PORT
       value: "8080"
+    - name: DATABASE_URL
+      value: "postgresql://postgres:123456@localhost:5432/neo_networker"
