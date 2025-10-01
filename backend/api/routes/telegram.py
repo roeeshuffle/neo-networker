@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import TelegramUser, User, Person, Company, Task
+from dal.models import User, Person, Company, Task
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -81,16 +81,16 @@ def handle_callback_query(callback_query):
                 return jsonify({'status': 'ok'})
             
             # Get the transcription from the user's state data
-            if telegram_user.state_data and 'transcription' in telegram_user.state_data:
-                transcription = telegram_user.state_data['transcription']
+            if user.state_data and 'transcription' in user.state_data:
+                transcription = user.state_data['transcription']
                 telegram_logger.info(f"✅ Processing approved transcription: '{transcription}'")
                 
                 response_text = process_natural_language_request(transcription, telegram_user)
                 send_telegram_message(chat_id, response_text)
                 
                 # Clear the state data
-                telegram_user.state_data = None
-                telegram_user.current_state = None
+                user.state_data = None
+                user.current_state = None
                 db.session.commit()
             else:
                 telegram_logger.error(f"❌ No pending transcription found for user {user_id}")
@@ -109,8 +109,8 @@ def handle_callback_query(callback_query):
             # Clear any pending state data
             telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
             if telegram_user:
-                telegram_user.state_data = None
-                telegram_user.current_state = None
+                user.state_data = None
+                user.current_state = None
                 db.session.commit()
             
             # Delete the approval message (no response message needed)
@@ -152,18 +152,18 @@ def handle_voice_message(message, chat_id, user_id, first_name, username):
             db.session.commit()
         
         # Check if user's Telegram ID is connected in the web app
-        webapp_user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        webapp_user = User.query.filter_by(telegram_id=user.telegram_id).first()
         
         if not webapp_user:
-            response_text = f"🔐 **Connection Required**\n\nTo use voice commands, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'"
+            response_text = f"🔐 **Connection Required**\n\nTo use voice commands, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{user.telegram_id}`\n5. Click 'Connect Telegram'"
         else:
             # Convert voice to text using OpenAI Whisper
             transcription = convert_voice_to_text(file_id)
             
             if transcription:
                 # Set state to waiting for voice approval
-                telegram_user.current_state = 'waiting_voice_approval'
-                telegram_user.state_data = {'transcription': transcription}
+                user.current_state = 'waiting_voice_approval'
+                user.state_data = {'transcription': transcription}
                 db.session.commit()
                 
                 # Send approval request with inline keyboard
@@ -347,11 +347,11 @@ def send_admin_notification(user_id: str, prompt: str, response: str, success: b
     except Exception as e:
         telegram_logger.error(f"💥 Error sending admin notification: {e}")
 
-def get_or_create_thread(telegram_user: TelegramUser):
+def get_or_create_thread(user: User):
     """Get or create a thread for the user"""
     try:
         # Use telegram_id as thread identifier
-        thread_id = telegram_user.state_data.get('thread_id') if telegram_user.state_data else None
+        thread_id = user.state_data.get('thread_id') if user.state_data else None
         
         if not thread_id:
             # Create new thread
@@ -360,12 +360,12 @@ def get_or_create_thread(telegram_user: TelegramUser):
             thread_id = thread.id
             
             # Store thread_id in user's state_data
-            if not telegram_user.state_data:
-                telegram_user.state_data = {}
-            telegram_user.state_data['thread_id'] = thread_id
+            if not user.state_data:
+                user.state_data = {}
+            user.state_data['thread_id'] = thread_id
             db.session.commit()
             
-            telegram_logger.info(f"🧵 Created new thread {thread_id} for user {telegram_user.first_name}")
+            telegram_logger.info(f"🧵 Created new thread {thread_id} for user {user.full_name}")
         
         return thread_id
     except Exception as e:
@@ -387,9 +387,9 @@ def cleanup_old_threads():
     except Exception as e:
         telegram_logger.error(f"💥 Error during thread cleanup: {e}")
 
-def process_natural_language_request(text: str, telegram_user: TelegramUser) -> str:
+def process_natural_language_request(text: str, user: User) -> str:
     """Process natural language requests using OpenAI Assistant API"""
-    telegram_logger.info(f"🧠 Processing natural language request: '{text}' for user {telegram_user.first_name}")
+    telegram_logger.info(f"🧠 Processing natural language request: '{text}' for user {user.full_name}")
     
     if not os.getenv('OPENAI_API_KEY'):
         telegram_logger.error("❌ OpenAI API key not configured")
@@ -397,7 +397,7 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
 
     try:
         # Get or create thread for user
-        thread_id = get_or_create_thread(telegram_user)
+        thread_id = get_or_create_thread(user)
         if not thread_id:
             return "❌ Error creating conversation thread. Please try again."
         
@@ -417,7 +417,7 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
             assistant_id="asst_alist"  # Your assistant ID
         )
         
-        telegram_logger.info(f"🤖 Started assistant run {run.id} for user {telegram_user.first_name}")
+        telegram_logger.info(f"🤖 Started assistant run {run.id} for user {user.full_name}")
         
         # Poll for completion
         import time
@@ -477,59 +477,59 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
         # Fallback to search
         return search_from_telegram({"query": text, "type": "people"}, telegram_user)
 
-def execute_bot_function(function_number: int, parameters: any, telegram_user: TelegramUser, original_text: str) -> str:
+def execute_bot_function(function_number: int, parameters: any, user: User, original_text: str) -> str:
     """Execute the function mapped by OpenAI"""
-    telegram_logger.info(f"⚙️ Executing function {function_number} with params: {parameters} for user {telegram_user.first_name}")
+    telegram_logger.info(f"⚙️ Executing function {function_number} with params: {parameters} for user {user.full_name}")
     
     try:
         if function_number == 1:  # search_information
             if parameters and isinstance(parameters, list):
                 search_query = ' '.join(parameters)
-                return search_from_telegram({"query": search_query, "type": "people"}, telegram_user)
+                return search_from_telegram({"query": search_query, "type": "people"}, user)
             else:
-                return search_from_telegram({"query": original_text, "type": "people"}, telegram_user)
+                return search_from_telegram({"query": original_text, "type": "people"}, user)
                 
         elif function_number == 2:  # add_task
-            return add_task_from_telegram(parameters, telegram_user)
+            return add_task_from_telegram(parameters, user)
             
         elif function_number == 3:  # remove_task
-            return remove_task_from_telegram(parameters, telegram_user)
+            return remove_task_from_telegram(parameters, user)
             
         elif function_number == 4:  # add_alert_to_task
-            return add_alert_to_task_from_telegram(parameters, telegram_user)
+            return add_alert_to_task_from_telegram(parameters, user)
             
         elif function_number == 5:  # show_all_tasks
-            return show_tasks_from_telegram(parameters, telegram_user)
+            return show_tasks_from_telegram(parameters, user)
             
         elif function_number == 6:  # add_new_people
-            return add_people_from_telegram(parameters, telegram_user)
+            return add_people_from_telegram(parameters, user)
             
         elif function_number == 7:  # show_all_meetings
-            return show_meetings_from_telegram(parameters, telegram_user)
+            return show_meetings_from_telegram(parameters, user)
             
         elif function_number == 8:  # update_task_request
-            return update_task_from_telegram(parameters, telegram_user)
+            return update_task_from_telegram(parameters, user)
             
         elif function_number == 9:  # update_person
-            return update_person_from_telegram(parameters, telegram_user)
+            return update_person_from_telegram(parameters, user)
             
         elif function_number == 10:  # delete_person
-            return delete_person_from_telegram(parameters, telegram_user)
+            return delete_person_from_telegram(parameters, user)
             
         else:
-            telegram_logger.warning(f"🚧 Function {function_number} not implemented for user {telegram_user.first_name}")
+            telegram_logger.warning(f"🚧 Function {function_number} not implemented for user {user.full_name}")
             return f"🚧 Function {function_number} is not implemented yet."
     except Exception as e:
-        telegram_logger.error(f"💥 Error executing function {function_number} for user {telegram_user.first_name}: {str(e)}")
+        telegram_logger.error(f"💥 Error executing function {function_number} for user {user.full_name}: {str(e)}")
         return f"Error executing function: {str(e)}"
 
-def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def add_task_from_telegram(args: dict, user: User) -> str:
     """Add a task from Telegram request"""
     try:
         print(f"DEBUG: add_task_from_telegram called with args: {args}")
         
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        user = User.query.filter_by(telegram_id=user.telegram_id).first()
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -611,11 +611,11 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error adding task: {str(e)}"
 
-def remove_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
+def remove_task_from_telegram(args: any, user: User) -> str:
     """Remove a task from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        user = User.query.filter_by(telegram_id=user.telegram_id).first()
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -670,9 +670,9 @@ def remove_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
                     response += "\n"
                 
                 # Set state to wait for user selection
-                telegram_user.current_state = 'waiting_task_delete_confirmation'
+                user.current_state = 'waiting_task_delete_confirmation'
                 # Store the search term to recreate the list
-                telegram_user.state_data = {'search_term': search_term}
+                user.state_data = {'search_term': search_term}
                 db.session.commit()
                 
                 return response
@@ -680,24 +680,15 @@ def remove_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error removing task: {str(e)}"
 
-def add_alert_to_task_from_telegram(args: any, telegram_user: TelegramUser) -> str:
+def add_alert_to_task_from_telegram(args: any, user: User) -> str:
     """Add alert to task from Telegram request"""
     return "🚧 Task alerts feature coming soon!"
 
-def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def show_tasks_from_telegram(args: dict, user: User) -> str:
     """Show tasks from Telegram request"""
     try:
-        # Find the user associated with this telegram user
-        # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
-            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
-            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
-        else:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        
-        if not user:
-            return "❌ User not found. Please connect your account in the webapp first."
+        # User is already the correct user since we're using the same model
+        # No need to find user - we already have it
 
         # Get tasks for the user
         tasks = Task.query.filter_by(owner_id=user.id).limit(20).all()
@@ -731,20 +722,11 @@ def show_tasks_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error fetching tasks: {str(e)}"
 
-def add_people_from_telegram(args: list, telegram_user: TelegramUser) -> str:
+def add_people_from_telegram(args: list, user: User) -> str:
     """Add people from Telegram request"""
     try:
-        # Find the user associated with this telegram user
-        # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
-            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
-            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
-        else:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        
-        if not user:
-            return "❌ User not found. Please connect your account in the webapp first."
+        # User is already the correct user since we're using the same model
+        # No need to find user - we already have it
 
         results = []
         for person_data in args:
@@ -792,11 +774,11 @@ def add_people_from_telegram(args: list, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error adding people: {str(e)}"
 
-def show_meetings_from_telegram(args: str, telegram_user: TelegramUser) -> str:
+def show_meetings_from_telegram(args: str, user: User) -> str:
     """Show meetings from Telegram request"""
     return "🚧 Meetings feature coming soon!"
 
-def update_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def update_task_from_telegram(args: dict, user: User) -> str:
     """Update task from Telegram request"""
     try:
         if 'task_id' in args:
@@ -832,7 +814,7 @@ def update_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error updating task: {str(e)}"
 
-def update_person_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def update_person_from_telegram(args: dict, user: User) -> str:
     """Update person from Telegram request"""
     try:
         if 'person_id' in args:
@@ -867,7 +849,7 @@ def update_person_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error updating person: {str(e)}"
 
-def delete_person_from_telegram(args: any, telegram_user: TelegramUser) -> str:
+def delete_person_from_telegram(args: any, user: User) -> str:
     """Delete person from Telegram request"""
     try:
         if isinstance(args, dict) and 'person_id' in args:
@@ -922,9 +904,9 @@ def delete_person_from_telegram(args: any, telegram_user: TelegramUser) -> str:
                     response += "\n"
                 
                 # Set state to wait for user selection
-                telegram_user.current_state = 'waiting_delete_confirmation'
+                user.current_state = 'waiting_delete_confirmation'
                 # Store the search term to recreate the list
-                telegram_user.state_data = {'search_term': search_term}
+                user.state_data = {'search_term': search_term}
                 db.session.commit()
                 
                 return response
@@ -934,17 +916,17 @@ def delete_person_from_telegram(args: any, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error deleting person: {str(e)}"
 
-def add_person_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def add_person_from_telegram(args: dict, user: User) -> str:
     """Add a person from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(email=telegram_user.telegram_username + "@telegram.local").first()
+        user = User.query.filter_by(email=user.telegram_username + "@telegram.local").first()
         if not user:
             # Create a user for this telegram user
             user = User(
                 id=str(uuid.uuid4()),
-                email=telegram_user.telegram_username + "@telegram.local",
-                full_name=telegram_user.first_name,
+                email=user.telegram_username + "@telegram.local",
+                full_name=user.full_name,
                 is_approved=True
             )
             db.session.add(user)
@@ -971,11 +953,11 @@ def add_person_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error adding person: {str(e)}"
 
-def add_company_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def add_company_from_telegram(args: dict, user: User) -> str:
     """Add a company from Telegram request"""
     try:
         # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        user = User.query.filter_by(telegram_id=user.telegram_id).first()
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -998,20 +980,11 @@ def add_company_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error adding company: {str(e)}"
 
-def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def add_task_from_telegram(args: dict, user: User) -> str:
     """Add a task from Telegram request"""
     try:
-        # Find the user associated with this telegram user
-        # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
-            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
-            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
-        else:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        
-        if not user:
-            return "❌ User not found. Please connect your account in the webapp first."
+        # User is already the correct user since we're using the same model
+        # No need to find user - we already have it
 
         # Parse due_date if provided
         due_date = None
@@ -1058,23 +1031,14 @@ def add_task_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
     except Exception as e:
         return f"❌ Error adding task: {str(e)}"
 
-def search_from_telegram(args: dict, telegram_user: TelegramUser) -> str:
+def search_from_telegram(args: dict, user: User) -> str:
     """Search for information from Telegram request"""
     try:
         query = args.get('query', '')
         search_type = args.get('type', 'people')
         
-        # Find the user associated with this telegram user
-        # Handle both Telegram and WhatsApp users
-        if hasattr(telegram_user, 'is_whatsapp_user') and telegram_user.is_whatsapp_user:
-            # This is a WhatsApp user (MockTelegramUser with whatsapp_phone as telegram_id)
-            user = User.query.filter_by(whatsapp_phone=telegram_user.telegram_id).first()
-        else:
-            # This is a real Telegram user
-            user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
-        
-        if not user:
-            return "❌ User not found. Please connect your account in the webapp first."
+        # User is already the correct user since we're using the same model
+        # No need to find user - we already have it
 
         results = []
         
@@ -1161,16 +1125,16 @@ def telegram_auth():
             )
             db.session.add(telegram_user)
         else:
-            telegram_user.is_authenticated = True
-            telegram_user.authenticated_at = datetime.utcnow()
-            telegram_user.telegram_username = telegram_username
-            telegram_user.first_name = first_name
+            user.is_authenticated = True
+            user.authenticated_at = datetime.utcnow()
+            user.telegram_username = telegram_username
+            user.full_name = first_name
         
         db.session.commit()
         
         return jsonify({
             'message': 'Authentication successful',
-            'user': telegram_user.to_dict()
+            'user': user.to_dict()
         })
         
     except Exception as e:
@@ -1237,42 +1201,42 @@ def telegram_webhook():
         telegram_logger.info(f"👤 User: {first_name} (@{username}) ID: {user_id}")
         telegram_logger.info(f"💬 Message: '{text}' in chat {chat_id}")
         
-        # Get or create telegram user
-        telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+        # Get or create user
+        user = User.query.filter_by(telegram_id=user_id).first()
         
-        if not telegram_user:
-            telegram_logger.info(f"🆕 Creating new Telegram user: {first_name} (@{username}) ID: {user_id}")
-            telegram_user = TelegramUser(
+        if not user:
+            telegram_logger.info(f"🆕 Creating new user for Telegram: {first_name} (@{username}) ID: {user_id}")
+            user = User(
                 id=str(uuid.uuid4()),
                 telegram_id=user_id,
                 telegram_username=message['from'].get('username'),
-                first_name=message['from'].get('first_name'),
-                current_state='idle'
+                full_name=message['from'].get('first_name'),
+                current_state='idle',
+                provider='telegram'
             )
-            db.session.add(telegram_user)
+            db.session.add(user)
             db.session.commit()
-            telegram_logger.info(f"✅ New Telegram user created with ID: {telegram_user.id}")
+            telegram_logger.info(f"✅ New user created with ID: {user.id}")
         else:
-            telegram_logger.info(f"👤 Existing Telegram user found: {telegram_user.first_name} (ID: {telegram_user.id})")
+            telegram_logger.info(f"👤 Existing user found: {user.full_name} (ID: {user.id})")
         
-        # Check if user's Telegram ID is connected in the web app
-        webapp_user = User.query.filter_by(telegram_id=telegram_user.telegram_id).first()
+        # User is already the webapp user since we're using the same model
         
         # Handle different commands
-        telegram_logger.info(f"🔍 Processing command: '{text}' for user {telegram_user.first_name}")
+        telegram_logger.info(f"🔍 Processing command: '{text}' for user {user.full_name}")
         
-        if not webapp_user:
-            telegram_logger.info(f"🔐 User {telegram_user.first_name} needs to connect via webapp")
-            response_text = f"🔐 **Connection Required**\n\nTo use this bot, you need to connect your Telegram account to your webapp account.\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'\n\nOnce connected, you can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
-        elif text == '/start':
-            telegram_logger.info(f"🚀 User {telegram_user.first_name} started the bot")
-            telegram_user.current_state = 'idle'
-            telegram_user.state_data = {}
+        # Since we're using the same User model, we can process commands directly
+        # No need to check for webapp connection since user already exists
+        
+        if text == '/start':
+            telegram_logger.info(f"🚀 User {user.full_name} started the bot")
+            user.current_state = 'idle'
+            user.state_data = {}
             db.session.commit()
             
-            response_text = f"👋 Welcome back {telegram_user.first_name}!\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
+            response_text = f"👋 Welcome back {user.full_name}!\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
         elif text == '/help':
-            telegram_logger.info(f"❓ User {telegram_user.first_name} requested help")
+            telegram_logger.info(f"❓ User {user.full_name} requested help")
             response_text = """Available commands:
 /start - Start the bot
 /help - Show this help message
@@ -1281,29 +1245,29 @@ def telegram_webhook():
 
 To use this bot, you need to connect your Telegram account via the webapp first."""
         elif text == '/auth':
-            telegram_logger.info(f"🔐 User {telegram_user.first_name} checked connection status")
+            telegram_logger.info(f"🔐 User {user.full_name} checked connection status")
             if webapp_user:
                 response_text = "✅ You are connected to your webapp account! You can now use the bot."
             else:
-                response_text = f"🔐 **Not Connected**\n\nTo use this bot, connect your Telegram account via the webapp:\n\n**Your Telegram ID:** `{telegram_user.telegram_id}`\n\n**Steps to connect:**\n1. Go to: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{telegram_user.telegram_id}`\n5. Click 'Connect Telegram'"
+                response_text = f"🔐 **Not Connected**\n\nTo use this bot, connect your Telegram account via the webapp:\n\n**Your Telegram ID:** `{user.telegram_id}`\n\n**Steps to connect:**\n1. Go to: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your Telegram ID: `{user.telegram_id}`\n5. Click 'Connect Telegram'"
         elif text == '/status':
             if webapp_user:
                 auth_status = 'Connected to webapp'
-                telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
+                telegram_logger.info(f"📊 User {user.full_name} checked status: {auth_status}")
                 response_text = f"Status: {auth_status}\n\nYou can use natural language commands like:\n• 'Add roee'\n• 'Show my tasks'\n• 'Find contacts'"
             else:
                 auth_status = 'Not connected to webapp'
-                telegram_logger.info(f"📊 User {telegram_user.first_name} checked status: {auth_status}")
+                telegram_logger.info(f"📊 User {user.full_name} checked status: {auth_status}")
                 response_text = f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         else:
             # Handle state-based responses
-            telegram_logger.info(f"🔍 Current state for user {telegram_user.first_name}: '{telegram_user.current_state}'")
-            if telegram_user.current_state == 'waiting_delete_confirmation':
+            telegram_logger.info(f"🔍 Current state for user {user.full_name}: '{user.current_state}'")
+            if user.current_state == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
                     selection = int(text.strip())
-                    if telegram_user.state_data and 'search_term' in telegram_user.state_data:
-                        search_term = telegram_user.state_data['search_term']
+                    if user.state_data and 'search_term' in user.state_data:
+                        search_term = user.state_data['search_term']
                         people = Person.query.filter(Person.full_name.ilike(f'%{search_term}%')).limit(10).all()
                         
                         if 1 <= selection <= len(people):
@@ -1313,8 +1277,8 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                             db.session.commit()
                             
                             # Reset state
-                            telegram_user.current_state = 'idle'
-                            telegram_user.state_data = None
+                            user.current_state = 'idle'
+                            user.state_data = None
                             db.session.commit()
                             
                             response_text = f"✅ {person_name} deleted successfully."
@@ -1326,22 +1290,22 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                     response_text = "❌ Please enter a valid number to select the contact to delete."
                 except Exception as e:
                     response_text = f"❌ Error deleting contact: {str(e)}"
-            elif telegram_user.current_state == 'waiting_email':
+            elif user.current_state == 'waiting_email':
                 # User is trying to authenticate but needs to connect via webapp first
-                telegram_logger.info(f"📧 User {telegram_user.first_name} tried to authenticate but not connected to webapp")
+                telegram_logger.info(f"📧 User {user.full_name} tried to authenticate but not connected to webapp")
                 response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
             else:
                 # Use OpenAI to process natural language requests
                 if webapp_user:
-                    telegram_logger.info(f"🤖 Processing natural language request for user {telegram_user.first_name}: '{text}'")
+                    telegram_logger.info(f"🤖 Processing natural language request for user {user.full_name}: '{text}'")
                     response_text = process_natural_language_request(text, telegram_user)
-                    telegram_logger.info(f"🤖 OpenAI response for user {telegram_user.first_name}: '{response_text[:100]}...'")
+                    telegram_logger.info(f"🤖 OpenAI response for user {user.full_name}: '{response_text[:100]}...'")
                 else:
-                    telegram_logger.info(f"🚫 Unconnected user {telegram_user.first_name} tried to use bot: '{text}'")
+                    telegram_logger.info(f"🚫 Unconnected user {user.full_name} tried to use bot: '{text}'")
                     response_text = "🔐 Please connect your Telegram account via the webapp first. Send /start for instructions."
         
         # Log response being sent
-        telegram_logger.info(f"📤 Sending response to user {telegram_user.first_name}: '{response_text[:100]}...'")
+        telegram_logger.info(f"📤 Sending response to user {user.full_name}: '{response_text[:100]}...'")
         
         # Send response back to telegram
         try:
@@ -1356,13 +1320,13 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 
                 response = requests.post(url, data=data, timeout=10)
                 if response.status_code == 200:
-                    telegram_logger.info(f"✅ Message sent successfully to user {telegram_user.first_name}")
+                    telegram_logger.info(f"✅ Message sent successfully to user {user.full_name}")
                 else:
-                    telegram_logger.error(f"❌ Failed to send message to user {telegram_user.first_name}: {response.status_code} - {response.text}")
+                    telegram_logger.error(f"❌ Failed to send message to user {user.full_name}: {response.status_code} - {response.text}")
             else:
                 telegram_logger.error("❌ Telegram bot token not configured")
         except Exception as e:
-            telegram_logger.error(f"💥 Error sending message to user {telegram_user.first_name}: {str(e)}")
+            telegram_logger.error(f"💥 Error sending message to user {user.full_name}: {str(e)}")
         
         return jsonify({'status': 'ok', 'response': response_text})
         

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import User, TelegramUser
+from dal.models import User
 from dal.database import db
 from bl.services.whatsapp_service import whatsapp_service
 from bl.services.messaging_service import messaging_service
@@ -244,16 +244,7 @@ def whatsapp_webhook():
                     # Process the approved transcription as a regular text message
                     from routes.telegram import process_natural_language_request
                     
-                    class MockTelegramUser:
-                        def __init__(self, user):
-                            self.telegram_id = user.whatsapp_phone
-                            self.first_name = user.full_name or "User"
-                            self.current_state = 'idle'
-                            self.state_data = None
-                            self.is_whatsapp_user = True  # Flag to identify WhatsApp users
-                    
-                    mock_user = MockTelegramUser(user)
-                    response_text = process_natural_language_request(transcription, mock_user)
+                    response_text = process_natural_language_request(transcription, user)
                     
                     whatsapp_service.send_message(from_phone, response_text)
                     return jsonify({'status': 'ok'})
@@ -272,17 +263,7 @@ def whatsapp_webhook():
             # Process the message using the same logic as Telegram
             from routes.telegram import process_natural_language_request
             
-            # Create a mock telegram_user object for compatibility
-            class MockTelegramUser:
-                def __init__(self, user):
-                    self.telegram_id = user.whatsapp_phone
-                    self.first_name = user.full_name or "User"
-                    self.current_state = 'idle'
-                    self.state_data = None
-                    self.is_whatsapp_user = True  # Flag to identify WhatsApp users
-            
-            mock_user = MockTelegramUser(user)
-            response_text = process_natural_language_request(message_text, mock_user)
+            response_text = process_natural_language_request(message_text, user)
             
             # Send response back to WhatsApp
             whatsapp_service.send_message(from_phone, response_text)

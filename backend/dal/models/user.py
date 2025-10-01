@@ -19,6 +19,10 @@ class User(db.Model):
     preferred_messaging_platform = db.Column(db.String(20), default='telegram')  # 'telegram' or 'whatsapp'
     state_data = db.Column(db.JSON, nullable=True)  # For storing temporary state like voice transcriptions
     
+    # Bot state fields (moved from TelegramUser)
+    current_state = db.Column(db.String(100), default='idle')  # Bot conversation state
+    telegram_username = db.Column(db.String(255))  # Telegram username
+    
     # Google OAuth fields
     google_id = db.Column(db.String(100), unique=True, nullable=True)
     google_refresh_token = db.Column(db.Text, nullable=True)
@@ -55,6 +59,8 @@ class User(db.Model):
             'whatsapp_phone': self.whatsapp_phone,
             'preferred_messaging_platform': self.preferred_messaging_platform,
             'state_data': self.state_data,
+            'current_state': self.current_state,
+            'telegram_username': self.telegram_username,
             'google_id': self.google_id,
             'google_contacts_synced_at': self.google_contacts_synced_at.isoformat() if self.google_contacts_synced_at else None,
             'google_calendar_synced_at': self.google_calendar_synced_at.isoformat() if self.google_calendar_synced_at else None,
