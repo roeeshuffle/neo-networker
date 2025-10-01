@@ -126,26 +126,38 @@ const Dashboard = () => {
       if (error) throw error;
       
       console.log('Tasks data:', data);
-      setTotalTasks(data?.length || 0);
+      
+      // Handle different response formats
+      let tasks = [];
+      if (Array.isArray(data)) {
+        tasks = data;
+      } else if (data && Array.isArray(data.tasks)) {
+        tasks = data.tasks;
+      } else if (data && data.projects) {
+        // If data is in projects format, flatten all tasks
+        tasks = Object.values(data.projects).flat();
+      }
+      
+      setTotalTasks(tasks.length);
       
       // Calculate today's tasks (Israel timezone)
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
       
-      const todayTasksCount = data?.filter(task => {
+      const todayTasksCount = tasks.filter(task => {
         if (!task.due_date) return false;
         const taskDate = new Date(task.due_date);
         return taskDate >= todayStart && taskDate <= todayEnd;
-      }).length || 0;
+      }).length;
       
       console.log('Today tasks count:', todayTasksCount);
       setTodayTasks(todayTasksCount);
       
       // Calculate total open tasks (not completed or cancelled)
-      const openTasksCount = data?.filter(task => 
+      const openTasksCount = tasks.filter(task => 
         task.status !== 'completed' && task.status !== 'cancelled'
-      ).length || 0;
+      ).length;
       
       console.log('Open tasks count:', openTasksCount);
       setTotalOpenTasks(openTasksCount);
@@ -169,8 +181,17 @@ const Dashboard = () => {
       if (error) throw error;
       
       console.log('Events data:', data);
-      console.log('Today events count:', data?.length || 0);
-      setTodayEvents(data?.length || 0);
+      
+      // Handle different response formats
+      let events = [];
+      if (Array.isArray(data)) {
+        events = data;
+      } else if (data && Array.isArray(data.events)) {
+        events = data.events;
+      }
+      
+      console.log('Today events count:', events.length);
+      setTodayEvents(events.length);
     } catch (error: any) {
       console.error('Error fetching events count:', error);
     }
