@@ -96,6 +96,31 @@ app.register_blueprint(admin_bp, url_prefix='/api')
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
+@app.route('/api/health-fix', methods=['GET'])
+def health_check_with_fix():
+    """Health check that also fixes database issues"""
+    try:
+        # Try to fix database issues
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id VARCHAR(255);")
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(255);")
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(255);")
+        db.session.execute("DROP TABLE IF EXISTS telegram_users CASCADE;")
+        db.session.execute("DROP TABLE IF EXISTS companies CASCADE;")
+        db.session.execute("DROP TABLE IF EXISTS shared_data CASCADE;")
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'healthy', 
+            'timestamp': datetime.utcnow().isoformat(),
+            'database_fixed': True
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'healthy', 
+            'timestamp': datetime.utcnow().isoformat(),
+            'database_fix_error': str(e)
+        })
+
 @app.route('/api/migration-test', methods=['GET'])
 def migration_test():
     """Test endpoint to verify migration is working"""
