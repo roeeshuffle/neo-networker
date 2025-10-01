@@ -107,58 +107,83 @@ def migrate_database():
     try:
         logger.info("🚀 Starting production database migration...")
         
-        # Execute SQL migration directly
-        migration_sql = """
-        -- Add new columns to users table
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id VARCHAR(255);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(255);
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(255);
+        # Execute migration SQL statements one by one
+        migration_statements = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id VARCHAR(255);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(255);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(255);",
+        ]
         
-        -- Rename columns to match simplified model
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') 
-               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
-                ALTER TABLE users RENAME COLUMN name TO full_name;
-            END IF;
-        END $$;
+        # Execute each statement
+        for statement in migration_statements:
+            try:
+                db.session.execute(statement)
+                logger.info(f"✅ Executed: {statement}")
+            except Exception as e:
+                logger.warning(f"⚠️ Statement warning: {e}")
         
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'fullname') 
-               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
-                ALTER TABLE users RENAME COLUMN fullname TO full_name;
-            END IF;
-        END $$;
+        # Rename columns if they exist
+        try:
+            db.session.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') 
+                       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
+                        ALTER TABLE users RENAME COLUMN name TO full_name;
+                    END IF;
+                END $$;
+            """)
+            logger.info("✅ Renamed 'name' to 'full_name' if needed")
+        except Exception as e:
+            logger.warning(f"⚠️ Rename warning: {e}")
         
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') 
-               AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash') THEN
-                ALTER TABLE users RENAME COLUMN password TO password_hash;
-            END IF;
-        END $$;
+        try:
+            db.session.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password') 
+                       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash') THEN
+                        ALTER TABLE users RENAME COLUMN password TO password_hash;
+                    END IF;
+                END $$;
+            """)
+            logger.info("✅ Renamed 'password' to 'password_hash' if needed")
+        except Exception as e:
+            logger.warning(f"⚠️ Rename warning: {e}")
         
-        -- Migrate data from telegram_users table if it exists
-        DO $$
-        BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'telegram_users') THEN
-                UPDATE users 
-                SET telegram_id = tu.telegram_id,
-                    telegram_username = tu.telegram_username
-                FROM telegram_users tu 
-                WHERE users.id = tu.user_id;
-            END IF;
-        END $$;
+        # Migrate telegram_users data if table exists
+        try:
+            db.session.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'telegram_users') THEN
+                        UPDATE users 
+                        SET telegram_id = tu.telegram_id,
+                            telegram_username = tu.telegram_username
+                        FROM telegram_users tu 
+                        WHERE users.id = tu.user_id;
+                    END IF;
+                END $$;
+            """)
+            logger.info("✅ Migrated telegram_users data if table existed")
+        except Exception as e:
+            logger.warning(f"⚠️ Telegram migration warning: {e}")
         
-        -- Drop unnecessary tables
-        DROP TABLE IF EXISTS telegram_users CASCADE;
-        DROP TABLE IF EXISTS companies CASCADE;
-        DROP TABLE IF EXISTS shared_data CASCADE;
-        """
+        # Drop unnecessary tables
+        drop_statements = [
+            "DROP TABLE IF EXISTS telegram_users CASCADE;",
+            "DROP TABLE IF EXISTS companies CASCADE;",
+            "DROP TABLE IF EXISTS shared_data CASCADE;"
+        ]
         
-        # Execute the migration SQL
-        db.session.execute(migration_sql)
+        for statement in drop_statements:
+            try:
+                db.session.execute(statement)
+                logger.info(f"✅ Executed: {statement}")
+            except Exception as e:
+                logger.warning(f"⚠️ Drop warning: {e}")
+        
+        # Commit all changes
         db.session.commit()
         
         logger.info("✅ Database migration completed successfully")
