@@ -101,8 +101,8 @@ def migration_test():
     """Test endpoint to verify migration is working"""
     return jsonify({'message': 'Migration endpoint is working', 'status': 'ok'})
 
-@app.route('/api/migrate-database', methods=['POST'])
-def migrate_database():
+@app.route('/api/fix-database', methods=['POST'])
+def fix_database():
     """Run database migration to update production database structure"""
     try:
         logger.info("🚀 Starting production database migration...")
