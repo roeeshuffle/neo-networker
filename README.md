@@ -1,74 +1,201 @@
-# Welcome to your Lovable project
+# 🚀 Neo Networker - Professional CRM System
 
-## Project info
+A modern, full-stack CRM application with task management, event scheduling, and contact management capabilities.
 
-**URL**: https://lovable.dev/projects/3bfcbb3c-1ba8-4ab8-98f9-28a8d33af7d8
+## 🏗️ Architecture Overview
 
-## How can I edit this code?
+This project follows a **clean, layered architecture** with clear separation of concerns:
 
-There are several ways of editing your application.
+```
+neo-networker/
+├── 📁 backend/                    # Backend API Layer
+│   ├── 📁 dal/                   # Data Access Layer
+│   │   ├── models/               # SQLAlchemy Models
+│   │   ├── migrations/           # Database Migrations
+│   │   └── database.py           # Database Connection
+│   ├── 📁 bl/                    # Business Logic Layer
+│   │   ├── services/             # Business Services
+│   │   └── utils/                # Business Utilities
+│   ├── 📁 dsl/                   # Domain Service Layer
+│   │   ├── auth/                 # Authentication Services
+│   │   ├── tasks/                # Task Domain Services
+│   │   ├── events/               # Event Domain Services
+│   │   └── contacts/             # Contact Domain Services
+│   ├── 📁 api/                   # API Layer
+│   │   ├── routes/               # Flask Routes
+│   │   ├── middleware/           # Middleware
+│   │   └── app.py                # Flask App
+│   ├── 📁 config/                # Configuration
+│   ├── 📁 utils/                 # General Utilities
+│   └── main.py                   # Entry Point
+├── 📁 frontend/                  # Frontend Layer
+│   ├── src/                      # React Source Code
+│   ├── public/                   # Static Assets
+│   └── dist/                     # Build Output
+├── 📁 tests/                     # Test Layer
+│   ├── unit/                     # Unit Tests
+│   ├── integration/              # Integration Tests
+│   └── e2e/                      # End-to-End Tests
+├── 📁 docker/                    # Docker Configuration
+├── 📁 docs/                      # Documentation
+└── 📁 scripts/                   # Utility Scripts
+```
 
-**Use Lovable**
+## 🚀 Quick Start
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3bfcbb3c-1ba8-4ab8-98f9-28a8d33af7d8) and start prompting.
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 13+
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend Setup
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Frontend Setup
+```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Docker Setup
+```bash
+docker-compose -f docker/docker-compose.new.yml up
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🎯 Features
 
-**Use GitHub Codespaces**
+### ✅ **Tasks Management**
+- Create, update, delete tasks
+- Project-based organization
+- Scheduled tasks with future activation
+- Quick "done" button
+- Status filtering (todo, in_progress, completed)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### ✅ **Events & Calendar**
+- Create meetings and events
+- Daily, weekly, monthly calendar views
+- Event types (meeting/event)
+- Location and participant management
+- Repeat patterns and alerts
 
-## What technologies are used for this project?
+### ✅ **Contact Management**
+- Full contact CRUD operations
+- CSV import/export
+- Duplicate detection and management
+- Contact sharing capabilities
 
-This project is built with:
+### ✅ **Dashboard**
+- Today's events count
+- Today's tasks count
+- Total open tasks
+- Real-time statistics
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔧 API Endpoints
 
-## How can I deploy this project?
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/me` - Get current user
 
-Simply open [Lovable](https://lovable.dev/projects/3bfcbb3c-1ba8-4ab8-98f9-28a8d33af7d8) and click on Share -> Publish.
+### Tasks
+- `GET /api/tasks` - Get all tasks
+- `POST /api/tasks` - Create task
+- `PUT /api/tasks/{id}` - Update task
+- `DELETE /api/tasks/{id}` - Delete task
 
-## Can I connect a custom domain to my Lovable project?
+### Events
+- `GET /api/events` - Get all events
+- `POST /api/events` - Create event
+- `PUT /api/events/{id}` - Update event
+- `DELETE /api/events/{id}` - Delete event
 
-Yes, you can!
+### Contacts
+- `GET /api/people` - Get all contacts
+- `POST /api/people` - Create contact
+- `PUT /api/people/{id}` - Update contact
+- `DELETE /api/people/{id}` - Delete contact
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🧪 Testing
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-# Force deployment Wed Oct  1 15:00:39 IDT 2025
+### Run Integration Tests
+```bash
+python tests/integration/test_with_real_auth.py
+```
+
+### Expected Results
+- ✅ Tasks GET: 200
+- ✅ Events GET: 200
+- ✅ Tasks POST: 201
+- ✅ Events POST: 201
+
+## 🐳 Docker
+
+### Backend Container
+```bash
+docker build -f docker/Dockerfile.backend.new -t neo-backend .
+```
+
+### Frontend Container
+```bash
+docker build -f docker/Dockerfile.frontend -t neo-frontend .
+```
+
+### Full Stack
+```bash
+docker-compose -f docker/docker-compose.new.yml up
+```
+
+## 📚 Documentation
+
+- [Deployment Guide](docs/DEPLOYMENT_SUCCESS_CHECKLIST.md)
+- [Error Prevention](docs/QUICK_ERROR_PREVENTION.md)
+- [API Documentation](docs/API_DOCUMENTATION.md)
+- [Testing Guide](docs/TESTING_GUIDE.md)
+
+## 🔒 Security
+
+- JWT-based authentication
+- Password hashing with Werkzeug
+- CORS protection
+- Input validation and sanitization
+
+## 🚀 Deployment
+
+### AWS App Runner
+The application is configured for AWS App Runner deployment with:
+- Automatic scaling
+- Load balancing
+- SSL termination
+- Environment variable management
+
+### Environment Variables
+```bash
+DATABASE_URL=postgresql://user:pass@host:port/db
+JWT_SECRET_KEY=your-secret-key
+FLASK_ENV=production
+```
+
+## 🎉 Status
+
+**✅ ALL SYSTEMS OPERATIONAL**
+- Backend API: ✅ Working
+- Frontend UI: ✅ Working
+- Database: ✅ Connected
+- Authentication: ✅ Secure
+- Tasks & Events: ✅ Fully Functional
+
+## 🤝 Contributing
+
+1. Follow the layered architecture
+2. Write tests for new features
+3. Update documentation
+4. Run integration tests before deployment
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
