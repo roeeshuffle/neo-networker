@@ -33,7 +33,8 @@ jobs:
         WHATSAPP_PHONE_NUMBER_ID: test-phone-id
         WHATSAPP_WEBHOOK_VERIFY_TOKEN: test-verify-token
       run: |
-        python -m pytest tests/integration/test_basic.py -v
+        cd backend
+        python -m pytest ../tests/integration/test_basic.py -v
     
     - name: Set up Node.js
       uses: actions/setup-node@v3
