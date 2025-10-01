@@ -10,6 +10,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neo_networker_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
     - uses: actions/checkout@v3
     
@@ -23,9 +37,35 @@ jobs:
         cd backend
         pip install -r requirements.txt
     
-    - name: Run backend tests
+    - name: Set up test database
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/neo_networker_test
+        JWT_SECRET_KEY: test-secret-key
       run: |
-        python -m pytest tests/integration/ -v
+        cd backend
+        python -c "
+        from dal.database import db, create_tables
+        create_tables()
+        print('Test database setup complete')
+        "
+    
+    - name: Run basic tests
+      run: |
+        cd backend
+        python -m pytest tests/integration/test_basic.py -v
+    
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/neo_networker_test
+        JWT_SECRET_KEY: test-secret-key
+        OPENAI_API_KEY: test-openai-key
+        TELEGRAM_BOT_TOKEN: test-telegram-token
+        WHATSAPP_ACCESS_TOKEN: test-whatsapp-token
+        WHATSAPP_PHONE_NUMBER_ID: test-phone-id
+        WHATSAPP_WEBHOOK_VERIFY_TOKEN: test-verify-token
+      run: |
+        cd backend
+        python -m pytest tests/integration/ -v --ignore=tests/integration/test_basic.py
     
     - name: Set up Node.js
       uses: actions/setup-node@v3
