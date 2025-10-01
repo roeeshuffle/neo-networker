@@ -144,7 +144,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   return (
     <div className="overflow-hidden rounded-lg">
       <div className="overflow-x-auto resize-x min-w-full max-w-full" style={{ resize: 'horizontal' }}>
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-[700px]">
           <thead>
             <tr className="border-b border-border-soft bg-muted/30">
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider w-16">
@@ -178,32 +178,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                         placeholder="Enter name..."
                         value={filters.full_name || ''}
                         onChange={(e) => handleFilter('full_name', e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-              <div className="flex items-center gap-2">
-                Email
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-6 w-6 p-0 ${filters.email ? 'text-green-600' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by email</label>
-                      <Input
-                        placeholder="Enter email..."
-                        value={filters.email || ''}
-                        onChange={(e) => handleFilter('email', e.target.value)}
                       />
                     </div>
                   </PopoverContent>
@@ -296,8 +270,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 </Popover>
               </div>
             </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Newsletter</th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Owner</th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -335,18 +307,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 )}
               </td>
               <td className="px-6 py-4">
-                {person.email ? (
-                  <a 
-                    href={`mailto:${person.email}`}
-                    className="text-sm text-primary hover:text-primary-hover transition-colors font-medium"
-                  >
-                    {person.email}
-                  </a>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
-                )}
-              </td>
-              <td className="px-6 py-4">
                 <span className="text-sm font-medium text-foreground">{person.company || "—"}</span>
               </td>
                <td className="px-6 py-4">
@@ -379,17 +339,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                <td className="px-6 py-4">
                  <span className="text-sm font-medium text-foreground">{person.status || "—"}</span>
                </td>
-               <td className="px-6 py-4">
-                 <div className="flex items-center gap-2">
-                   <div className={`w-2 h-2 rounded-full ${person.newsletter ? 'bg-secondary' : 'bg-muted-foreground/30'}`}></div>
-                   <span className={`text-sm font-medium ${person.newsletter ? 'text-secondary-foreground' : 'text-muted-foreground'}`}>
-                     {person.newsletter ? 'Subscribed' : 'Not subscribed'}
-                   </span>
-                 </div>
-                </td>
-                <td className="px-6 py-4">
-                  <OwnerInfo ownerId={person.owner_id || ""} />
-                </td>
                 <td className="px-6 py-4">
                  <div className="flex gap-2">
                    <Button
