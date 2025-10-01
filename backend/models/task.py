@@ -25,7 +25,7 @@ class Task(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Legacy columns (for backward compatibility)
-    text = db.Column(db.Text, nullable=True)  # Old title field
+    text = db.Column(db.Text, nullable=False, default='')  # Old title field with default
     assign_to = db.Column(db.String(255), nullable=True)
     label = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
