@@ -57,6 +57,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>('weekly');
+
+  const handleViewModeChange = (value: 'weekly' | 'daily' | 'monthly') => {
+    console.log('Changing view mode to:', value);
+    setViewMode(value);
+  };
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -324,7 +329,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
           <p className="text-muted-foreground">Manage your scheduled events and meetings</p>
         </div>
         <div className="flex gap-2">
-          <Select value={viewMode} onValueChange={(value: 'weekly' | 'daily' | 'monthly') => setViewMode(value)}>
+          <Select value={viewMode} onValueChange={handleViewModeChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -546,6 +551,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
       </div>
 
       {/* Calendar Views */}
+      {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
         <div className="space-y-4">
           <Card>

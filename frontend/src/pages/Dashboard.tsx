@@ -120,9 +120,12 @@ const Dashboard = () => {
 
   const fetchTasksCount = async () => {
     try {
+      console.log('Fetching tasks count...');
       const { data, error } = await apiClient.getTasks();
 
       if (error) throw error;
+      
+      console.log('Tasks data:', data);
       setTotalTasks(data?.length || 0);
       
       // Calculate today's tasks (Israel timezone)
@@ -136,6 +139,7 @@ const Dashboard = () => {
         return taskDate >= todayStart && taskDate <= todayEnd;
       }).length || 0;
       
+      console.log('Today tasks count:', todayTasksCount);
       setTodayTasks(todayTasksCount);
       
       // Calculate total open tasks (not completed or cancelled)
@@ -143,6 +147,7 @@ const Dashboard = () => {
         task.status !== 'completed' && task.status !== 'cancelled'
       ).length || 0;
       
+      console.log('Open tasks count:', openTasksCount);
       setTotalOpenTasks(openTasksCount);
     } catch (error: any) {
       console.error('Error fetching tasks count:', error);
@@ -151,6 +156,7 @@ const Dashboard = () => {
 
   const fetchEventsCount = async () => {
     try {
+      console.log('Fetching events count...');
       const today = new Date();
       const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
@@ -161,6 +167,9 @@ const Dashboard = () => {
       );
 
       if (error) throw error;
+      
+      console.log('Events data:', data);
+      console.log('Today events count:', data?.length || 0);
       setTodayEvents(data?.length || 0);
     } catch (error: any) {
       console.error('Error fetching events count:', error);
