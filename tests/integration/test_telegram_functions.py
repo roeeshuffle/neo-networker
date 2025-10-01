@@ -5,12 +5,12 @@ Tests all functionality with mock data generation
 """
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'backend'))
 
-from app import app
-from models import User, Person, Company, Task, TelegramUser
-from database import db
-from routes.telegram import process_natural_language_request
+from api.app import app
+from dal.models import User, Person, Company, Task, TelegramUser
+from dal.database import db
+from api.routes.telegram import process_natural_language_request
 import uuid
 from datetime import datetime, timedelta
 import random

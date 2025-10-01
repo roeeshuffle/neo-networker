@@ -11,10 +11,11 @@ import sys
 from datetime import datetime, timedelta
 
 # Add the backend directory to the Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'backend'))
 
-from app import app, db
-from models import User, Person, Company, Task, SharedData, TelegramUser
+from api.app import app
+from dal.database import db
+from dal.models import User, Person, Company, Task, SharedData, TelegramUser
 from flask_jwt_extended import create_access_token
 
 class TestNeoNetworkerAPI(unittest.TestCase):

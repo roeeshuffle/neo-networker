@@ -13,11 +13,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 # Import and run the Flask app from the new structure
 from api.app import app
 
-# Add a simple health check route
-@app.route('/health')
-def health_check():
-    return {'status': 'healthy', 'message': 'Neo Networker API is running'}, 200
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5002))
     print(f"🚀 Starting Neo Networker on port {port}")
