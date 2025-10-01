@@ -69,6 +69,26 @@ const Dashboard = () => {
     }
   }, [isAuthenticated, authLoading, user, navigate]);
 
+  // Refresh counts when switching to tasks or events tabs
+  useEffect(() => {
+    if (isAuthenticated && user && (activeTab === 'tasks' || activeTab === 'events')) {
+      fetchTasksCount();
+      fetchEventsCount();
+    }
+  }, [activeTab, isAuthenticated, user]);
+
+  // Periodic refresh of counts every 30 seconds
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const interval = setInterval(() => {
+      fetchTasksCount();
+      fetchEventsCount();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user]);
+
   const loadData = async () => {
     if (user) {
       await fetchPeople();

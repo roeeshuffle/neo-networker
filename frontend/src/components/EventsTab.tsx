@@ -264,6 +264,22 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
     });
   };
 
+  const handleDateClick = (date: Date) => {
+    // Set the form data with the clicked date
+    const startDate = new Date(date);
+    startDate.setHours(9, 0, 0, 0); // Default to 9:00 AM
+    const endDate = new Date(date);
+    endDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
+    
+    setFormData({
+      ...formData,
+      start_datetime: startDate.toISOString().slice(0, 16), // Format for datetime-local input
+      end_datetime: endDate.toISOString().slice(0, 16),
+    });
+    
+    setIsAddDialogOpen(true);
+  };
+
   const navigateWeek = (direction: 'prev' | 'next') => {
     setCurrentWeek(prev => 
       direction === 'prev' 
@@ -538,9 +554,12 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                 {format(currentDay, 'EEEE, MMMM d, yyyy')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent 
+              className="space-y-3 cursor-pointer hover:bg-muted/20 transition-colors"
+              onClick={() => handleDateClick(currentDay)}
+            >
               {events.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No events scheduled for this day</p>
+                <p className="text-muted-foreground text-center py-8">No events scheduled for this day. Click to add an event.</p>
               ) : (
                 events.map((event) => (
                   <div
@@ -587,7 +606,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                     {format(date, 'MMM d')}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent 
+                  className="space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
+                  onClick={() => handleDateClick(date)}
+                >
                   {dayEvents.map((event) => (
                     <div
                       key={event.id}
@@ -638,9 +660,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                   return (
                     <div
                       key={i}
-                      className={`min-h-[80px] p-2 border rounded ${
+                      className={`min-h-[80px] p-2 border rounded cursor-pointer hover:bg-muted/20 transition-colors ${
                         isCurrentMonth ? 'bg-background' : 'bg-muted/30'
                       }`}
+                      onClick={() => handleDateClick(date)}
                     >
                       <div className={`text-sm ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {format(date, 'd')}
