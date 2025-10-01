@@ -101,6 +101,35 @@ def migration_test():
     """Test endpoint to verify migration is working"""
     return jsonify({'message': 'Migration endpoint is working', 'status': 'ok'})
 
+@app.route('/api/quick-fix', methods=['POST'])
+def quick_fix():
+    """Quick fix for database structure issues"""
+    try:
+        logger.info("🚀 Starting quick database fix...")
+        
+        # Add missing columns to users table
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id VARCHAR(255);")
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(255);")
+        db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(255);")
+        
+        # Drop problematic tables
+        db.session.execute("DROP TABLE IF EXISTS telegram_users CASCADE;")
+        db.session.execute("DROP TABLE IF EXISTS companies CASCADE;")
+        db.session.execute("DROP TABLE IF EXISTS shared_data CASCADE;")
+        
+        db.session.commit()
+        
+        logger.info("✅ Quick fix completed successfully")
+        return jsonify({
+            'message': 'Quick database fix completed successfully',
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"💥 Error in quick fix: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/fix-database', methods=['POST'])
 def fix_database():
     """Run database migration to update production database structure"""
