@@ -96,6 +96,52 @@ app.register_blueprint(migration_bp, url_prefix='/api')
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
+@app.route('/api/migration-test', methods=['GET'])
+def migration_test():
+    """Test endpoint to verify migration is working"""
+    return jsonify({'message': 'Migration endpoint is working', 'status': 'ok'})
+
+@app.route('/api/migrate-database', methods=['POST'])
+def migrate_database():
+    """Run database migration to update production database structure"""
+    try:
+        import subprocess
+        import os
+        
+        logger.info("🚀 Starting production database migration...")
+        
+        # Run the migration script
+        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrate_production_db.py')
+        
+        try:
+            result = subprocess.run([
+                'python', script_path
+            ], capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                logger.info("✅ Database migration completed successfully")
+                return jsonify({
+                    'message': 'Database migration completed successfully',
+                    'output': result.stdout
+                }), 200
+            else:
+                logger.error(f"❌ Migration failed: {result.stderr}")
+                return jsonify({
+                    'error': 'Database migration failed',
+                    'details': result.stderr
+                }), 500
+                
+        except subprocess.TimeoutExpired:
+            logger.error("❌ Migration timed out")
+            return jsonify({'error': 'Migration timed out'}), 500
+        except Exception as e:
+            logger.error(f"❌ Migration error: {e}")
+            return jsonify({'error': str(e)}), 500
+        
+    except Exception as e:
+        logger.error(f"💥 Error in migration endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Removed Google OAuth endpoint - Google OAuth fields removed from User model
 
 @app.before_request
