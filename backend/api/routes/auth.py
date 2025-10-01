@@ -64,34 +64,62 @@ def register():
 def login():
     """Login user with email and password"""
     try:
+        print("🔍 LOGIN DEBUG: Starting login process")
+        
         data = request.get_json()
+        print(f"🔍 LOGIN DEBUG: Request data received: {data}")
+        
         email = data.get('email')
         password = data.get('password')
+        print(f"🔍 LOGIN DEBUG: Email: {email}, Password provided: {bool(password)}")
         
         if not email or not password:
+            print("🔍 LOGIN DEBUG: Missing email or password")
             return jsonify({'error': 'Email and password are required'}), 400
         
+        print("🔍 LOGIN DEBUG: Querying user from database")
         user = User.query.filter_by(email=email).first()
+        print(f"🔍 LOGIN DEBUG: User found: {user is not None}")
+        
         if not user:
+            print("🔍 LOGIN DEBUG: User not found")
             return jsonify({'error': 'Invalid email or password'}), 401
         
+        print(f"🔍 LOGIN DEBUG: User ID: {user.id}, Email: {user.email}, Approved: {user.is_approved}")
+        
         # Check password
+        print("🔍 LOGIN DEBUG: Checking password")
         if not user.password_hash or not check_password_hash(user.password_hash, password):
+            print("🔍 LOGIN DEBUG: Password check failed")
             return jsonify({'error': 'Invalid email or password'}), 401
+        
+        print("🔍 LOGIN DEBUG: Password check passed")
         
         # Check if user is approved
         if not user.is_approved:
+            print("🔍 LOGIN DEBUG: User not approved")
             return jsonify({'error': 'Your account is pending admin approval. Please wait for approval before logging in.'}), 403
         
+        print("🔍 LOGIN DEBUG: User is approved, creating access token")
         # Create access token
         access_token = create_access_token(identity=user.id)
+        print("🔍 LOGIN DEBUG: Access token created successfully")
         
+        print("🔍 LOGIN DEBUG: Converting user to dict")
+        user_dict = user.to_dict()
+        print("🔍 LOGIN DEBUG: User dict created successfully")
+        
+        print("🔍 LOGIN DEBUG: Login successful, returning response")
         return jsonify({
-            'user': user.to_dict(),
+            'user': user_dict,
             'access_token': access_token
         })
         
     except Exception as e:
+        print(f"❌ LOGIN ERROR: {str(e)}")
+        print(f"❌ LOGIN ERROR TYPE: {type(e).__name__}")
+        import traceback
+        print(f"❌ LOGIN ERROR TRACEBACK: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/me', methods=['GET'])
