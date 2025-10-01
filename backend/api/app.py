@@ -89,7 +89,7 @@ app.register_blueprint(telegram_auth_bp, url_prefix='/api')
 app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(google_auth_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
-app.register_blueprint(migration_bp, url_prefix='/api')
+# app.register_blueprint(migration_bp, url_prefix='/api')  # Disabled - using direct endpoint instead
 # Removed temporary fix blueprint registrations - no longer needed
 
 @app.route('/api/health')
