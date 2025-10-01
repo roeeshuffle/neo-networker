@@ -347,18 +347,48 @@ def send_admin_notification(user_id: str, prompt: str, response: str, success: b
     except Exception as e:
         telegram_logger.error(f"💥 Error sending admin notification: {e}")
 
-def load_bot_prompt():
-    """Load the bot prompt from external file"""
+def get_or_create_thread(telegram_user: TelegramUser):
+    """Get or create a thread for the user"""
     try:
-        prompt_path = os.path.join(os.path.dirname(__file__), '..', '..', 'prompts', 'bot_router.txt')
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            return f.read().strip()
+        # Use telegram_id as thread identifier
+        thread_id = telegram_user.state_data.get('thread_id') if telegram_user.state_data else None
+        
+        if not thread_id:
+            # Create new thread
+            client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            thread = client.beta.threads.create()
+            thread_id = thread.id
+            
+            # Store thread_id in user's state_data
+            if not telegram_user.state_data:
+                telegram_user.state_data = {}
+            telegram_user.state_data['thread_id'] = thread_id
+            db.session.commit()
+            
+            telegram_logger.info(f"🧵 Created new thread {thread_id} for user {telegram_user.first_name}")
+        
+        return thread_id
     except Exception as e:
-        telegram_logger.error(f"❌ Error loading bot prompt: {e}")
-        return "You are a function router. Return ONLY a JSON array [function_number, parameters]."
+        telegram_logger.error(f"💥 Error managing thread: {e}")
+        return None
+
+def cleanup_old_threads():
+    """Clean up old threads to prevent accumulation (run periodically)"""
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        # Get all threads (this is a simplified approach)
+        # In production, you might want to implement a more sophisticated cleanup
+        # based on thread age, message count, etc.
+        
+        # For now, we'll just log that cleanup was attempted
+        telegram_logger.info("🧹 Thread cleanup attempted (simplified implementation)")
+        
+    except Exception as e:
+        telegram_logger.error(f"💥 Error during thread cleanup: {e}")
 
 def process_natural_language_request(text: str, telegram_user: TelegramUser) -> str:
-    """Process natural language requests using OpenAI and map to functions"""
+    """Process natural language requests using OpenAI Assistant API"""
     telegram_logger.info(f"🧠 Processing natural language request: '{text}' for user {telegram_user.first_name}")
     
     if not os.getenv('OPENAI_API_KEY'):
@@ -366,48 +396,84 @@ def process_natural_language_request(text: str, telegram_user: TelegramUser) -> 
         return "❌ OpenAI API not configured. Please contact administrator."
 
     try:
-        import requests
+        # Get or create thread for user
+        thread_id = get_or_create_thread(telegram_user)
+        if not thread_id:
+            return "❌ Error creating conversation thread. Please try again."
         
-        # Load prompt from external file
-        system_prompt = load_bot_prompt()
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        response = requests.post('https://api.openai.com/v1/chat/completions', 
-            headers={
-                'Authorization': f'Bearer {os.getenv("OPENAI_API_KEY")}',
-                'Content-Type': 'application/json',
-            },
-            json={
-                'model': 'gpt-4o-mini',
-                'messages': [
-                    { 
-                        'role': 'system', 
-                        'content': system_prompt
-                    },
-                    { 'role': 'user', 'content': text }
-                ],
-                'temperature': 0.1,
-                'max_tokens': 150
-            }
+        # Add user message to thread
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=text
         )
-
-        data = response.json()
-        function_call = data['choices'][0]['message']['content'].strip()
         
-        telegram_logger.info(f"🤖 OpenAI function router response: {function_call}")
+        # Run the assistant
+        run = client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id="asst_alist"  # Your assistant ID
+        )
         
+        telegram_logger.info(f"🤖 Started assistant run {run.id} for user {telegram_user.first_name}")
+        
+        # Poll for completion
+        import time
+        max_attempts = 30  # 15 seconds max
+        attempts = 0
+        
+        while attempts < max_attempts:
+            run_status = client.beta.threads.runs.retrieve(
+                thread_id=thread_id,
+                run_id=run.id
+            )
+            
+            if run_status.status in ["completed", "failed", "requires_action"]:
+                break
+                
+            time.sleep(0.5)
+            attempts += 1
+        
+        if run_status.status == "failed":
+            telegram_logger.error(f"❌ Assistant run failed: {run_status.last_error}")
+            return "❌ Sorry, I encountered an error processing your request."
+        
+        if run_status.status == "requires_action":
+            telegram_logger.warning(f"⚠️ Assistant requires action: {run_status.required_action}")
+            return "❌ Sorry, I need more information to process your request."
+        
+        # Get assistant's response
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        
+        # Find the latest assistant message
+        assistant_response = None
+        for msg in messages.data:
+            if msg.role == "assistant":
+                assistant_response = msg.content[0].text.value
+                break
+        
+        if not assistant_response:
+            telegram_logger.error("❌ No assistant response found")
+            return "❌ Sorry, I didn't receive a response from the assistant."
+        
+        telegram_logger.info(f"🤖 Assistant response: {assistant_response}")
+        
+        # Parse the JSON response
         try:
-            function_data = json.loads(function_call)
+            function_data = json.loads(assistant_response)
             function_number = function_data[0]
             parameters = function_data[1] if len(function_data) > 1 else None
             telegram_logger.info(f"🔧 Executing function {function_number} with parameters: {parameters}")
             return execute_bot_function(function_number, parameters, telegram_user, text)
         except (json.JSONDecodeError, IndexError) as parse_error:
-            telegram_logger.warning(f"⚠️ Failed to parse OpenAI function response: {parse_error}")
+            telegram_logger.warning(f"⚠️ Failed to parse assistant response: {parse_error}")
             # Fallback to search
             return search_from_telegram({"query": text, "type": "people"}, telegram_user)
         
     except Exception as error:
-        telegram_logger.error(f"💥 OpenAI function router error: {error}")
+        telegram_logger.error(f"💥 Assistant API error: {error}")
         # Fallback to search
         return search_from_telegram({"query": text, "type": "people"}, telegram_user)
 
