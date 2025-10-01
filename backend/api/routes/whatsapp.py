@@ -23,12 +23,12 @@ def handle_whatsapp_voice_message(message_data, from_phone):
         whatsapp_logger.info(f"🔍 [VOICE] Looking for user with WhatsApp phone: '{from_phone}'")
         
         # Debug: Check all users with WhatsApp phones
-        all_whatsapp_users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+        all_whatsapp_users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
         whatsapp_logger.info(f"📱 [VOICE] All users with WhatsApp phones:")
         for u in all_whatsapp_users:
-            whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone='{u.whatsapp_phone}'")
+            whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{u.whatsapp_phone_number}'")
         
-        user = User.query.filter_by(whatsapp_phone=from_phone).first()
+        user = User.query.filter_by(whatsapp_phone_number=from_phone).first()
         
         if not user:
             whatsapp_logger.info(f"❌ [VOICE] No user found with WhatsApp phone: {from_phone}")
@@ -209,12 +209,12 @@ def whatsapp_webhook():
             whatsapp_logger.info(f"🔍 Looking for user with WhatsApp phone: '{from_phone}'")
             
             # Debug: Check all users with WhatsApp phones
-            all_whatsapp_users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+            all_whatsapp_users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
             whatsapp_logger.info(f"📱 All users with WhatsApp phones:")
             for u in all_whatsapp_users:
-                whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone='{u.whatsapp_phone}'")
+                whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{u.whatsapp_phone_number}'")
             
-            user = User.query.filter_by(whatsapp_phone=from_phone).first()
+            user = User.query.filter_by(whatsapp_phone_number=from_phone).first()
             
             if not user:
                 whatsapp_logger.info(f"❌ No user found with WhatsApp phone: {from_phone}")
@@ -278,12 +278,12 @@ def whatsapp_webhook():
 def debug_whatsapp_users():
     """Debug endpoint to see all users with WhatsApp phones"""
     try:
-        users = User.query.filter(User.whatsapp_phone.isnot(None)).all()
+        users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
         result = []
         for user in users:
             result.append({
                 'email': user.email,
-                'whatsapp_phone': user.whatsapp_phone,
+                'whatsapp_phone_number': user.whatsapp_phone_number,
                 'is_approved': user.is_approved,
                 'preferred_messaging_platform': user.preferred_messaging_platform
             })
@@ -312,33 +312,33 @@ def connect_whatsapp():
         data = request.get_json()
         whatsapp_logger.info(f"🔧 [CONNECT] Request data: {data}")
         
-        whatsapp_phone = data.get('whatsapp_phone')
-        whatsapp_logger.info(f"🔧 [CONNECT] WhatsApp phone from request: '{whatsapp_phone}'")
+        whatsapp_phone_number = data.get('whatsapp_phone_number')
+        whatsapp_logger.info(f"🔧 [CONNECT] WhatsApp phone from request: '{whatsapp_phone_number}'")
         
-        if not whatsapp_phone:
+        if not whatsapp_phone_number:
             whatsapp_logger.error(f"❌ [CONNECT] No WhatsApp phone provided")
             return jsonify({'error': 'WhatsApp phone number is required'}), 400
         
         # Check if phone number is already in use
-        existing_user = User.query.filter_by(whatsapp_phone=whatsapp_phone).first()
+        existing_user = User.query.filter_by(whatsapp_phone_number=whatsapp_phone_number).first()
         if existing_user and existing_user.id != user.id:
-            whatsapp_logger.error(f"❌ [CONNECT] Phone {whatsapp_phone} already used by user {existing_user.email}")
+            whatsapp_logger.error(f"❌ [CONNECT] Phone {whatsapp_phone_number} already used by user {existing_user.email}")
             return jsonify({'error': 'WhatsApp phone number already in use'}), 400
         
         # Update user
-        whatsapp_logger.info(f"🔧 [CONNECT] Updating user {user.email} with WhatsApp phone: {whatsapp_phone}")
-        user.whatsapp_phone = whatsapp_phone
+        whatsapp_logger.info(f"🔧 [CONNECT] Updating user {user.email} with WhatsApp phone: {whatsapp_phone_number}")
+        user.whatsapp_phone_number = whatsapp_phone_number
         user.preferred_messaging_platform = 'whatsapp'
         db.session.commit()
         
         # Verify the save
         updated_user = User.query.get(current_user_id)
-        whatsapp_logger.info(f"✅ [CONNECT] User {user.email} connected WhatsApp phone: {whatsapp_phone}")
-        whatsapp_logger.info(f"✅ [CONNECT] Verification - User's whatsapp_phone: '{updated_user.whatsapp_phone}'")
+        whatsapp_logger.info(f"✅ [CONNECT] User {user.email} connected WhatsApp phone: {whatsapp_phone_number}")
+        whatsapp_logger.info(f"✅ [CONNECT] Verification - User's whatsapp_phone_number: '{updated_user.whatsapp_phone_number}'")
         
         return jsonify({
             'message': 'WhatsApp connected successfully',
-            'whatsapp_phone': whatsapp_phone
+            'whatsapp_phone_number': whatsapp_phone_number
         })
         
     except Exception as e:
@@ -356,7 +356,7 @@ def disconnect_whatsapp():
         if not user or not user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        user.whatsapp_phone = None
+        user.whatsapp_phone_number = None
         user.preferred_messaging_platform = 'telegram'  # Fallback to telegram
         db.session.commit()
         
@@ -380,8 +380,8 @@ def whatsapp_status():
             return jsonify({'error': 'Unauthorized'}), 403
         
         return jsonify({
-            'whatsapp_connected': bool(user.whatsapp_phone),
-            'whatsapp_phone': user.whatsapp_phone,
+            'whatsapp_connected': bool(user.whatsapp_phone_number),
+            'whatsapp_phone_number': user.whatsapp_phone_number,
             'preferred_platform': user.preferred_messaging_platform
         })
         

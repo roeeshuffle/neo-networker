@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from dal.models import User, Person, Company, Task
+from dal.models import User, Person, Task
 from dal.database import db
 from datetime import datetime
 import uuid
@@ -1209,10 +1209,8 @@ def telegram_webhook():
             user = User(
                 id=str(uuid.uuid4()),
                 telegram_id=user_id,
-                telegram_username=message['from'].get('username'),
                 full_name=message['from'].get('first_name'),
-                current_state='idle',
-                provider='telegram'
+                email=f"telegram_{user_id}@temp.com"  # Temporary email for Telegram users
             )
             db.session.add(user)
             db.session.commit()
