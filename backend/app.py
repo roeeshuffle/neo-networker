@@ -45,10 +45,11 @@ CORS(app)
 
 
 # Import models after db initialization
-from models import User, Person, Company, Task, SharedData, TelegramUser
+from models import User, Person, Company, Task, Event, SharedData, TelegramUser
 
 # Import routes
 from routes import auth_bp, people_bp, companies_bp, tasks_bp, csv_bp, telegram_bp
+from routes.events import events_bp
 from routes.telegram_auth import telegram_auth_bp
 from routes.whatsapp import whatsapp_bp
 from routes.google_auth import google_auth_bp
@@ -63,6 +64,7 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(people_bp, url_prefix='/api')
 app.register_blueprint(companies_bp, url_prefix='/api')
 app.register_blueprint(tasks_bp, url_prefix='/api')
+app.register_blueprint(events_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api')
 app.register_blueprint(telegram_bp, url_prefix='/api')
 app.register_blueprint(telegram_auth_bp, url_prefix='/api')

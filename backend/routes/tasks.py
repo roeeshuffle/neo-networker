@@ -10,7 +10,7 @@ tasks_bp = Blueprint('tasks', __name__)
 @tasks_bp.route('/tasks', methods=['GET'])
 @jwt_required()
 def get_tasks():
-    """Get all tasks for the current user"""
+    """Get all tasks for the current user, grouped by project"""
     try:
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
@@ -18,18 +18,38 @@ def get_tasks():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Get tasks owned by user or shared with user
-        tasks = Task.query.filter(
-            (Task.owner_id == current_user_id) |
-            (Task.id.in_(
-                db.session.query(SharedData.record_id).filter(
-                    SharedData.shared_with_user_id == current_user_id,
-                    SharedData.table_name == 'tasks'
-                )
-            ))
-        ).order_by(Task.created_at.desc()).all()
+        # Get query parameters
+        project = request.args.get('project')
+        status = request.args.get('status')
+        include_scheduled = request.args.get('include_scheduled', 'true').lower() == 'true'
         
-        return jsonify([task.to_dict() for task in tasks])
+        # Build query
+        query = Task.query.filter(Task.owner_id == current_user_id)
+        
+        if project:
+            query = query.filter(Task.project == project)
+        
+        if status:
+            query = query.filter(Task.status == status)
+        
+        if not include_scheduled:
+            # Only show active tasks (not scheduled for future)
+            query = query.filter(Task.is_active == True)
+        
+        tasks = query.order_by(Task.project.asc(), Task.priority.desc(), Task.created_at.desc()).all()
+        
+        # Group tasks by project
+        projects = {}
+        for task in tasks:
+            project_name = task.project
+            if project_name not in projects:
+                projects[project_name] = []
+            projects[project_name].append(task.to_dict())
+        
+        return jsonify({
+            'projects': projects,
+            'total_tasks': len(tasks)
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -40,78 +60,65 @@ def create_task():
     """Create a new task"""
     try:
         current_user_id = get_jwt_identity()
-        print(f"🔍 TASK CREATE - JWT Identity: {current_user_id}")
         current_user = User.query.get(current_user_id)
-        print(f"🔍 TASK CREATE - User found: {current_user is not None}")
-        if current_user:
-            print(f"🔍 TASK CREATE - User email: {current_user.email}")
-            print(f"🔍 TASK CREATE - User approved: {current_user.is_approved}")
-            print(f"🔍 TASK CREATE - User telegram_id: {current_user.telegram_id}")
         
         if not current_user or not current_user.is_approved:
-            print(f"❌ TASK CREATE - Unauthorized: user={current_user is not None}, approved={current_user.is_approved if current_user else 'N/A'}")
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
-        print(f"🔍 Debug - Received task data: {data}")
         
-        # Generate sequential task_id
-        max_task_id = db.session.query(db.func.max(Task.task_id)).filter(
-            Task.owner_id == current_user_id,
-            Task.task_id.isnot(None)
-        ).scalar() or 0
-        next_task_id = max_task_id + 1
+        # Validate required fields
+        required_fields = ['title', 'project']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
         
-        print(f"DEBUG: max_task_id={max_task_id}, next_task_id={next_task_id}")
+        # Handle date parsing
+        scheduled_date = None
+        if data.get('scheduled_date'):
+            try:
+                date_str = data['scheduled_date'].replace('Z', '') if data['scheduled_date'].endswith('Z') else data['scheduled_date']
+                scheduled_date = datetime.fromisoformat(date_str)
+            except ValueError as e:
+                return jsonify({'error': f'Invalid scheduled_date format: {data["scheduled_date"]}'}), 400
         
-        # Handle date parsing with debug logging
         due_date = None
         if data.get('due_date'):
             try:
-                # Remove 'Z' suffix if present (from JavaScript toISOString())
                 date_str = data['due_date'].replace('Z', '') if data['due_date'].endswith('Z') else data['due_date']
                 due_date = datetime.fromisoformat(date_str)
-                print(f"🔍 Debug - Parsed due_date: {due_date}")
             except ValueError as e:
-                print(f"🔍 Debug - Error parsing due_date '{data['due_date']}': {e}")
                 return jsonify({'error': f'Invalid due_date format: {data["due_date"]}'}), 400
         
-        alert_time = None
-        if data.get('alert_time'):
-            try:
-                # Remove 'Z' suffix if present (from JavaScript toISOString())
-                alert_str = data['alert_time'].replace('Z', '') if data['alert_time'].endswith('Z') else data['alert_time']
-                alert_time = datetime.fromisoformat(alert_str)
-                print(f"🔍 Debug - Parsed alert_time: {alert_time}")
-            except ValueError as e:
-                print(f"🔍 Debug - Error parsing alert_time '{data['alert_time']}': {e}")
-                return jsonify({'error': f'Invalid alert_time format: {data["alert_time"]}'}), 400
+        # Determine if task is scheduled for future
+        is_scheduled = scheduled_date is not None
+        is_active = not is_scheduled or (scheduled_date and scheduled_date <= datetime.utcnow())
 
         task = Task(
             id=str(uuid.uuid4()),
-            task_id=next_task_id,
-            text=data['text'],
-            assign_to=data.get('assign_to'),
-            due_date=due_date,
+            title=data['title'],
+            description=data.get('description', ''),
+            project=data['project'],
             status=data.get('status', 'todo'),
-            label=data.get('label'),
             priority=data.get('priority', 'medium'),
-            notes=data.get('notes'),
-            alert_time=alert_time,
+            scheduled_date=scheduled_date,
+            due_date=due_date,
+            is_scheduled=is_scheduled,
+            is_active=is_active,
             owner_id=current_user_id,
             created_by=current_user_id
         )
         
-        print(f"DEBUG: Created task with task_id={task.task_id}")
-        
         db.session.add(task)
         db.session.commit()
         
-        print(f"DEBUG: After commit, task_id={task.task_id}")
-        
-        return jsonify(task.to_dict()), 201
+        return jsonify({
+            'message': 'Task created successfully',
+            'task': task.to_dict()
+        }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @tasks_bp.route('/tasks/<task_id>', methods=['PUT'])
