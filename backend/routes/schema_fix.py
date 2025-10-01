@@ -8,16 +8,9 @@ from urllib.parse import urlparse
 schema_fix_bp = Blueprint('schema_fix', __name__)
 
 @schema_fix_bp.route('/fix-schema', methods=['POST'])
-@jwt_required()
 def fix_schema():
     """Fix the database schema by adding missing columns"""
     try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user or not current_user.is_approved:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
         print("🔧 Starting database schema fix...")
         
         # Get database URL from environment
