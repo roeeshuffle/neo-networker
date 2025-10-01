@@ -21,6 +21,11 @@ def check_migration_bypass():
     # In production, this should be removed after migration is complete
     return True  # Temporarily allow bypass for migration
 
+@migration_bp.route('/migration-test', methods=['GET'])
+def migration_test():
+    """Test endpoint to verify migration route is working"""
+    return jsonify({'message': 'Migration endpoint is working', 'status': 'ok'})
+
 @migration_bp.route('/migrate-database', methods=['POST'])
 def migrate_database():
     """Run database migration to update production database structure"""
