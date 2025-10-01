@@ -40,6 +40,7 @@ interface TaskFormData {
 const TasksTab: React.FC = () => {
   const [projects, setProjects] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
+  const [showDone, setShowDone] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -79,13 +80,16 @@ const TasksTab: React.FC = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [showDone]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/tasks');
-      setProjects(response.data.projects || {});
+      const status = showDone ? undefined : 'todo,in_progress';
+      const { data, error } = await apiClient.getTasks(undefined, status, true);
+      
+      if (error) throw error;
+      setProjects(data?.projects || {});
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
@@ -100,10 +104,12 @@ const TasksTab: React.FC = () => {
 
   const handleCreateTask = async () => {
     try {
-      const response = await apiClient.post('/tasks', formData);
+      const { data, error } = await apiClient.createTask(formData);
+      
+      if (error) throw error;
       
       // Update local state
-      const newTask = response.data.task;
+      const newTask = data.task;
       const projectName = newTask.project;
       
       setProjects(prev => ({
@@ -179,9 +185,42 @@ const TasksTab: React.FC = () => {
     }
   };
 
+  const handleQuickDone = async (taskId: string) => {
+    try {
+      const { error } = await apiClient.updateTask(taskId, { status: 'completed' });
+      
+      if (error) throw error;
+      
+      // Update local state
+      setProjects(prev => {
+        const newProjects = { ...prev };
+        Object.keys(newProjects).forEach(project => {
+          newProjects[project] = newProjects[project].map(task => 
+            task.id === taskId ? { ...task, status: 'completed' } : task
+          );
+        });
+        return newProjects;
+      });
+      
+      toast({
+        title: "Success",
+        description: "Task marked as completed",
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await apiClient.delete(`/tasks/${taskId}`);
+      const { error } = await apiClient.deleteTask(taskId);
+      
+      if (error) throw error;
       
       // Update local state
       setProjects(prev => {
@@ -283,6 +322,18 @@ const TasksTab: React.FC = () => {
           <p className="text-muted-foreground">Manage your project-based tasks</p>
         </div>
         <div className="flex gap-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="show-done"
+              checked={showDone}
+              onChange={(e) => setShowDone(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="show-done" className="text-sm font-medium">
+              Show Done
+            </label>
+          </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -497,6 +548,17 @@ const TasksTab: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {task.status !== 'completed' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuickDone(task.id)}
+                              disabled={isDisabled}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

@@ -129,8 +129,14 @@ class ApiClient {
   }
 
   // Tasks methods
-  async getTasks() {
-    return this.request('/tasks');
+  async getTasks(project?: string, status?: string, includeScheduled: boolean = true) {
+    const params = new URLSearchParams();
+    if (project) params.append('project', project);
+    if (status) params.append('status', status);
+    params.append('include_scheduled', includeScheduled.toString());
+    
+    const queryString = params.toString();
+    return this.request(queryString ? `/tasks?${queryString}` : '/tasks');
   }
 
   async createTask(taskData: any) {
@@ -240,6 +246,7 @@ class ApiClient {
       body: JSON.stringify({ approved: false }),
     });
   }
+
 
   // Health check
   async healthCheck() {

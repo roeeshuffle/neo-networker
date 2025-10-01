@@ -88,8 +88,10 @@ const EventsTab: React.FC = () => {
       const startDate = weekStart.toISOString();
       const endDate = weekEnd.toISOString();
       
-      const response = await apiClient.get(`/events?start_date=${startDate}&end_date=${endDate}`);
-      setEvents(response.data.events || []);
+      const { data, error } = await apiClient.getEvents(startDate, endDate);
+      
+      if (error) throw error;
+      setEvents(data?.events || []);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -104,8 +106,10 @@ const EventsTab: React.FC = () => {
 
   const handleCreateEvent = async () => {
     try {
-      const response = await apiClient.post('/events', formData);
-      setEvents([...events, response.data.event]);
+      const { data, error } = await apiClient.createEvent(formData);
+      
+      if (error) throw error;
+      setEvents([...events, data.event]);
       setIsAddDialogOpen(false);
       resetForm();
       toast({
