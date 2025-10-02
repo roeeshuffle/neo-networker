@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 13.7 - FORCE REBUILD FOR OPENAI API V2 FIXES")
-    print("🔍 Starting Flask app with OpenAI API v2 headers fix")
+    print("🚀 APP VERSION: 13.8 - UPDATED TELEGRAM FUNCTIONS FOR NEW PROMPT")
+    print("🔍 Starting Flask app with updated Telegram function mapping")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)
