@@ -297,9 +297,6 @@ const Dashboard = () => {
                   className="h-10 w-10 object-contain"
                 />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Alist</h1>
-              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50">
