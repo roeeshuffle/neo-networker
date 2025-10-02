@@ -129,6 +129,10 @@ class ApiClient {
   }
 
   // Tasks methods
+  async getProjects() {
+    return this.request('/projects');
+  }
+
   async getTasks(project?: string, status?: string, includeScheduled: boolean = true) {
     const params = new URLSearchParams();
     if (project) params.append('project', project);

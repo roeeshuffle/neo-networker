@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 12.2 - TABS IN HEADER");
-  console.log("🔍 Auth page loaded with tabs in header");
+  console.log("🚀 FRONTEND VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT");
+  console.log("🔍 Auth page loaded with dynamic project management");
 
   const handleGoogleAuth = async () => {
     setLoading(true);

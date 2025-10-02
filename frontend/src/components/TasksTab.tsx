@@ -45,6 +45,7 @@ interface TasksTabProps {
 const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const [projects, setProjects] = useState<Record<string, Task[]>>({});
   const [filteredProjects, setFilteredProjects] = useState<Record<string, Task[]>>({});
+  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
@@ -63,50 +64,39 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     due_date: ''
   });
 
-  // Get dynamic project list from current projects
-  const getProjectsList = () => {
-    const existingProjects = Object.keys(projects);
-    const defaultProjects = ['Personal', 'Work', 'Company', 'Health', 'Finance', 'Learning', 'Home', 'Travel'];
-    
-    // Combine existing projects with default ones, remove duplicates
-    const allProjects = [...new Set([...existingProjects, ...defaultProjects])];
-    return allProjects.sort();
+  // Fetch available projects from backend
+  const fetchProjects = async () => {
+    try {
+      console.log('🚀 FRONTEND VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT');
+      console.log('Fetching distinct projects from backend...');
+      
+      const { data, error } = await apiClient.getProjects();
+      
+      if (error) {
+        console.error('Error fetching projects:', error);
+        return;
+      }
+      
+      const projects = data?.projects || [];
+      console.log('Available projects:', projects);
+      setAvailableProjects(projects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    }
   };
 
-  const handleDeleteEmptyProject = (projectName: string) => {
-    if (projects[projectName] && projects[projectName].length === 0) {
-      setProjects(prev => {
-        const newProjects = { ...prev };
-        delete newProjects[projectName];
-        return newProjects;
-      });
-      
-      // Remove from collapsed state
-      setCollapsedProjects(prev => {
-        const newCollapsed = { ...prev };
-        delete newCollapsed[projectName];
-        return newCollapsed;
-      });
-      
-      toast({
-        title: "Success",
-        description: `Project "${projectName}" deleted successfully`,
-      });
-    }
+  // Get projects list for dropdown (dynamic + default suggestions)
+  const getProjectsList = () => {
+    const defaultProjects = ['Personal', 'Work', 'Company', 'Health', 'Finance', 'Learning', 'Home', 'Travel'];
+    
+    // Combine available projects with default suggestions, remove duplicates
+    const allProjects = [...new Set([...availableProjects, ...defaultProjects])];
+    return allProjects.sort();
   };
 
   const handleCreateNewProject = () => {
     if (newProjectName.trim()) {
-      setProjects(prev => ({
-        ...prev,
-        [newProjectName.trim()]: []
-      }));
-      
-      setCollapsedProjects(prev => ({
-        ...prev,
-        [newProjectName.trim()]: false
-      }));
-      
+      // Just set the form data - the project will be created when the task is saved
       setFormData(prev => ({
         ...prev,
         project: newProjectName.trim()
@@ -117,7 +107,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       toast({
         title: "Success",
-        description: `Project "${newProjectName.trim()}" created successfully`,
+        description: `Project "${newProjectName.trim()}" will be created when you save the task`,
       });
     }
   };
@@ -137,6 +127,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
   useEffect(() => {
     fetchTasks();
+    fetchProjects(); // Fetch available projects
   }, []); // Only fetch once on mount
 
   useEffect(() => {
@@ -253,6 +244,9 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       if (error) throw error;
       
+      // Refresh projects list to include new project
+      await fetchProjects();
+      
       // Update local state
       const newTask = data.task;
       const projectName = newTask.project;
@@ -292,6 +286,9 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       }
       
       console.log('Task updated successfully:', data);
+      
+      // Refresh projects list in case project changed
+      await fetchProjects();
       
       // Update local state
       const updatedTask = data.task;
@@ -811,16 +808,6 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                         <Badge variant="outline" className="text-red-600">
                           {statusCounts.cancelled} cancelled
                         </Badge>
-                      )}
-                      {totalTasks === 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteEmptyProject(projectName)}
-                          className="p-1 h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
                       )}
                     </div>
                   </CardTitle>

@@ -7,6 +7,42 @@ import uuid
 
 tasks_bp = Blueprint('tasks', __name__)
 
+@tasks_bp.route('/projects', methods=['GET'])
+@jwt_required()
+def get_projects():
+    """Get distinct projects for the current user"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        print(f"🚀 APP VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT")
+        print(f"📋 GET /projects - user_id: {current_user_id}")
+        
+        # Get distinct projects from tasks table for this user
+        distinct_projects = db.session.query(Task.project).filter(
+            Task.owner_id == current_user_id,
+            Task.project.isnot(None),
+            Task.project != ''
+        ).distinct().all()
+        
+        # Extract project names and sort them
+        projects = [project[0] for project in distinct_projects if project[0]]
+        projects.sort()
+        
+        print(f"📊 Found {len(projects)} distinct projects: {projects}")
+        
+        return jsonify({
+            'projects': projects,
+            'count': len(projects)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting projects: {str(e)}")
+        return jsonify({'error': 'Failed to get projects'}), 500
+
 @tasks_bp.route('/tasks', methods=['GET'])
 @jwt_required()
 def get_tasks():
