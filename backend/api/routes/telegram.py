@@ -1572,7 +1572,12 @@ def telegram_status():
         
         return jsonify({
             'connected': current_user.telegram_id is not None,
-            'telegram_id': current_user.telegram_id
+            'telegram_user': {
+                'id': current_user.id,
+                'telegram_id': current_user.telegram_id,
+                'telegram_username': current_user.telegram_username,
+                'first_name': current_user.full_name
+            } if current_user.telegram_id else None
         })
         
     except Exception as e:
