@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 11.2 - SHOW EMPTY PROJECTS FOR DELETION");
-  console.log("🔍 Auth page loaded with empty projects visibility fix");
+  console.log("🚀 FRONTEND VERSION: 12.0 - SIDEBAR NAVIGATION");
+  console.log("🔍 Auth page loaded with sidebar navigation");
 
   const handleGoogleAuth = async () => {
     setLoading(true);
