@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 14.9 - GOOGLE SYNC PREVIEW FUNCTIONALITY")
-    print("🔍 Starting Flask app with Google sync preview and duplicate detection")
+    print("🚀 APP VERSION: 15.0 - FORCE DEPLOY GOOGLE SYNC PREVIEW")
+    print("🔍 Starting Flask app with Google sync preview endpoints")
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=False, host='0.0.0.0', port=port)
