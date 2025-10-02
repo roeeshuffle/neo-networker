@@ -18,8 +18,18 @@ def get_projects():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        print(f"🚀 APP VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT")
+        print(f"🚀 APP VERSION: 12.7 - DEBUG PROJECTS DROPDOWN")
         print(f"📋 GET /projects - user_id: {current_user_id}")
+        
+        # First, let's check if there are any tasks for this user at all
+        total_tasks = Task.query.filter(Task.owner_id == current_user_id).count()
+        print(f"📊 Total tasks for user {current_user_id}: {total_tasks}")
+        
+        # Get all tasks for this user to debug
+        all_tasks = Task.query.filter(Task.owner_id == current_user_id).all()
+        print(f"📋 All tasks for user:")
+        for task in all_tasks:
+            print(f"  - Task {task.id}: project='{task.project}', status='{task.status}'")
         
         # Get distinct projects from tasks table for this user
         distinct_projects = db.session.query(Task.project).filter(
@@ -36,7 +46,12 @@ def get_projects():
         
         return jsonify({
             'projects': projects,
-            'count': len(projects)
+            'count': len(projects),
+            'total_tasks': total_tasks,
+            'debug_info': {
+                'user_id': current_user_id,
+                'all_tasks_count': len(all_tasks)
+            }
         })
         
     except Exception as e:

@@ -67,22 +67,28 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   // Fetch available projects from backend
   const fetchProjects = async () => {
     try {
-      console.log('🚀 FRONTEND VERSION: 12.5 - FIX PROJECT LIST REFRESH');
+      console.log('🚀 FRONTEND VERSION: 12.7 - DEBUG PROJECTS DROPDOWN');
       console.log('Fetching distinct projects from backend...');
       
       const { data, error } = await apiClient.getProjects();
       
       if (error) {
-        console.error('Error fetching projects:', error);
+        console.error('❌ Error fetching projects:', error);
         return;
       }
       
+      console.log('✅ Raw API response:', data);
+      
       const projects = data?.projects || [];
-      console.log('Available projects received:', projects);
-      console.log('Setting availableProjects to:', projects);
+      console.log('📊 Available projects received:', projects);
+      console.log('📊 Projects count:', projects.length);
+      console.log('📊 Total tasks:', data?.total_tasks);
+      console.log('📊 Debug info:', data?.debug_info);
+      
       setAvailableProjects(projects);
+      console.log('✅ Set availableProjects state to:', projects);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('❌ Error fetching projects:', error);
     }
   };
 

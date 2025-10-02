@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 12.6 - STANDARDIZE BUTTON SIZES");
-  console.log("🔍 Auth page loaded with standardized button sizes");
+  console.log("🚀 FRONTEND VERSION: 12.7 - DEBUG PROJECTS DROPDOWN");
+  console.log("🔍 Auth page loaded with projects dropdown debug");
 
   const handleGoogleAuth = async () => {
     setLoading(true);

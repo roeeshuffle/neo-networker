@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-        print("🚀 APP VERSION: 12.6 - STANDARDIZE BUTTON SIZES")
-        print("🔍 Starting Flask app with standardized button sizes")
+        print("🚀 APP VERSION: 12.7 - DEBUG PROJECTS DROPDOWN")
+        print("🔍 Starting Flask app with projects dropdown debug")
         port = int(os.environ.get('PORT', 5002))
         app.run(debug=True, host='0.0.0.0', port=port)
