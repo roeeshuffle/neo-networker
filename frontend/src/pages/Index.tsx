@@ -11,7 +11,7 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
-                src="/alist-logo.png" 
+                src="/alist-logo.svg" 
                 alt="Alist Logo" 
                 className="h-12 w-12"
               />
