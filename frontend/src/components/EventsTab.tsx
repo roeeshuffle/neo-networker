@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, CalendarDays } from 'lucide-react';
 import { apiClient } from '@/integrations/api/client';
 import { toast } from '@/hooks/use-toast';
@@ -88,6 +89,26 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDates = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  useEffect(() => {
+    if (editingEvent) {
+      setFormData({
+        title: editingEvent.title,
+        description: editingEvent.description,
+        start_datetime: editingEvent.start_datetime,
+        end_datetime: editingEvent.end_datetime,
+        location: editingEvent.location,
+        event_type: editingEvent.event_type,
+        participants: editingEvent.participants,
+        alert_minutes: editingEvent.alert_minutes,
+        repeat_pattern: editingEvent.repeat_pattern,
+        repeat_interval: editingEvent.repeat_interval,
+        repeat_days: editingEvent.repeat_days,
+        repeat_end_date: editingEvent.repeat_end_date,
+        notes: editingEvent.notes
+      });
+    }
+  }, [editingEvent]);
 
   useEffect(() => {
     fetchEvents();
@@ -182,7 +203,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
 
   const handleDeleteEvent = async (eventId: number) => {
     try {
-      await apiClient.delete(`/events/${eventId}`);
+      await apiClient.deleteEvent(eventId);
       setEvents(events.filter(event => event.id !== eventId));
       onEventsChange?.(); // Trigger count update
       toast({
@@ -575,7 +596,21 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{event.title}</h4>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <h4 className="font-medium">{event.title}</h4>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="max-w-xs">
+                                <p className="font-medium">{event.title}</p>
+                                <p className="text-sm">{event.description}</p>
+                                <p className="text-sm">{event.location && `📍 ${event.location}`}</p>
+                                <p className="text-sm">{format(parseISO(event.start_datetime), 'MMM dd, yyyy HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <p className="text-sm text-muted-foreground">{event.description}</p>
                       </div>
                       <div className="text-right">
@@ -622,7 +657,21 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                       className="p-2 bg-blue-50 rounded text-xs cursor-pointer hover:bg-blue-100"
                       onClick={() => openEditDialog(event)}
                     >
-                      <div className="font-medium truncate">{event.title}</div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="font-medium truncate">{event.title}</div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="max-w-xs">
+                              <p className="font-medium">{event.title}</p>
+                              <p className="text-sm">{event.description}</p>
+                              <p className="text-sm">{event.location && `📍 ${event.location}`}</p>
+                              <p className="text-sm">{format(parseISO(event.start_datetime), 'MMM dd, yyyy HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <div className="text-muted-foreground">
                         {format(parseISO(event.start_datetime), 'HH:mm')}
                       </div>
@@ -681,7 +730,21 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                             className="text-xs bg-blue-100 text-blue-800 rounded px-1 truncate cursor-pointer hover:bg-blue-200"
                             onClick={() => openEditDialog(event)}
                           >
-                            {event.title}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="truncate">{event.title}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="max-w-xs">
+                                    <p className="font-medium">{event.title}</p>
+                                    <p className="text-sm">{event.description}</p>
+                                    <p className="text-sm">{event.location && `📍 ${event.location}`}</p>
+                                    <p className="text-sm">{format(parseISO(event.start_datetime), 'MMM dd, yyyy HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         ))}
                         {dayEvents.length > 2 && (

@@ -483,8 +483,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{Object.keys(projects).length}</div>
-            <div className="text-sm text-muted-foreground">Projects</div>
+            <div className="text-2xl font-bold">{Object.values(projects).flat().filter(task => task.status !== 'completed' && task.status !== 'cancelled').length}</div>
+            <div className="text-sm text-muted-foreground">Open Tasks</div>
           </CardContent>
         </Card>
       </div>
