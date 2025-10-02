@@ -201,12 +201,12 @@ const Companies = () => {
               <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
                 <img 
                   src={alistLogo} 
-                  alt="ALIST Logo" 
+                  alt="Alist Logo" 
                   className="h-10 w-10 object-contain"
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">ALIST - Companies</h1>
+                <h1 className="text-2xl font-bold tracking-tight">Alist - Companies</h1>
               </div>
             </div>
             <div className="flex items-center gap-4">

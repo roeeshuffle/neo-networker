@@ -13,8 +13,6 @@ class User(db.Model):
     telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
     whatsapp_phone_number = db.Column(db.String(20), unique=True, nullable=True)
     telegram_username = db.Column(db.String(255), nullable=True)
-    is_authenticated = db.Column(db.Boolean, default=False)
-    authenticated_at = db.Column(db.DateTime, nullable=True)
     
     # Additional fields from the database
     approved_by = db.Column(db.String(36), db.ForeignKey('profiles.id'), nullable=True)
@@ -51,8 +49,6 @@ class User(db.Model):
             'telegram_id': self.telegram_id,
             'whatsapp_phone_number': self.whatsapp_phone_number,
             'telegram_username': self.telegram_username,
-            'is_authenticated': self.is_authenticated,
-            'authenticated_at': self.authenticated_at.isoformat() if self.authenticated_at else None,
             'approved_by': self.approved_by,
             'approved_at': self.approved_at.isoformat() if self.approved_at else None,
             'avatar_url': self.avatar_url,

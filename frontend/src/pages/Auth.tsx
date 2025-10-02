@@ -210,10 +210,10 @@ const Auth = () => {
             <CardTitle className="flex items-center justify-center gap-2">
               <img 
                 src="/alist-logo.png" 
-                alt="ALIST Logo" 
+                alt="Alist Logo" 
                 className="h-8 w-8"
               />
-              ALIST
+              Alist
             </CardTitle>
             <p className="text-muted-foreground">
               {isLogin ? "Sign in to your account" : "Create a new account"}

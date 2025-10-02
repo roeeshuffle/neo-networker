@@ -1121,14 +1121,10 @@ def telegram_auth():
                 telegram_username=telegram_username,
                 full_name=first_name,
                 email=f"{telegram_username}@telegram.local",  # Temporary email
-                is_approved=True,  # Auto-approve telegram users
-                is_authenticated=True,
-                authenticated_at=datetime.utcnow()
+                is_approved=True  # Auto-approve telegram users
             )
             db.session.add(user)
         else:
-            user.is_authenticated = True
-            user.authenticated_at = datetime.utcnow()
             user.telegram_username = telegram_username
             user.full_name = first_name
         
@@ -1150,8 +1146,7 @@ def telegram_check():
         telegram_id = data.get('telegram_id')
         
         user = User.query.filter_by(
-            telegram_id=telegram_id,
-            is_authenticated=True
+            telegram_id=telegram_id
         ).first()
         
         return jsonify({
