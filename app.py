@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 6.0 - TASKS UI IMPROVEMENTS")
-    print("🔍 Starting Flask app with tasks UI improvements")
+    print("🚀 APP VERSION: 7.0 - BUTTON FIXES & TASK FILTER DEBUG")
+    print("🔍 Starting Flask app with button fixes and task filter debugging")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

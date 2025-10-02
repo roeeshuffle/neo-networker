@@ -90,7 +90,11 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   }, [showDone]);
 
   useEffect(() => {
+    console.log('🔄 Filtering projects based on search query:', searchQuery);
+    console.log('Current projects:', projects);
+    
     if (!searchQuery || searchQuery.trim() === '') {
+      console.log('No search query, setting filteredProjects to projects');
       setFilteredProjects(projects);
     } else {
       const searchTerm = searchQuery.toLowerCase();
@@ -107,6 +111,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         }
       });
       
+      console.log('Filtered projects:', filtered);
       setFilteredProjects(filtered);
     }
   }, [projects, searchQuery]);
@@ -117,16 +122,29 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       // When showDone is false: show only active tasks (todo, in_progress)
       // When showDone is true: show all tasks (including completed, cancelled)
       const status = showDone ? undefined : 'todo,in_progress';
-      console.log('🚀 FRONTEND VERSION: 6.0 - TASKS UI IMPROVEMENTS');
+      console.log('🚀 FRONTEND VERSION: 7.0 - BUTTON FIXES & TASK FILTER DEBUG');
       console.log('Fetching tasks with status filter:', status, 'showDone:', showDone);
+      console.log('API call: getTasks(undefined, status, true)');
+      
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
-      if (error) throw error;
+      if (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+      
       console.log('Tasks data received:', data);
       console.log('Projects data:', data?.projects);
       
       const projectsData = data?.projects || {};
       console.log('Setting projects to:', projectsData);
+      console.log('Projects keys:', Object.keys(projectsData));
+      
+      // Log each project's tasks
+      Object.entries(projectsData).forEach(([projectName, tasks]) => {
+        console.log(`Project "${projectName}" has ${tasks.length} tasks:`, tasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
+      });
+      
       setProjects(projectsData);
       
       // Initialize collapsed state for new projects
@@ -433,10 +451,10 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             onClick={() => setShowDone(!showDone)}
             className="flex items-center gap-2"
           >
-            {showDone ? "Show Active Only" : "Show All"}
+            {showDone ? "Show Active" : "Show All"}
           </Button>
           
-          {Object.keys(filteredProjects).length > 1 && (
+          {Object.keys(filteredProjects).length > 0 && (
             <>
               <Button
                 variant="outline"
