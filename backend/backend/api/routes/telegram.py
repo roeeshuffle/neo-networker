@@ -230,7 +230,10 @@ def convert_voice_to_text(file_id):
         try:
             # Transcribe using OpenAI Whisper (force English)
             with open(temp_file_path, 'rb') as audio_file:
-                client = openai.OpenAI(api_key=openai.api_key)
+                client = openai.OpenAI(
+                    api_key=openai.api_key,
+                    default_headers={"OpenAI-Beta": "assistants=v2"}
+                )
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,
@@ -355,7 +358,10 @@ def get_or_create_thread(user: User):
         
         if not thread_id:
             # Create new thread
-            client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            client = openai.OpenAI(
+                api_key=os.getenv('OPENAI_API_KEY'),
+                default_headers={"OpenAI-Beta": "assistants=v2"}
+            )
             thread = client.beta.threads.create()
             thread_id = thread.id
             
@@ -375,7 +381,10 @@ def get_or_create_thread(user: User):
 def cleanup_old_threads():
     """Clean up old threads to prevent accumulation (run periodically)"""
     try:
-        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = openai.OpenAI(
+            api_key=os.getenv('OPENAI_API_KEY'),
+            default_headers={"OpenAI-Beta": "assistants=v2"}
+        )
         
         # Get all threads (this is a simplified approach)
         # In production, you might want to implement a more sophisticated cleanup
@@ -402,7 +411,10 @@ def process_natural_language_request(text: str, user: User) -> str:
             return "❌ Error creating conversation thread. Please try again."
         
         # Initialize OpenAI client
-        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        client = openai.OpenAI(
+            api_key=os.getenv('OPENAI_API_KEY'),
+            default_headers={"OpenAI-Beta": "assistants=v2"}
+        )
         
         # Add user message to thread
         client.beta.threads.messages.create(
