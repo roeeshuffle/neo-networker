@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'backend'))
 
 from api.app import app
-from dal.models import User, Person, Company, Task, TelegramUser
+from dal.models import User, Person, Task, Event
 from dal.database import db
 from api.routes.telegram import process_natural_language_request
 import uuid
@@ -22,7 +22,7 @@ class TelegramBotTester:
         self.setup_test_data()
     
     def setup_test_data(self):
-        """Create test user and telegram user"""
+        """Create test user and mock telegram user"""
         with app.app_context():
             # Find or create test user
             self.test_user = User.query.filter_by(email="test@example.com").first()
@@ -31,33 +31,26 @@ class TelegramBotTester:
                     id=str(uuid.uuid4()),
                     email="test@example.com",
                     full_name="Test User",
-                    is_approved=True
+                    is_approved=True,
+                    telegram_id=123456789,
+                    telegram_username="testuser"
                 )
                 db.session.add(self.test_user)
                 print(f"✅ Created test user: {self.test_user.email}")
             else:
                 print(f"✅ Found existing test user: {self.test_user.email}")
             
-            # Find or create test telegram user
-            self.test_telegram_user = TelegramUser.query.filter_by(telegram_id=123456789).first()
-            if not self.test_telegram_user:
-                self.test_telegram_user = TelegramUser(
-                    id=str(uuid.uuid4()),
-                    telegram_id=123456789,
-                    telegram_username="testuser",
-                    first_name="Test User",
-                    user_id=self.test_user.id,
-                    is_authenticated=True,
-                    current_state='idle'
-                )
-                db.session.add(self.test_telegram_user)
-                print(f"✅ Created test telegram user: {self.test_telegram_user.first_name}")
-            else:
-                # Update existing telegram user
-                self.test_telegram_user.user_id = self.test_user.id
-                self.test_telegram_user.is_authenticated = True
-                self.test_telegram_user.current_state = 'idle'
-                print(f"✅ Updated existing telegram user: {self.test_telegram_user.first_name}")
+            # Create mock telegram user object (since TelegramUser model was removed)
+            class MockTelegramUser:
+                def __init__(self, user):
+                    self.telegram_id = user.telegram_id
+                    self.user_id = user.id
+                    self.is_authenticated = True
+                    self.current_state = 'idle'
+                    self.first_name = user.full_name
+            
+            self.test_telegram_user = MockTelegramUser(self.test_user)
+            print(f"✅ Created mock telegram user: {self.test_telegram_user.first_name}")
             
             db.session.commit()
     
@@ -111,47 +104,7 @@ class TelegramBotTester:
             print(f"✅ Generated {count} mock people")
             return people_data
     
-    def generate_mock_companies(self, count=3):
-        """Generate mock companies data"""
-        with app.app_context():
-            # Get fresh user reference
-            user = User.query.get(self.test_user.id)
-            companies_data = []
-            company_names = [
-                "Tech Innovations Inc",
-                "Digital Solutions Ltd", 
-                "Future Systems Corp",
-                "Smart Technologies LLC",
-                "NextGen Enterprises"
-            ]
-            
-            industries = ["Technology", "Healthcare", "Finance", "Education", "Manufacturing"]
-            sizes = ["1-10", "11-50", "51-200", "201-500", "500+"]
-            
-            for i in range(count):
-                name = company_names[i % len(company_names)]
-                industry = industries[i % len(industries)]
-                size = sizes[i % len(sizes)]
-                
-                company = Company(
-                    id=str(uuid.uuid4()),
-                    name=name,
-                    industry=industry,
-                    size=size,
-                    website=f"https://{name.lower().replace(' ', '')}.com",
-                    description=f"Leading {industry.lower()} company focused on innovation",
-                    owner_id=user.id
-                )
-                db.session.add(company)
-                companies_data.append({
-                    'name': name,
-                    'industry': industry,
-                    'size': size
-                })
-            
-            db.session.commit()
-            print(f"✅ Generated {count} mock companies")
-            return companies_data
+    # Company model was removed - no longer needed
     
     def generate_mock_tasks(self, count=4):
         """Generate mock tasks data"""
@@ -280,24 +233,7 @@ class TelegramBotTester:
             except Exception as e:
                 print(f"❌ Error: {e}")
     
-    def test_search_companies(self):
-        """Test searching for companies"""
-        print("\n🔍 Testing Company Search...")
-        
-        test_queries = [
-            "Find companies",
-            "Show tech companies",
-            "Search for startups",
-            "Find companies by industry"
-        ]
-        
-        for query in test_queries:
-            print(f"\n📝 Query: '{query}'")
-            try:
-                response = process_natural_language_request(query, self.test_telegram_user)
-                print(f"✅ Response: {response[:200]}...")
-            except Exception as e:
-                print(f"❌ Error: {e}")
+    # Company search test removed - Company model was deleted
     
     def test_general_search(self):
         """Test general information search"""
@@ -318,6 +254,45 @@ class TelegramBotTester:
             except Exception as e:
                 print(f"❌ Error: {e}")
     
+    def test_assistant_show_tasks(self):
+        """Test the assistant with 'show tasks' command - EXPECTED FORMAT: [5, {"period": "daily"}]"""
+        print("\n🤖 Testing Assistant API: 'show tasks'")
+        print("=" * 50)
+        
+        query = "show tasks"
+        print(f"📝 Query: '{query}'")
+        
+        try:
+            response = process_natural_language_request(query, self.test_telegram_user)
+            print(f"✅ Assistant Response: {response}")
+            
+            # Parse and validate the response format
+            import json
+            try:
+                parsed_response = json.loads(response)
+                if isinstance(parsed_response, list) and len(parsed_response) == 2:
+                    count = parsed_response[0]
+                    period_info = parsed_response[1]
+                    
+                    if isinstance(count, int) and isinstance(period_info, dict) and "period" in period_info:
+                        print(f"✅ Response format is correct!")
+                        print(f"   📊 Task count: {count}")
+                        print(f"   📅 Period: {period_info['period']}")
+                        return True
+                    else:
+                        print(f"❌ Response format incorrect: expected [int, {{'period': str}}]")
+                        return False
+                else:
+                    print(f"❌ Response format incorrect: expected list with 2 elements")
+                    return False
+            except json.JSONDecodeError:
+                print(f"❌ Response is not valid JSON: {response}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error calling assistant: {e}")
+            return False
+    
     def run_all_tests(self):
         """Run all tests"""
         print("🚀 Starting Telegram Bot Function Tests")
@@ -326,12 +301,10 @@ class TelegramBotTester:
         # Generate mock data
         print("\n📊 Generating Mock Data...")
         people_data = self.generate_mock_people(8)
-        companies_data = self.generate_mock_companies(3)
         tasks_data = self.generate_mock_tasks(6)
         
         print(f"\n📋 Mock Data Summary:")
         print(f"   👥 People: {len(people_data)}")
-        print(f"   🏢 Companies: {len(companies_data)}")
         print(f"   ✅ Tasks: {len(tasks_data)}")
         
         # Run all tests
@@ -339,8 +312,11 @@ class TelegramBotTester:
         self.test_add_people()
         self.test_search_tasks()
         self.test_add_tasks()
-        self.test_search_companies()
         self.test_general_search()
+        
+        # Test Assistant API functionality
+        assistant_test_passed = self.test_assistant_show_tasks()
+        print(f"\n🤖 Assistant API Test: {'✅ PASSED' if assistant_test_passed else '❌ FAILED'}")
         
         print("\n🎉 All tests completed!")
         print("=" * 60)
@@ -350,9 +326,7 @@ class TelegramBotTester:
         with app.app_context():
             # Delete test data
             Person.query.filter_by(owner_id=self.test_user.id).delete()
-            Company.query.filter_by(owner_id=self.test_user.id).delete()
             Task.query.filter_by(owner_id=self.test_user.id).delete()
-            TelegramUser.query.filter_by(id=self.test_telegram_user.id).delete()
             User.query.filter_by(id=self.test_user.id).delete()
             
             db.session.commit()
