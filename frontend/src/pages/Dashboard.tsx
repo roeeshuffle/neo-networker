@@ -375,7 +375,7 @@ const Dashboard = () => {
           </TabsContent>
           
           <TabsContent value="tasks">
-            <TasksTab onTasksChange={fetchTasksCount} />
+            <TasksTab onTasksChange={fetchTasksCount} searchQuery={searchQuery} />
           </TabsContent>
           
           <TabsContent value="events">

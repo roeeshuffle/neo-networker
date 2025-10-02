@@ -39,10 +39,12 @@ interface TaskFormData {
 
 interface TasksTabProps {
   onTasksChange?: () => void;
+  searchQuery?: string;
 }
 
-const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
+const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const [projects, setProjects] = useState<Record<string, Task[]>>({});
+  const [filteredProjects, setFilteredProjects] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -86,15 +88,39 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
     fetchTasks();
   }, [showDone]);
 
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim() === '') {
+      setFilteredProjects(projects);
+    } else {
+      const searchTerm = searchQuery.toLowerCase();
+      const filtered: Record<string, Task[]> = {};
+      
+      Object.keys(projects).forEach(project => {
+        const filteredTasks = projects[project].filter(task =>
+          task.title.toLowerCase().includes(searchTerm) ||
+          task.description.toLowerCase().includes(searchTerm) ||
+          task.project.toLowerCase().includes(searchTerm)
+        );
+        if (filteredTasks.length > 0) {
+          filtered[project] = filteredTasks;
+        }
+      });
+      
+      setFilteredProjects(filtered);
+    }
+  }, [projects, searchQuery]);
+
   const fetchTasks = async () => {
     try {
       setLoading(true);
       // When showDone is false: show only active tasks (todo, in_progress, pending)
       // When showDone is true: show all tasks (including completed, cancelled)
       const status = showDone ? undefined : 'todo,in_progress,pending';
+      console.log('Fetching tasks with status filter:', status, 'showDone:', showDone);
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
       if (error) throw error;
+      console.log('Tasks data received:', data);
       setProjects(data?.projects || {});
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -353,7 +379,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
               className="rounded"
             />
             <label htmlFor="show-done" className="text-sm font-medium">
-              Show completed & cancelled tasks
+              Show all
             </label>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -504,7 +530,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       </div>
 
       {/* Projects */}
-      {Object.keys(projects).length === 0 ? (
+      {Object.keys(filteredProjects).length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <div className="text-lg text-muted-foreground">No tasks yet</div>
@@ -515,7 +541,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(projects).map(([projectName, tasks]) => (
+          {Object.entries(filteredProjects).map(([projectName, tasks]) => (
             <Card key={projectName}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
