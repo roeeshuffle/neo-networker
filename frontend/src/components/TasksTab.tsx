@@ -85,13 +85,10 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     }
   };
 
-  // Get projects list for dropdown (dynamic + default suggestions)
+  // Get projects list for dropdown (ONLY from tasks table, no defaults)
   const getProjectsList = () => {
-    const defaultProjects = ['Personal', 'Work', 'Company', 'Health', 'Finance', 'Learning', 'Home', 'Travel'];
-    
-    // Combine available projects with default suggestions, remove duplicates
-    const allProjects = [...new Set([...availableProjects, ...defaultProjects])];
-    return allProjects.sort();
+    // Only return projects that actually exist in the user's tasks
+    return availableProjects.sort();
   };
 
   const handleCreateNewProject = () => {

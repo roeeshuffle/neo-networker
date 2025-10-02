@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-        print("🚀 APP VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT")
-        print("🔍 Starting Flask app with dynamic project management")
+        print("🚀 APP VERSION: 12.4 - PURE DYNAMIC PROJECTS ONLY")
+        print("🔍 Starting Flask app with pure dynamic projects only")
         port = int(os.environ.get('PORT', 5002))
         app.run(debug=True, host='0.0.0.0', port=port)
