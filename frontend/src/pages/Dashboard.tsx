@@ -11,13 +11,14 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare, Calendar } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Calendar, Settings, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TasksTab from "@/components/TasksTab";
 import EventsTab from "@/components/EventsTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
 import { SettingsTab } from "@/components/SettingsTab";
-import Sidebar from "@/components/Sidebar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import alistLogo from "@/assets/alist-logo-new.svg";
 
 export interface Person {
   id: string;
@@ -284,20 +285,66 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-soft/20 via-background to-secondary-soft/20 flex">
-      {/* Sidebar */}
-      <Sidebar />
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 px-6 py-12 space-y-8">
-          {/* Search section */}
-          <div className="flex justify-start mb-8">
-            <SearchBar 
-              onSearch={handleSearch} 
-              placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
-            />
+    <div className="min-h-screen bg-gradient-to-br from-primary-soft/20 via-background to-secondary-soft/20">
+      {/* Modern header with glass effect */}
+      <header className="border-b border-border-soft bg-card/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Logo */}
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
+                <img 
+                  src={alistLogo} 
+                  alt="Alist Logo" 
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
+              {/* Search Bar */}
+              <div className="flex-1 max-w-md">
+                <SearchBar 
+                  onSearch={handleSearch} 
+                  placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
+                />
+              </div>
+            </div>
+            
+            {/* Right: User and Settings */}
+            <div className="flex items-center gap-3">
+              {/* Settings Button */}
+              {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
+                <Button 
+                  onClick={() => navigate('/admin')}
+                  variant="ghost" 
+                  size="sm"
+                  className="w-10 h-10 p-0"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {/* User Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User className="h-3 w-3 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium">{user?.email?.split('@')[0] || 'User'}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-6 py-12 space-y-8">
 
         {/* Main content tabs */}
 
@@ -358,8 +405,7 @@ const Dashboard = () => {
           onClose={() => setViewingPerson(null)}
           onSave={fetchPeople}
         />
-        </main>
-      </div>
+      </main>
     </div>
   );
 };
