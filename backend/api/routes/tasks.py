@@ -7,6 +7,11 @@ import uuid
 
 tasks_bp = Blueprint('tasks', __name__)
 
+@tasks_bp.route('/projects', methods=['OPTIONS'])
+def handle_projects_options():
+    """Handle CORS preflight for projects endpoint"""
+    return '', 200
+
 @tasks_bp.route('/projects', methods=['GET'])
 @jwt_required()
 def get_projects():
