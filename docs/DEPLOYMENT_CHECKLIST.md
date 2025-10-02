@@ -62,9 +62,22 @@
 - **🔍 Check**: Verify environment variable configuration
 - **📝 Files**: `src/integrations/api/client.ts`
 
+### 11. **🚨 CRITICAL: Directory Structure Issues**
+- **❌ Error**: Duplicate nested directories (e.g., `backend/backend/`)
+- **✅ Solution**: Verify clean directory structure before deployment
+- **🔍 Check**: Run `find . -type d -name "*backend*"` to detect duplicates
+- **📝 Files**: Entire project structure
+- **⚠️ Impact**: Causes App Runner to use wrong files, breaking deployments
+
 ---
 
 ## 🔄 PRE-DEPLOYMENT CHECKLIST
+
+### 🚨 CRITICAL STRUCTURE VALIDATION:
+- [ ] **Run**: `find . -type d -name "*backend*"` - should only show `./backend`
+- [ ] **Run**: `ls -la backend/` - verify no nested `backend/backend/` directory
+- [ ] **Run**: `find . -name "*.py" | grep backend/backend` - should return empty
+- [ ] **Verify**: App Runner `SourceDirectory` is set to `backend` (not nested)
 
 ### Backend Checks:
 - [ ] All routes use proper JWT authentication
@@ -72,6 +85,7 @@
 - [ ] No excessive logging statements
 - [ ] Migration scripts are safe for existing data
 - [ ] No SQLAlchemy relationship conflicts
+- [ ] **🚨 Directory structure is clean (no duplicate nested directories)**
 
 ### Frontend Checks:
 - [ ] All imports/exports match (default vs named)
@@ -95,19 +109,24 @@
 
 ## 🚀 DEPLOYMENT STEPS
 
-1. **Review this checklist** ✅
-2. **Run local build test**: `npm run build`
-3. **Check for linting errors**: `npm run lint` (if available)
-4. **Commit changes**: `git add . && git commit -m "message"`
-5. **Push to trigger deployment**: `git push origin main`
-6. **Wait for deployment**: ~30 seconds
-7. **Test production**: Check browser console for errors
-8. **Monitor logs**: `aws logs tail /aws/apprunner/...`
+1. **🚨 CRITICAL: Validate directory structure** ✅
+   - Run: `find . -type d -name "*backend*"`
+   - Run: `ls -la backend/`
+   - Verify no nested directories exist
+2. **Review this checklist** ✅
+3. **Run local build test**: `npm run build`
+4. **Check for linting errors**: `npm run lint` (if available)
+5. **Commit changes**: `git add . && git commit -m "message"`
+6. **Push to trigger deployment**: `git push origin main`
+7. **Wait for deployment**: ~30 seconds
+8. **Test production**: Check browser console for errors
+9. **Monitor logs**: `aws logs tail /aws/apprunner/...`
 
 ---
 
 ## 📋 COMMON MISTAKES TO AVOID
 
+- ❌ **🚨 CRITICAL: Deploying with duplicate nested directories**
 - ❌ Deploying without checking database schema compatibility
 - ❌ Using localhost URLs in production
 - ❌ Leaving mock data fallbacks in production code
