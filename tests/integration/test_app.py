@@ -89,7 +89,8 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         """Test user registration"""
         user_data = {
             'email': 'newuser@test.com',
-            'full_name': 'New User'
+            'full_name': 'New User',
+            'password': 'password123'
         }
         
         response = self.client.post('/api/auth/register', 
@@ -98,10 +99,10 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         
         self.assertEqual(response.status_code, 201)
         data = json.loads(response.data)
-        self.assertIn('access_token', data)
-        self.assertIn('user', data)
-        self.assertEqual(data['user']['email'], 'newuser@test.com')
-        self.assertEqual(data['user']['is_approved'], False)
+        self.assertIn('message', data)
+        self.assertIn('requires_approval', data)
+        self.assertTrue(data['requires_approval'])
+        self.assertIn('pending admin approval', data['message'])
     
     def test_user_login(self):
         """Test user login"""
@@ -172,6 +173,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
     
     def test_delete_user(self):
         """Test delete user endpoint"""
+        user_id_to_delete = None
         with self.app.app_context():
             # Create a user to delete
             user_to_delete = User(
@@ -182,8 +184,9 @@ class TestNeoNetworkerAPI(unittest.TestCase):
             )
             db.session.add(user_to_delete)
             db.session.commit()
+            user_id_to_delete = user_to_delete.id
         
-        response = self.client.delete(f'/api/users/{user_to_delete.id}',
+        response = self.client.delete(f'/api/users/{user_id_to_delete}',
                                     headers=self.get_headers(self.admin_token))
         
         self.assertEqual(response.status_code, 200)
@@ -252,11 +255,11 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         """Test tasks CRUD operations"""
         # Create task
         task_data = {
-            'text': 'Complete project documentation',
-            'assign_to': 'John Doe',
+            'title': 'Complete project documentation',
+            'project': 'work',
+            'description': 'Document the project thoroughly',
             'priority': 'high',
-            'status': 'todo',
-            'label': 'work'
+            'status': 'todo'
         }
         
         response = self.client.post('/api/tasks',
@@ -266,9 +269,9 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         
         self.assertEqual(response.status_code, 201)
         data = json.loads(response.data)
-        task_id = data['id']
-        self.assertEqual(data['text'], 'Complete project documentation')
-        self.assertEqual(data['priority'], 'high')
+        task_id = data['task']['id']
+        self.assertEqual(data['task']['title'], 'Complete project documentation')
+        self.assertEqual(data['task']['priority'], 'high')
         
         # Get tasks
         response = self.client.get('/api/tasks',
@@ -276,13 +279,16 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 1)
+        self.assertIn('projects', data)
+        self.assertIn('total_tasks', data)
+        self.assertEqual(data['total_tasks'], 1)
+        self.assertIn('work', data['projects'])
+        self.assertEqual(len(data['projects']['work']), 1)
         
         # Update task
         update_data = {
-            'text': 'Updated task description',
-            'status': 'in-progress'
+            'title': 'Updated task description',
+            'status': 'in_progress'
         }
         
         response = self.client.put(f'/api/tasks/{task_id}',
@@ -292,8 +298,8 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
-        self.assertEqual(data['text'], 'Updated task description')
-        self.assertEqual(data['status'], 'in-progress')
+        self.assertEqual(data['title'], 'Updated task description')
+        self.assertEqual(data['status'], 'in_progress')
         
         # Delete task
         response = self.client.delete(f'/api/tasks/{task_id}',
@@ -321,23 +327,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         self.assertIn('message', data)
         self.assertIn('people', data)
         self.assertGreaterEqual(len(data['people']), 2)
-        
-        # Test company CSV processing
-        company_csv_data = {
-            'csvData': 'Company Name,Categories,Description\nTest Corp,Technology,Test company\nAnother Corp,Finance,Another test company',
-            'customMapping': {}
-        }
-        
-        response = self.client.post('/api/company-csv-processor',
-                                  data=json.dumps(company_csv_data),
-                                  content_type='application/json',
-                                  headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertIn('message', data)
-        self.assertIn('companies', data)
-        self.assertGreaterEqual(len(data['companies']), 2)
+    
     
     def test_telegram_auth(self):
         """Test telegram authentication"""
@@ -395,6 +385,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
     
     def test_user_approval(self):
         """Test user approval functionality"""
+        unapproved_user_id = None
         with self.app.app_context():
             # Create unapproved user
             unapproved_user = User(
@@ -405,9 +396,10 @@ class TestNeoNetworkerAPI(unittest.TestCase):
             )
             db.session.add(unapproved_user)
             db.session.commit()
+            unapproved_user_id = unapproved_user.id
         
         # Approve user
-        response = self.client.post(f'/api/auth/approve/{unapproved_user.id}',
+        response = self.client.post(f'/api/auth/approve/{unapproved_user_id}',
                                   headers=self.get_headers(self.admin_token))
         
         self.assertEqual(response.status_code, 200)

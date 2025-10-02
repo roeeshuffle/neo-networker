@@ -1111,19 +1111,21 @@ def telegram_auth():
         if password != "121212":  # From the original code
             return jsonify({'error': 'Invalid password'}), 401
         
-        # Find or create telegram user
-        telegram_user = TelegramUser.query.filter_by(telegram_id=telegram_id).first()
+        # Find or create user with telegram_id
+        user = User.query.filter_by(telegram_id=telegram_id).first()
         
-        if not telegram_user:
-            telegram_user = TelegramUser(
+        if not user:
+            user = User(
                 id=str(uuid.uuid4()),
                 telegram_id=telegram_id,
                 telegram_username=telegram_username,
-                first_name=first_name,
+                full_name=first_name,
+                email=f"{telegram_username}@telegram.local",  # Temporary email
+                is_approved=True,  # Auto-approve telegram users
                 is_authenticated=True,
                 authenticated_at=datetime.utcnow()
             )
-            db.session.add(telegram_user)
+            db.session.add(user)
         else:
             user.is_authenticated = True
             user.authenticated_at = datetime.utcnow()
@@ -1147,13 +1149,13 @@ def telegram_check():
         data = request.get_json()
         telegram_id = data.get('telegram_id')
         
-        telegram_user = TelegramUser.query.filter_by(
+        user = User.query.filter_by(
             telegram_id=telegram_id,
             is_authenticated=True
         ).first()
         
         return jsonify({
-            'authenticated': telegram_user is not None
+            'authenticated': user is not None
         })
         
     except Exception as e:
