@@ -431,9 +431,12 @@ def process_natural_language_request(text: str, user: User) -> str:
         )
         
         # Run the assistant
+        assistant_id = os.getenv('OPENAI_ASSISTANT_ID', 'asst_ywyYJshVjop8vd5hvXv1Nn1r')
+        telegram_logger.info(f"🤖 Using assistant ID: {assistant_id}")
+        
         run = client.beta.threads.runs.create(
             thread_id=thread_id,
-            assistant_id="asst_alist"  # Your assistant ID
+            assistant_id=assistant_id
         )
         
         telegram_logger.info(f"🤖 Started assistant run {run.id} for user {user.full_name}")
@@ -471,6 +474,7 @@ def process_natural_language_request(text: str, user: User) -> str:
         for msg in messages.data:
             if msg.role == "assistant":
                 assistant_response = msg.content[0].text.value
+                telegram_logger.info(f"🤖 Assistant response: '{assistant_response}'")
                 break
         
         if not assistant_response:
