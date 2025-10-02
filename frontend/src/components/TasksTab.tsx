@@ -159,7 +159,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         }
         // If showDone is true, show all tasks (no filter)
         
-        if (filteredTasks.length > 0) {
+        // Always include project if it has tasks OR if showDone is true (to show empty projects for deletion)
+        if (filteredTasks.length > 0 || showDone) {
           filtered[project] = filteredTasks;
         }
       });
@@ -185,7 +186,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           );
         }
         
-        if (filteredTasks.length > 0) {
+        // Always include project if it has tasks OR if showDone is true (to show empty projects for deletion)
+        if (filteredTasks.length > 0 || showDone) {
           filtered[project] = filteredTasks;
         }
       });
