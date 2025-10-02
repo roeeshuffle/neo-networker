@@ -474,39 +474,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setGoogleLoading(false);
     }
   };
-    setGoogleLoading(true);
-    try {
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-calendar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync calendar');
-      }
-
-      const data = await response.json();
-      toast({
-        title: "Calendar Synced",
-        description: data.message,
-      });
-      
-      await checkGoogleStatus();
-    } catch (error: any) {
-      console.error('Error syncing Google calendar:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to sync Google calendar",
-        variant: "destructive"
-      });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   const updatePreferredPlatform = async (platform: string) => {
     try {

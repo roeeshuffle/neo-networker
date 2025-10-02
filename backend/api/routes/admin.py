@@ -73,7 +73,8 @@ def get_all_users():
                 'created_at': user.created_at.isoformat() if user.created_at else None,
                 'approved_at': user.approved_at.isoformat() if user.approved_at else None,
                 'approved_by': user.approved_by,
-                'telegram_id': telegram_user.telegram_id if telegram_user else None,
+                'telegram_id': user.telegram_id,
+                'whatsapp_phone_number': user.whatsapp_phone_number,
                 'telegram_connected': bool(user.telegram_id)
             })
         
@@ -130,6 +131,73 @@ def approve_user(user_id):
         
     except Exception as e:
         admin_logger.error(f"Error approving user: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/admin/users/<user_id>/reject', methods=['POST'])
+@jwt_required()
+def reject_user(user_id):
+    """Reject a user (admin only)"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not check_admin_access(current_user_id):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        user.is_approved = False
+        user.approved_by = current_user_id
+        user.approved_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        admin_logger.info(f"User {user.email} rejected by admin")
+        
+        return jsonify({
+            'message': 'User rejected successfully',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'full_name': user.full_name,
+                'is_approved': user.is_approved
+            }
+        }), 200
+        
+    except Exception as e:
+        admin_logger.error(f"Error rejecting user: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/admin/users/<user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    """Delete a user (admin only)"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not check_admin_access(current_user_id):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Don't allow admin to delete themselves
+        if user.id == current_user_id:
+            return jsonify({'error': 'Cannot delete your own account'}), 400
+        
+        db.session.delete(user)
+        db.session.commit()
+        
+        admin_logger.info(f"User {user.email} deleted by admin")
+        
+        return jsonify({
+            'message': 'User deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        admin_logger.error(f"Error deleting user: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/admin/telegram-users', methods=['DELETE'])
