@@ -64,31 +64,41 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     due_date: ''
   });
 
-  // Fetch available projects from backend
+  // Fetch available projects from tasks data (workaround for /projects endpoint issue)
   const fetchProjects = async () => {
     try {
-      console.log('🚀 FRONTEND VERSION: 12.7 - DEBUG PROJECTS DROPDOWN');
-      console.log('Fetching distinct projects from backend...');
+      console.log('🚀 FRONTEND VERSION: 13.1 - WORKAROUND PROJECTS FROM TASKS');
+      console.log('Extracting projects from tasks data instead of calling /projects endpoint...');
       
-      const { data, error } = await apiClient.getProjects();
+      // Get tasks data to extract projects
+      const { data: tasksData, error } = await apiClient.getTasks(undefined, undefined, true);
       
       if (error) {
-        console.error('❌ Error fetching projects:', error);
+        console.error('❌ Error fetching tasks for projects:', error);
         return;
       }
       
-      console.log('✅ Raw API response:', data);
+      console.log('✅ Tasks data received for project extraction:', tasksData);
       
-      const projects = data?.projects || [];
-      console.log('📊 Available projects received:', projects);
+      // Extract unique projects from tasks data
+      const projectsSet = new Set<string>();
+      
+      if (tasksData?.projects) {
+        Object.keys(tasksData.projects).forEach(projectName => {
+          if (projectName && projectName.trim() !== '') {
+            projectsSet.add(projectName);
+          }
+        });
+      }
+      
+      const projects = Array.from(projectsSet).sort();
+      console.log('📊 Extracted projects from tasks:', projects);
       console.log('📊 Projects count:', projects.length);
-      console.log('📊 Total tasks:', data?.total_tasks);
-      console.log('📊 Debug info:', data?.debug_info);
       
       setAvailableProjects(projects);
       console.log('✅ Set availableProjects state to:', projects);
     } catch (error) {
-      console.error('❌ Error fetching projects:', error);
+      console.error('❌ Error extracting projects from tasks:', error);
     }
   };
 
