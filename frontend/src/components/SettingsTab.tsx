@@ -37,6 +37,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [previewType, setPreviewType] = useState<'contacts' | 'calendar'>('contacts');
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   
   // Collapse/Expand state for settings sections
   const [expandedSections, setExpandedSections] = useState({
@@ -53,8 +55,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 14.4 - REMOVED SYNC ALL GOOGLE DATA BUTTON');
-    console.log('🔧 SettingsTab loaded with individual preview & sync buttons only!');
+    console.log('🚀 FRONTEND VERSION: 14.5 - FIX SEPARATE LOADING STATES FOR GOOGLE SYNC BUTTONS');
+    console.log('🔧 SettingsTab loaded with separate loading states for contacts and calendar!');
     checkAllStatus();
   }, []);
 
@@ -251,7 +253,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const previewGoogleContacts = async () => {
     try {
-      setPreviewLoading(true);
+      setContactsLoading(true);
       setPreviewType('contacts');
       
       const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-contacts', {
@@ -282,13 +284,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         variant: "destructive",
       });
     } finally {
-      setPreviewLoading(false);
+      setContactsLoading(false);
     }
   };
 
   const previewGoogleCalendar = async () => {
     try {
-      setPreviewLoading(true);
+      setCalendarLoading(true);
       setPreviewType('calendar');
       
       const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-calendar', {
@@ -319,7 +321,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         variant: "destructive",
       });
     } finally {
-      setPreviewLoading(false);
+      setCalendarLoading(false);
     }
   };
 
@@ -843,9 +845,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={previewGoogleContacts}
-                      disabled={previewLoading}
+                      disabled={contactsLoading}
                     >
-                      {previewLoading ? 'Loading...' : 'Preview & Sync Contacts'}
+                      {contactsLoading ? 'Loading...' : 'Preview & Sync Contacts'}
                     </Button>
                   </div>
                   
@@ -860,9 +862,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={previewGoogleCalendar}
-                      disabled={previewLoading}
+                      disabled={calendarLoading}
                     >
-                      {previewLoading ? 'Loading...' : 'Preview & Sync Calendar'}
+                      {calendarLoading ? 'Loading...' : 'Preview & Sync Calendar'}
                     </Button>
                   </div>
                 </div>
