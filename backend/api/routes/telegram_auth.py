@@ -106,14 +106,17 @@ def get_telegram_status():
         if current_user.telegram_id:
             return jsonify({
                 'connected': True,
-                'telegram_id': current_user.telegram_id,
-                'telegram_username': current_user.telegram_username
+                'telegram_user': {
+                    'id': current_user.id,
+                    'telegram_id': current_user.telegram_id,
+                    'telegram_username': current_user.telegram_username,
+                    'first_name': current_user.full_name
+                }
             })
         else:
             return jsonify({
                 'connected': False,
-                'telegram_id': None,
-                'telegram_username': None
+                'telegram_user': None
             })
         
     except Exception as e:
