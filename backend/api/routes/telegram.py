@@ -73,10 +73,10 @@ def handle_callback_query(callback_query):
         if data == 'voice_approve':
             telegram_logger.info(f"✅ Voice approved by {first_name}")
             
-            # Find the telegram user first
-            telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
-            if not telegram_user:
-                telegram_logger.error(f"❌ Telegram user not found: {user_id}")
+            # Find the user by telegram_id
+            user = User.query.filter_by(telegram_id=user_id).first()
+            if not user:
+                telegram_logger.error(f"❌ User not found: {user_id}")
                 send_telegram_message(chat_id, "❌ User not found. Please connect your Telegram account via the web app first.")
                 return jsonify({'status': 'ok'})
             
@@ -85,7 +85,7 @@ def handle_callback_query(callback_query):
                 transcription = user.state_data['transcription']
                 telegram_logger.info(f"✅ Processing approved transcription: '{transcription}'")
                 
-                response_text = process_natural_language_request(transcription, telegram_user)
+                response_text = process_natural_language_request(transcription, user)
                 send_telegram_message(chat_id, response_text)
                 
                 # Clear the state data
@@ -109,8 +109,8 @@ def handle_callback_query(callback_query):
             telegram_logger.info(f"❌ Voice rejected by {first_name}")
             
             # Clear any pending state data
-            telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
-            if telegram_user:
+            user = User.query.filter_by(telegram_id=user_id).first()
+            if user:
                 user.state_data = None
                 if not user.state_data:
                     user.state_data = {}
@@ -140,19 +140,20 @@ def handle_voice_message(message, chat_id, user_id, first_name, username):
         
         telegram_logger.info(f"🎤 Processing voice message from {first_name} (file_id: {file_id})")
         
-        # Get or create telegram user
-        telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
+        # Get or create user
+        user = User.query.filter_by(telegram_id=user_id).first()
         
-        if not telegram_user:
-            telegram_logger.info(f"🆕 Creating new Telegram user for voice: {first_name} ID: {user_id}")
-            telegram_user = TelegramUser(
+        if not user:
+            telegram_logger.info(f"🆕 Creating new user for voice: {first_name} ID: {user_id}")
+            user = User(
                 id=str(uuid.uuid4()),
                 telegram_id=user_id,
                 telegram_username=username,
-                first_name=first_name,
-                current_state='idle'
+                full_name=first_name,
+                email=f"{username}@telegram.local",  # Temporary email
+                is_approved=True  # Auto-approve telegram users
             )
-            db.session.add(telegram_user)
+            db.session.add(user)
             db.session.commit()
         
         # Check if user's Telegram ID is connected in the web app
@@ -1322,7 +1323,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 # Use OpenAI to process natural language requests
                 if webapp_user:
                     telegram_logger.info(f"🤖 Processing natural language request for user {user.full_name}: '{text}'")
-                    response_text = process_natural_language_request(text, telegram_user)
+                    response_text = process_natural_language_request(text, user)
                     telegram_logger.info(f"🤖 OpenAI response for user {user.full_name}: '{response_text[:100]}...'")
                 else:
                     telegram_logger.info(f"🚫 Unconnected user {user.full_name} tried to use bot: '{text}'")
