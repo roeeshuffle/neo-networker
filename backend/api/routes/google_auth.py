@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, redirect, url_for
+from flask import Blueprint, request, jsonify, redirect
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from bl.services.google_auth_service import GoogleAuthService
 from dal.models import User
@@ -30,6 +30,7 @@ def google_auth_initiate():
         
         # Store state in session or database for validation
         # For now, we'll include it in the redirect URL
+        # Generate authorization URL with backend callback
         authorization_url = google_auth_service.get_authorization_url(state=state)
         
         return jsonify({
@@ -69,13 +70,11 @@ def google_auth_callback():
         # Create JWT token
         access_token = create_access_token(identity=user.id)
         
-        # Return JSON response instead of redirect
-        return jsonify({
-            'success': True,
-            'access_token': access_token,
-            'user': user.to_dict(),
-            'message': 'Google authentication successful'
-        })
+        # Redirect to frontend with success and token
+        frontend_url = "https://d2fq8k5py78ii.cloudfront.net/auth/google/callback"
+        redirect_url = f"{frontend_url}?success=true&token={access_token}"
+        
+        return redirect(redirect_url)
         
     except Exception as e:
         logger.error(f"Error in Google auth callback: {str(e)}")
@@ -315,6 +314,62 @@ def google_auth_status():
             'authenticated': True
         })
         
+@google_auth_bp.route('/auth/google/sync-contacts', methods=['POST'])
+def sync_google_contacts():
+    """Sync Google contacts to the database"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Sync contacts
+        contacts_synced = google_auth_service.sync_contacts(user)
+        
+        # Update sync timestamp
+        user.google_contacts_synced_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'contacts_synced': contacts_synced,
+            'message': f'Successfully synced {contacts_synced} contacts'
+        })
+        
     except Exception as e:
-        logger.error(f"Error getting Google auth status: {str(e)}")
-        return jsonify({'error': 'Failed to get Google auth status', 'authenticated': False}), 500
+        logger.error(f"Error syncing Google contacts: {str(e)}")
+        return jsonify({'error': 'Failed to sync contacts'}), 500
+
+@google_auth_bp.route('/auth/google/sync-calendar', methods=['POST'])
+def sync_google_calendar():
+    """Sync Google calendar events to the database"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Sync calendar events
+        events_synced = google_auth_service.sync_calendar_events(user)
+        
+        # Update sync timestamp
+        user.google_calendar_synced_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'events_synced': events_synced,
+            'message': f'Successfully synced {events_synced} calendar events'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error syncing Google calendar: {str(e)}")
+        return jsonify({'error': 'Failed to sync calendar events'}), 500

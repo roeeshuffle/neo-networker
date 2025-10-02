@@ -20,7 +20,7 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 13.7 - AUTO REFRESH 5 MIN + MANUAL REFRESH BUTTON");
+  console.log("🚀 FRONTEND VERSION: 13.9 - GOOGLE AUTH SYNC FUNCTIONALITY");
   console.log("🔍 Auth page loaded with refresh improvements");
 
   const handleGoogleAuth = async () => {
@@ -28,7 +28,7 @@ const Auth = () => {
     
     try {
       // Get Google OAuth authorization URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +136,7 @@ const Auth = () => {
         }
       } else {
         console.log("Attempting registration with:", email);
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+        const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

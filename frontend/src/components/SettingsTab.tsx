@@ -229,7 +229,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const checkGoogleStatus = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google/status`, {
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -262,7 +262,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setGoogleLoading(true);
     try {
       // Get Google OAuth authorization URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -338,7 +338,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const disconnectGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google/revoke`, {
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/revoke`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -373,8 +373,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const syncGoogleContacts = async () => {
     setGoogleLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google/contacts`, {
-        method: 'GET',
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-contacts`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
@@ -388,8 +388,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       const data = await response.json();
       toast({
-        title: "Success",
-        description: `Synced ${data.count} Google contacts!`,
+        title: "Contacts Synced",
+        description: data.message,
       });
       
       await checkGoogleStatus();
@@ -408,8 +408,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const syncGoogleCalendar = async () => {
     setGoogleLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google/calendar`, {
-        method: 'GET',
+      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-calendar`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
@@ -423,8 +423,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       const data = await response.json();
       toast({
-        title: "Success",
-        description: `Synced ${data.count} Google calendar events!`,
+        title: "Calendar Synced",
+        description: data.message,
       });
       
       await checkGoogleStatus();

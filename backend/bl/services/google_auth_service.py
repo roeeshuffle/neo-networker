@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from datetime import datetime, timedelta
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -26,7 +27,7 @@ class GoogleAuthService:
     def __init__(self):
         self.client_id = os.getenv('GOOGLE_CLIENT_ID')
         self.client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
-        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/callback')
         
         self.enabled = all([self.client_id, self.client_secret, self.redirect_uri])
         if not self.enabled:
@@ -337,4 +338,98 @@ class GoogleAuthService:
             return user.google_access_token
         except Exception as e:
             logger.error(f"Error refreshing token for user {user.id}: {str(e)}")
+            raise
+    
+    def sync_contacts(self, user):
+        """Sync Google contacts to the database"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
+        
+        try:
+            # Get contacts from Google
+            contacts = self.get_contacts(user)
+            
+            # Import here to avoid circular imports
+            from dal.models import Person
+            from dal.database import db
+            
+            synced_count = 0
+            for contact in contacts:
+                # Check if contact already exists (by email)
+                existing_person = None
+                if contact.get('email'):
+                    existing_person = Person.query.filter_by(
+                        user_id=user.id,
+                        email=contact['email']
+                    ).first()
+                
+                if not existing_person:
+                    # Create new person
+                    person = Person(
+                        id=str(uuid.uuid4()),
+                        full_name=contact.get('name', 'Unknown'),
+                        email=contact.get('email'),
+                        company=contact.get('company'),
+                        phone=contact.get('phone'),
+                        owner_id=user.id,
+                        created_by=user.id,
+                        source='google_contacts'
+                    )
+                    db.session.add(person)
+                    synced_count += 1
+            
+            db.session.commit()
+            logger.info(f"Synced {synced_count} Google contacts for user {user.id}")
+            return synced_count
+            
+        except Exception as e:
+            logger.error(f"Error syncing contacts: {str(e)}")
+            raise
+    
+    def sync_calendar_events(self, user):
+        """Sync Google calendar events to the database"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
+        
+        try:
+            # Get calendar events from Google
+            events = self.get_calendar_events(user)
+            
+            # Import here to avoid circular imports
+            from dal.models import Event
+            from dal.database import db
+            
+            synced_count = 0
+            for event_data in events:
+                # Check if event already exists (by Google event ID or title + start time)
+                existing_event = None
+                if event_data.get('id'):
+                    existing_event = Event.query.filter_by(
+                        user_id=user.id,
+                        google_event_id=event_data['id']
+                    ).first()
+                
+                if not existing_event:
+                    # Create new event
+                    event = Event(
+                        id=str(uuid.uuid4()),
+                        title=event_data.get('summary', 'Untitled Event'),
+                        description=event_data.get('description'),
+                        start_datetime=datetime.fromisoformat(event_data['start']['dateTime'].replace('Z', '+00:00')),
+                        end_datetime=datetime.fromisoformat(event_data['end']['dateTime'].replace('Z', '+00:00')),
+                        location=event_data.get('location'),
+                        google_event_id=event_data.get('id'),
+                        user_id=user.id,
+                        created_by=user.id,
+                        is_active=True
+                    )
+                    db.session.add(event)
+                    synced_count += 1
+            
+            db.session.commit()
+            logger.info(f"Synced {synced_count} Google calendar events for user {user.id}")
+            return synced_count
+            
+        except Exception as e:
+            logger.error(f"Error syncing calendar events: {str(e)}")
             raise

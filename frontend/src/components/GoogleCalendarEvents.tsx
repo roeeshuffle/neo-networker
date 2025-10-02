@@ -47,7 +47,7 @@ export const GoogleCalendarEvents: React.FC<GoogleCalendarEventsProps> = ({
       const timeMax = weekEnd.toISOString();
       
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/google/calendar?time_min=${timeMin}&time_max=${timeMax}&max_results=50`,
+        `https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/calendar?time_min=${timeMin}&time_max=${timeMax}&max_results=50`,
         {
           method: 'GET',
           headers: {

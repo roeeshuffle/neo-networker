@@ -16,7 +16,7 @@ const GoogleCallback = () => {
         if (success && token) {
           // This is a success redirect from the backend
           // Get user info with the token
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+          const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/me`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -63,7 +63,7 @@ const GoogleCallback = () => {
         }
 
         // Send the code to the backend for processing
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/google/callback?code=${code}&state=${state}`, {
+        const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/callback?code=${code}&state=${state}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
