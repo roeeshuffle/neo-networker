@@ -1297,8 +1297,8 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                             
                             # Reset state
                             if not user.state_data:
-                user.state_data = {}
-            user.state_data['current_state'] = 'idle'
+                                user.state_data = {}
+                            user.state_data['current_state'] = 'idle'
                             user.state_data = None
                             db.session.commit()
                             
