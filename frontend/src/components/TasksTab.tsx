@@ -89,6 +89,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
+      // When showDone is false: show only active tasks (todo, in_progress, pending)
+      // When showDone is true: show all tasks (including completed, cancelled)
       const status = showDone ? undefined : 'todo,in_progress,pending';
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
@@ -193,7 +195,19 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
 
   const handleQuickDone = async (taskId: string) => {
     try {
-      const { error } = await apiClient.updateTask(taskId, { status: 'completed' });
+      // Find the current task to get its current status
+      let currentTask = null;
+      Object.values(projects).forEach(projectTasks => {
+        const task = projectTasks.find(t => t.id === taskId);
+        if (task) currentTask = task;
+      });
+      
+      if (!currentTask) return;
+      
+      // Toggle between 'completed' and 'todo'
+      const newStatus = currentTask.status === 'completed' ? 'todo' : 'completed';
+      
+      const { error } = await apiClient.updateTask(taskId, { status: newStatus });
       
       if (error) throw error;
       
@@ -202,7 +216,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
         const newProjects = { ...prev };
         Object.keys(newProjects).forEach(project => {
           newProjects[project] = newProjects[project].map(task => 
-            task.id === taskId ? { ...task, status: 'completed' } : task
+            task.id === taskId ? { ...task, status: newStatus } : task
           );
         });
         return newProjects;
@@ -211,7 +225,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
       onTasksChange?.(); // Trigger count update
       toast({
         title: "Success",
-        description: "Task marked as completed",
+        description: `Task marked as ${newStatus}`,
       });
     } catch (error) {
       console.error('Error updating task:', error);
@@ -339,7 +353,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
               className="rounded"
             />
             <label htmlFor="show-done" className="text-sm font-medium">
-              Show Done
+              Show completed & cancelled tasks
             </label>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
