@@ -74,7 +74,7 @@ from api.routes.telegram_auth import telegram_auth_bp
 from api.routes.whatsapp import whatsapp_bp
 from api.routes.google_auth import google_auth_bp
 from api.routes.admin import admin_bp
-from api.routes.db_migration import migration_bp
+# Removed db_migration import - migration completed
 # Removed temporary fix routes - no longer needed
 
 # Register blueprints
