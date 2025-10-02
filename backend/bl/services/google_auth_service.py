@@ -354,7 +354,98 @@ class GoogleAuthService:
             logger.error(f"Error refreshing token for user {user.id}: {str(e)}")
             raise
     
-    def sync_contacts(self, user):
+    def get_contacts_preview(self, user):
+        """Get Google contacts preview (without inserting to database)"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
+        
+        try:
+            # Get contacts from Google
+            contacts = self.get_contacts(user)
+            
+            # Import here to avoid circular imports
+            from dal.models import Person
+            from dal.database import db
+            
+            preview_data = []
+            for contact in contacts:
+                # Check if contact already exists (by email)
+                existing_person = None
+                if contact.get('email'):
+                    existing_person = Person.query.filter_by(
+                        user_id=user.id,
+                        email=contact['email']
+                    ).first()
+                
+                preview_data.append({
+                    'name': contact.get('name', 'Unknown'),
+                    'email': contact.get('email'),
+                    'company': contact.get('company'),
+                    'phone': contact.get('phone'),
+                    'is_duplicate': existing_person is not None,
+                    'existing_id': existing_person.id if existing_person else None
+                })
+            
+            logger.info(f"Generated preview for {len(preview_data)} Google contacts for user {user.id}")
+            return preview_data
+            
+        except Exception as e:
+            logger.error(f"Error getting contacts preview: {str(e)}")
+            raise
+
+    def get_calendar_events_preview(self, user):
+        """Get Google calendar events preview (without inserting to database)"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
+        
+        try:
+            # Get calendar events from Google
+            events = self.get_calendar_events(user)
+            
+            # Import here to avoid circular imports
+            from dal.models import Event
+            from dal.database import db
+            
+            preview_data = []
+            for event_data in events:
+                # Check if event already exists (by Google event ID or title + start time)
+                existing_event = None
+                
+                # First check by Google event ID
+                if event_data.get('id'):
+                    existing_event = Event.query.filter_by(
+                        user_id=user.id,
+                        google_event_id=event_data['id']
+                    ).first()
+                
+                # If not found by Google ID, check by title + start time
+                if not existing_event:
+                    event_title = event_data.get('summary', 'Untitled Event')
+                    event_start = datetime.fromisoformat(event_data['start']['dateTime'].replace('Z', '+00:00'))
+                    
+                    existing_event = Event.query.filter_by(
+                        user_id=user.id,
+                        title=event_title,
+                        start_datetime=event_start
+                    ).first()
+                
+                preview_data.append({
+                    'title': event_title,
+                    'description': event_data.get('description'),
+                    'start_datetime': event_start.isoformat(),
+                    'end_datetime': datetime.fromisoformat(event_data['end']['dateTime'].replace('Z', '+00:00')).isoformat(),
+                    'location': event_data.get('location'),
+                    'google_event_id': event_data.get('id'),
+                    'is_duplicate': existing_event is not None,
+                    'existing_id': existing_event.id if existing_event else None
+                })
+            
+            logger.info(f"Generated preview for {len(preview_data)} Google calendar events for user {user.id}")
+            return preview_data
+            
+        except Exception as e:
+            logger.error(f"Error getting calendar events preview: {str(e)}")
+            raise
         """Sync Google contacts to the database"""
         if not self.enabled:
             raise ValueError("Google OAuth is not configured")

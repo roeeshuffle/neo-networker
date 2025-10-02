@@ -341,6 +341,168 @@ def google_auth_status():
         logger.error(f"Error getting Google auth status: {str(e)}")
         return jsonify({'error': 'Failed to get Google auth status'}), 500
         
+@google_auth_bp.route('/auth/google/preview-contacts', methods=['POST'])
+def preview_google_contacts():
+    """Preview Google contacts before syncing"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Get preview data
+        preview_data = google_auth_service.get_contacts_preview(user)
+        
+        return jsonify({
+            'success': True,
+            'preview_data': preview_data,
+            'total_contacts': len(preview_data),
+            'new_contacts': len([c for c in preview_data if not c['is_duplicate']]),
+            'duplicate_contacts': len([c for c in preview_data if c['is_duplicate']])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error previewing Google contacts: {str(e)}")
+        return jsonify({'error': 'Failed to preview contacts'}), 500
+
+@google_auth_bp.route('/auth/google/preview-calendar', methods=['POST'])
+def preview_google_calendar():
+    """Preview Google calendar events before syncing"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Get preview data
+        preview_data = google_auth_service.get_calendar_events_preview(user)
+        
+        return jsonify({
+            'success': True,
+            'preview_data': preview_data,
+            'total_events': len(preview_data),
+            'new_events': len([e for e in preview_data if not e['is_duplicate']]),
+            'duplicate_events': len([e for e in preview_data if e['is_duplicate']])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error previewing Google calendar: {str(e)}")
+        return jsonify({'error': 'Failed to preview calendar events'}), 500
+
+@google_auth_bp.route('/auth/google/sync-selected-contacts', methods=['POST'])
+def sync_selected_contacts():
+    """Sync only selected Google contacts (non-duplicates)"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Get preview data and sync only non-duplicates
+        preview_data = google_auth_service.get_contacts_preview(user)
+        new_contacts = [c for c in preview_data if not c['is_duplicate']]
+        
+        # Import here to avoid circular imports
+        from dal.models import Person
+        import uuid
+        
+        synced_count = 0
+        for contact in new_contacts:
+            person = Person(
+                id=str(uuid.uuid4()),
+                full_name=contact['name'],
+                email=contact['email'],
+                company=contact['company'],
+                phone=contact['phone'],
+                owner_id=user.id,
+                created_by=user.id,
+                source='google_contacts'
+            )
+            db.session.add(person)
+            synced_count += 1
+        
+        db.session.commit()
+        
+        # Update sync timestamp
+        user.google_contacts_synced_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'contacts_synced': synced_count,
+            'message': f'Successfully synced {synced_count} new contacts (skipped {len(preview_data) - synced_count} duplicates)'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error syncing selected Google contacts: {str(e)}")
+        return jsonify({'error': 'Failed to sync selected contacts'}), 500
+
+@google_auth_bp.route('/auth/google/sync-selected-calendar', methods=['POST'])
+def sync_selected_calendar():
+    """Sync only selected Google calendar events (non-duplicates)"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if not user.google_id:
+            return jsonify({'error': 'Google account not connected'}), 400
+        
+        # Get preview data and sync only non-duplicates
+        preview_data = google_auth_service.get_calendar_events_preview(user)
+        new_events = [e for e in preview_data if not e['is_duplicate']]
+        
+        # Import here to avoid circular imports
+        from dal.models import Event
+        import uuid
+        
+        synced_count = 0
+        for event_data in new_events:
+            event = Event(
+                id=str(uuid.uuid4()),
+                title=event_data['title'],
+                description=event_data['description'],
+                start_datetime=datetime.fromisoformat(event_data['start_datetime']),
+                end_datetime=datetime.fromisoformat(event_data['end_datetime']),
+                location=event_data['location'],
+                google_event_id=event_data['google_event_id'],
+                user_id=user.id,
+                created_by=user.id,
+                is_active=True
+            )
+            db.session.add(event)
+            synced_count += 1
+        
+        db.session.commit()
+        
+        # Update sync timestamp
+        user.google_calendar_synced_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'events_synced': synced_count,
+            'message': f'Successfully synced {synced_count} new events (skipped {len(preview_data) - synced_count} duplicates)'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error syncing selected Google calendar events: {str(e)}")
+        return jsonify({'error': 'Failed to sync selected calendar events'}), 500
+
 @google_auth_bp.route('/auth/google/sync-contacts', methods=['POST'])
 def sync_google_contacts():
     """Sync Google contacts to the database"""

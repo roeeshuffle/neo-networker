@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 14.8 - FIX GOOGLE AUTH SYNTAX ERROR")
-    print("🔍 Starting Flask app with fixed Google Auth syntax error")
+    print("🚀 APP VERSION: 14.9 - GOOGLE SYNC PREVIEW FUNCTIONALITY")
+    print("🔍 Starting Flask app with Google sync preview and duplicate detection")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
+import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
 
 interface SettingsTabProps {
   onDeleteAllTelegramUsers?: () => Promise<void>;
@@ -31,6 +32,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [googleContactsSynced, setGoogleContactsSynced] = useState(false);
   const [googleCalendarSynced, setGoogleCalendarSynced] = useState(false);
   
+  // Preview dialog state
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewType, setPreviewType] = useState<'contacts' | 'calendar'>('contacts');
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  
   // Collapse/Expand state for settings sections
   const [expandedSections, setExpandedSections] = useState({
     telegram: true,
@@ -46,8 +53,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 14.0 - COLLAPSIBLE SETTINGS + WHITE BACKGROUNDS');
-    console.log('🔧 SettingsTab loaded with collapsible sections and white backgrounds!');
+    console.log('🚀 FRONTEND VERSION: 14.3 - GOOGLE SYNC PREVIEW DIALOG');
+    console.log('🔧 SettingsTab loaded with Google sync preview functionality!');
     checkAllStatus();
   }, []);
 
@@ -240,6 +247,136 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     } finally {
       setWhatsappLoading(false);
     }
+  };
+
+  const previewGoogleContacts = async () => {
+    try {
+      setPreviewLoading(true);
+      setPreviewType('contacts');
+      
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-contacts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setPreviewData(result.preview_data || []);
+        setPreviewDialogOpen(true);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Preview Failed",
+          description: error.error || "Failed to preview contacts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error previewing contacts:', error);
+      toast({
+        title: "Preview Failed",
+        description: "Failed to preview contacts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const previewGoogleCalendar = async () => {
+    try {
+      setPreviewLoading(true);
+      setPreviewType('calendar');
+      
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-calendar', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setPreviewData(result.preview_data || []);
+        setPreviewDialogOpen(true);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Preview Failed",
+          description: error.error || "Failed to preview calendar events",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error previewing calendar:', error);
+      toast({
+        title: "Preview Failed",
+        description: "Failed to preview calendar events. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handlePreviewApprove = async () => {
+    try {
+      setPreviewLoading(true);
+      
+      const endpoint = previewType === 'contacts' 
+        ? 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-selected-contacts'
+        : 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-selected-calendar';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Sync Successful",
+          description: result.message || `Successfully synced ${previewType}`,
+        });
+        
+        if (previewType === 'contacts') {
+          setGoogleContactsSynced(true);
+        } else {
+          setGoogleCalendarSynced(true);
+        }
+        
+        setPreviewDialogOpen(false);
+        await checkGoogleStatus(); // Refresh status
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Sync Failed",
+          description: error.error || "Failed to sync data",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing data:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handlePreviewCancel = () => {
+    setPreviewDialogOpen(false);
+    setPreviewData([]);
   };
 
   const checkGoogleStatus = async () => {
@@ -770,10 +907,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={syncGoogleContacts}
-                      disabled={googleLoading}
+                      onClick={previewGoogleContacts}
+                      disabled={previewLoading}
                     >
-                      {googleLoading ? 'Syncing...' : 'Sync Contacts'}
+                      {previewLoading ? 'Loading...' : 'Preview & Sync Contacts'}
                     </Button>
                   </div>
                   
@@ -787,10 +924,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={syncGoogleCalendar}
-                      disabled={googleLoading}
+                      onClick={previewGoogleCalendar}
+                      disabled={previewLoading}
                     >
-                      {googleLoading ? 'Syncing...' : 'Sync Calendar'}
+                      {previewLoading ? 'Loading...' : 'Preview & Sync Calendar'}
                     </Button>
                   </div>
                 </div>
@@ -822,6 +959,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
         </CardContent>
       </Card>
+      
+      {/* Preview Dialog */}
+      <GoogleSyncPreviewDialog
+        isOpen={previewDialogOpen}
+        onClose={handlePreviewCancel}
+        type={previewType}
+        previewData={previewData}
+        onApprove={handlePreviewApprove}
+        onCancel={handlePreviewCancel}
+        isLoading={previewLoading}
+      />
     </div>
   );
 };
