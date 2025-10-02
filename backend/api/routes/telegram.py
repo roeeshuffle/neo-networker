@@ -646,7 +646,7 @@ def add_task_from_telegram(args: dict, user: User) -> str:
         task = Task(
             id=str(uuid.uuid4()),
             task_id=next_task_id,
-            title=args.get('title') or args.get('text'),  # Support both new and old field names
+            title=args.get('title') or args.get('text') or 'Untitled Task',  # Ensure title is never None
             description=args.get('description'),
             project=args.get('project', 'Unrecognized project'),
             status=args.get('status', 'todo'),
@@ -677,7 +677,8 @@ def add_task_from_telegram(args: dict, user: User) -> str:
         return f"✅ Added task #{task.task_id}: {task.title or task.text}"
         
     except Exception as e:
-        return f"❌ Error adding task: {str(e)}"
+        telegram_logger.error(f"💥 Error adding task: {str(e)}")
+        return f"❌ Failed to add task. Please try again."
 
 def remove_task_from_telegram(args: any, user: User) -> str:
     """Remove a task from Telegram request"""
@@ -748,7 +749,8 @@ def remove_task_from_telegram(args: any, user: User) -> str:
                 return response
             
     except Exception as e:
-        return f"❌ Error removing task: {str(e)}"
+        telegram_logger.error(f"💥 Error removing task: {str(e)}")
+        return f"❌ Failed to remove task. Please try again."
 
 def add_alert_to_task_from_telegram(args: any, user: User) -> str:
     """Add alert to task from Telegram request"""
@@ -790,7 +792,8 @@ def show_tasks_from_telegram(args: dict, user: User) -> str:
         return response
         
     except Exception as e:
-        return f"❌ Error fetching tasks: {str(e)}"
+        telegram_logger.error(f"💥 Error fetching tasks: {str(e)}")
+        return f"❌ Failed to fetch tasks. Please try again."
 
 def add_people_from_telegram(args: list, user: User) -> str:
     """Add people from Telegram request"""
@@ -866,7 +869,7 @@ def add_people_from_telegram(args: list, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error adding people: {str(e)}")
-        return f"❌ Error adding people: {str(e)}"
+        return f"❌ Failed to add people. Please try again."
 
 def show_meetings_from_telegram(args: str, user: User) -> str:
     """Show meetings from Telegram request"""
@@ -951,7 +954,7 @@ def update_task_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error updating task: {str(e)}")
-        return f"❌ Error updating task: {str(e)}"
+        return f"❌ Failed to update task. Please try again."
 
 def update_person_from_telegram(args: dict, user: User) -> str:
     """Update person from Telegram request"""
@@ -1041,7 +1044,7 @@ def update_person_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error updating person: {str(e)}")
-        return f"❌ Error updating person: {str(e)}"
+        return f"❌ Failed to update person. Please try again."
 
 def delete_person_from_telegram(args: any, user: User) -> str:
     """Delete person from Telegram request"""
@@ -1072,7 +1075,7 @@ def delete_person_from_telegram(args: any, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error deleting person: {str(e)}")
-        return f"❌ Error deleting person: {str(e)}"
+        return f"❌ Failed to delete person. Please try again."
 
 def add_person_from_telegram(args: dict, user: User) -> str:
     """Add a person from Telegram request"""
@@ -1824,7 +1827,7 @@ def add_event_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error adding event: {str(e)}")
-        return f"❌ Error adding event: {str(e)}"
+        return f"❌ Failed to add event. Please try again."
 
 def show_events_from_telegram(args: dict, user: User) -> str:
     """Show events from Telegram request"""
@@ -1886,7 +1889,7 @@ def show_events_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error showing events: {str(e)}")
-        return f"❌ Error showing events: {str(e)}"
+        return f"❌ Failed to show events. Please try again."
 
 def remove_event_from_telegram(args: any, user: User) -> str:
     """Remove an event from Telegram request"""
@@ -1917,7 +1920,7 @@ def remove_event_from_telegram(args: any, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error removing event: {str(e)}")
-        return f"❌ Error removing event: {str(e)}"
+        return f"❌ Failed to remove event. Please try again."
 
 def update_event_from_telegram(args: dict, user: User) -> str:
     """Update an event from Telegram request"""
@@ -1985,7 +1988,7 @@ def update_event_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error updating event: {str(e)}")
-        return f"❌ Error updating event: {str(e)}"
+        return f"❌ Failed to update event. Please try again."
 
 def show_people_from_telegram(args: dict, user: User) -> str:
     """Show people from Telegram request"""
@@ -2029,7 +2032,7 @@ def show_people_from_telegram(args: dict, user: User) -> str:
         
     except Exception as e:
         telegram_logger.error(f"💥 Error showing people: {str(e)}")
-        return f"❌ Error showing people: {str(e)}"
+        return f"❌ Failed to show people. Please try again."
 
 @telegram_bp.route('/telegram/setup-webhook', methods=['POST'])
 @jwt_required()
