@@ -94,13 +94,21 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
     setTelegramLoading(true);
     try {
-      const { error } = await apiClient.connectTelegram(telegramId);
+      const { data, error } = await apiClient.connectTelegram(telegramId);
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Telegram account connected successfully!",
-      });
+      // Check if this was a transfer
+      if (data?.transferred_from) {
+        toast({
+          title: "Success",
+          description: `Telegram account transferred from ${data.transferred_from}!`,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Telegram account connected successfully!",
+        });
+      }
       
       // Refresh the user data in the authentication context
       await refreshUser();

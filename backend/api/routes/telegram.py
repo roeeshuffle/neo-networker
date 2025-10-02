@@ -1526,10 +1526,38 @@ def connect_telegram():
         # Check if telegram_id is already connected to another user
         existing_user = User.query.filter_by(telegram_id=telegram_id).first()
         if existing_user and existing_user.id != current_user.id:
-            return jsonify({'error': 'This Telegram ID is already connected to another account'}), 400
+            # Transfer the Telegram connection to the current user
+            print(f"🔄 TELEGRAM CONNECT - Transferring Telegram ID {telegram_id} from user {existing_user.email} to user {current_user.email}")
+            
+            # Clear the telegram_id from the existing user
+            existing_user.telegram_id = None
+            existing_user.telegram_username = None
+            
+            # Update current user with telegram_id
+            current_user.telegram_id = telegram_id
+            current_user.telegram_username = data.get('telegram_username', existing_user.telegram_username)
+            
+            db.session.commit()
+            
+            print(f"✅ TELEGRAM CONNECT - Successfully transferred Telegram connection")
+            
+            return jsonify({
+                'message': 'Telegram account transferred successfully',
+                'user': current_user.to_dict(),
+                'transferred_from': existing_user.email
+            })
         
-        # Update user with telegram_id
+        # If already connected to current user, just return success
+        if existing_user and existing_user.id == current_user.id:
+            print(f"✅ TELEGRAM CONNECT - Telegram ID {telegram_id} already connected to current user")
+            return jsonify({
+                'message': 'Telegram account already connected',
+                'user': current_user.to_dict()
+            })
+        
+        # Update user with telegram_id (new connection)
         current_user.telegram_id = telegram_id
+        current_user.telegram_username = data.get('telegram_username', 'Unknown')
         db.session.commit()
         
         return jsonify({
