@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 2.0 - WITH DEBUG LOGGING")
-    print("🔍 Starting Flask app with enhanced logging")
+    print("🚀 APP VERSION: 4.0 - FRONTEND CONSOLE LOGGING")
+    print("🔍 Starting Flask app with frontend console logging")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

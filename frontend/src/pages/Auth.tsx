@@ -19,6 +19,10 @@ const Auth = () => {
   const { toast } = useToast();
   const { login, refreshUser, isAuthenticated } = useAuth();
 
+  // Frontend version logging
+  console.log("🚀 FRONTEND VERSION: 4.0 - FRONTEND CONSOLE LOGGING");
+  console.log("🔍 Auth page loaded with frontend console logging");
+
   const handleGoogleAuth = async () => {
     setLoading(true);
     
@@ -196,24 +200,14 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {isAuthenticated && (
-          <div className="flex items-center gap-4 mb-8">
-            <Link to="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-        )}
 
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center">
               <img 
-                src="/alist-logo-final.svg" 
+                src="/alist-logo.png" 
                 alt="Alist Logo" 
-                className="h-12 w-12"
+                className="h-16 w-16"
               />
             </CardTitle>
             <p className="text-muted-foreground">

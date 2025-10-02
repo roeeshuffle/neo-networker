@@ -113,9 +113,9 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      // When showDone is false: show only active tasks (todo, in_progress, pending)
+      // When showDone is false: show only active tasks (todo, in_progress)
       // When showDone is true: show all tasks (including completed, cancelled)
-      const status = showDone ? undefined : 'todo,in_progress,pending';
+      const status = showDone ? undefined : 'todo,in_progress';
       console.log('Fetching tasks with status filter:', status, 'showDone:', showDone);
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
