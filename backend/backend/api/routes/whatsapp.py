@@ -242,7 +242,7 @@ def whatsapp_webhook():
                     db.session.commit()
                     
                     # Process the approved transcription as a regular text message
-                    from routes.telegram import process_natural_language_request
+                    from api.routes.telegram import process_natural_language_request
                     
                     response_text = process_natural_language_request(transcription, user)
                     
@@ -261,7 +261,7 @@ def whatsapp_webhook():
                     return jsonify({'status': 'ok'})
             
             # Process the message using the same logic as Telegram
-            from routes.telegram import process_natural_language_request
+            from api.routes.telegram import process_natural_language_request
             
             response_text = process_natural_language_request(message_text, user)
             
