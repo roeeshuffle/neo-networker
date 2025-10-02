@@ -177,7 +177,7 @@ def whatsapp_webhook():
             message_data = messaging_service.process_incoming_message('whatsapp', data)
             
             if not message_data:
-                whatsapp_logger.info("❌ Could not process WhatsApp message")
+                whatsapp_logger.info("ℹ️ WhatsApp webhook processed (status update or no message)")
                 return jsonify({'status': 'ok'})
             
             from_phone = message_data.get('from_phone')
