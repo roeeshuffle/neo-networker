@@ -74,7 +74,7 @@ def get_all_users():
                 'approved_at': user.approved_at.isoformat() if user.approved_at else None,
                 'approved_by': user.approved_by,
                 'telegram_id': telegram_user.telegram_id if telegram_user else None,
-                'telegram_connected': telegram_user.is_authenticated if telegram_user else False
+                'telegram_connected': bool(user.telegram_id)
             })
         
         return jsonify(user_data), 200
