@@ -269,20 +269,8 @@ def fix_database():
 
 # Removed Google OAuth endpoint - Google OAuth fields removed from User model
 
-@app.before_request
-def log_request_info():
-    # Only log important requests, skip repetitive auth checks and user management
-    skip_patterns = ['/api/auth/me', '/api/health', '/api/auth/users']
-    if not any(pattern in request.url for pattern in skip_patterns):
-        app.logger.info(f'{request.method} {request.url} from {request.remote_addr}')
-
-@app.after_request
-def log_response_info(response):
-    # Only log important responses, skip repetitive auth checks and user management
-    skip_patterns = ['/api/auth/me', '/api/health', '/api/auth/users']
-    if not any(pattern in request.url for pattern in skip_patterns):
-        app.logger.info(f'Response: {response.status_code}')
-    return response
+# Removed excessive request/response logging to reduce log noise
+# @app.before_request and @app.after_request decorators removed
 
 @app.route('/api/users', methods=['GET'])
 @jwt_required()
