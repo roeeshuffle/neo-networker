@@ -263,15 +263,29 @@ def get_google_calendar():
         return jsonify({'error': 'Failed to get Google calendar events'}), 500
 
 @google_auth_bp.route('/auth/google/status', methods=['GET'])
-@jwt_required()
 def google_auth_status():
     """Get Google authentication status for current user"""
     try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        # Check if user is authenticated
+        try:
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return jsonify({'error': 'User not found', 'authenticated': False}), 404
+        except Exception as auth_error:
+            # JWT authentication failed - return JSON instead of HTML
+            logger.warning(f"JWT authentication failed for Google status: {str(auth_error)}")
+            return jsonify({
+                'error': 'Authentication required',
+                'authenticated': False,
+                'has_google_account': False,
+                'google_id': None,
+                'token_valid': False,
+                'contacts_synced_at': None,
+                'calendar_synced_at': None,
+                'service_configured': False
+            }), 401
         
         has_google = bool(user.google_id)
         token_valid = False
@@ -284,7 +298,8 @@ def google_auth_status():
                 'token_valid': False,
                 'contacts_synced_at': None,
                 'calendar_synced_at': None,
-                'service_configured': False
+                'service_configured': False,
+                'authenticated': True
             })
         
         if has_google:
@@ -296,9 +311,10 @@ def google_auth_status():
             'token_valid': token_valid,
             'contacts_synced_at': user.google_contacts_synced_at.isoformat() if user.google_contacts_synced_at else None,
             'calendar_synced_at': user.google_calendar_synced_at.isoformat() if user.google_calendar_synced_at else None,
-            'service_configured': True
+            'service_configured': True,
+            'authenticated': True
         })
         
     except Exception as e:
         logger.error(f"Error getting Google auth status: {str(e)}")
-        return jsonify({'error': 'Failed to get Google auth status'}), 500
+        return jsonify({'error': 'Failed to get Google auth status', 'authenticated': False}), 500
