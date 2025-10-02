@@ -466,16 +466,16 @@ def process_natural_language_request(text: str, user: User) -> str:
             function_number = function_data[0]
             parameters = function_data[1] if len(function_data) > 1 else None
             telegram_logger.info(f"🔧 Executing function {function_number} with parameters: {parameters}")
-            return execute_bot_function(function_number, parameters, telegram_user, text)
+            return execute_bot_function(function_number, parameters, user, text)
         except (json.JSONDecodeError, IndexError) as parse_error:
             telegram_logger.warning(f"⚠️ Failed to parse assistant response: {parse_error}")
             # Fallback to search
-            return search_from_telegram({"query": text, "type": "people"}, telegram_user)
+            return search_from_telegram({"query": text, "type": "people"}, user)
         
     except Exception as error:
         telegram_logger.error(f"💥 Assistant API error: {error}")
         # Fallback to search
-        return search_from_telegram({"query": text, "type": "people"}, telegram_user)
+        return search_from_telegram({"query": text, "type": "people"}, user)
 
 def execute_bot_function(function_number: int, parameters: any, user: User, original_text: str) -> str:
     """Execute the function mapped by OpenAI"""
