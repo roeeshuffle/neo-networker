@@ -20,6 +20,7 @@ from api.app import app
 from dal.database import db
 from dal.models import User, Person, Task, Event
 from flask_jwt_extended import create_access_token
+from werkzeug.security import generate_password_hash
 
 class TestNeoNetworkerAPI(unittest.TestCase):
     """Test cases for the Neo Networker API"""
@@ -45,6 +46,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
                 approved_at=datetime.now(timezone.utc)
             )
             self.admin_user.approved_by = self.admin_user.id
+            self.admin_user.password_hash = generate_password_hash('admin123')
             db.session.add(self.admin_user)
             
             # Create test regular user
@@ -56,6 +58,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
                 approved_at=datetime.now(timezone.utc)
             )
             self.regular_user.approved_by = self.admin_user.id
+            self.regular_user.password_hash = generate_password_hash('user123')
             db.session.add(self.regular_user)
             
             db.session.commit()
@@ -102,7 +105,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
     
     def test_user_login(self):
         """Test user login"""
-        login_data = {'email': 'admin@test.com'}
+        login_data = {'email': 'admin@test.com', 'password': 'admin123'}
         
         response = self.client.post('/api/auth/login',
                                   data=json.dumps(login_data),
