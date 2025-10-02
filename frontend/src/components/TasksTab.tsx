@@ -948,7 +948,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projectsList.map((project) => (
+                  {getProjectsList().map((project) => (
                     <SelectItem key={project} value={project}>
                       {project}
                     </SelectItem>
