@@ -207,8 +207,12 @@ const Auth = () => {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-center">
-              Alist
+            <CardTitle className="flex items-center justify-center">
+              <img 
+                src="/alist-logo-final.svg" 
+                alt="Alist Logo" 
+                className="h-12 w-12"
+              />
             </CardTitle>
             <p className="text-muted-foreground">
               {isLogin ? "Sign in to your account" : "Create a new account"}
