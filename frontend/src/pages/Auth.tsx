@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 13.6 - FIX GOOGLE STATUS ERROR HANDLING");
-  console.log("🔍 Auth page loaded with Google status error handling fix");
+  console.log("🚀 FRONTEND VERSION: 13.7 - AUTO REFRESH 5 MIN + MANUAL REFRESH BUTTON");
+  console.log("🔍 Auth page loaded with refresh improvements");
 
   const handleGoogleAuth = async () => {
     setLoading(true);

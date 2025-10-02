@@ -11,7 +11,7 @@ import { PeopleTable } from "@/components/PeopleTable";
 import { PersonForm } from "@/components/PersonForm";
 import { EditablePersonModal } from "@/components/EditablePersonModal";
 import { CsvUploader } from "@/components/CsvUploader";
-import { LogOut, Plus, CheckSquare, Calendar, Settings, User } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TasksTab from "@/components/TasksTab";
 import EventsTab from "@/components/EventsTab";
@@ -79,14 +79,14 @@ const Dashboard = () => {
     }
   }, [activeTab, isAuthenticated, user]);
 
-  // Periodic refresh of counts every 30 seconds
+  // Periodic refresh of counts every 5 minutes
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
     const interval = setInterval(() => {
       fetchTasksCount();
       fetchEventsCount();
-    }, 30000); // Refresh every 30 seconds
+    }, 300000); // Refresh every 5 minutes (300 seconds)
 
     return () => clearInterval(interval);
   }, [isAuthenticated, user]);
@@ -96,6 +96,16 @@ const Dashboard = () => {
       await fetchPeople();
       await fetchTasksCount();
       await fetchEventsCount();
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    if (user) {
+      await loadData();
+      toast({
+        title: "Refreshed",
+        description: "Data updated successfully",
+      });
     }
   };
 
@@ -323,7 +333,7 @@ const Dashboard = () => {
               </Tabs>
             </div>
             
-            {/* Right: Search Bar, Settings, and User */}
+            {/* Right: Search Bar, Refresh Button, Settings, and User */}
             <div className="flex items-center gap-3">
               {/* Search Bar */}
               <div className="w-64">
@@ -332,6 +342,17 @@ const Dashboard = () => {
                   placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
                 />
               </div>
+              
+              {/* Refresh Button */}
+              <Button 
+                onClick={handleManualRefresh}
+                variant="ghost" 
+                size="sm"
+                className="w-10 h-10 p-0"
+                title="Refresh data"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
               
               {/* Settings Button */}
               {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
