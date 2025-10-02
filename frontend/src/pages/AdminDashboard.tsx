@@ -27,8 +27,8 @@ const AdminDashboard = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 14.1 - ENHANCED ADMIN DASHBOARD');
-    console.log('👑 AdminDashboard loaded with full user management!');
+    console.log('🚀 FRONTEND VERSION: 14.2 - FIX ADMIN DASHBOARD VARIABLE REFERENCE');
+    console.log('👑 AdminDashboard loaded with fixed variable references!');
     fetchAllUsers();
   }, []);
 
@@ -201,7 +201,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Approved Users</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {pendingUsers.filter(user => user.is_approved).length}
+                    {users.filter(user => user.is_approved).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
@@ -217,7 +217,7 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-foreground/80">Total Users</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {pendingUsers.length}
+                    {users.length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
