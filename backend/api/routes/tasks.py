@@ -23,6 +23,9 @@ def get_tasks():
         status = request.args.get('status')
         include_scheduled = request.args.get('include_scheduled', 'true').lower() == 'true'
         
+        print(f"🚀 APP VERSION: 8.0 - BACKEND STATUS FILTER FIX")
+        print(f"📋 GET /tasks - project: {project}, status: {status}, include_scheduled: {include_scheduled}")
+        
         # Build query
         query = Task.query.filter(Task.owner_id == current_user_id)
         
@@ -36,7 +39,12 @@ def get_tasks():
                 query = query.filter(Task.text.ilike(f'%{project}%'))
         
         if status:
-            query = query.filter(Task.status == status)
+            # Handle comma-separated status values
+            if ',' in status:
+                status_list = [s.strip() for s in status.split(',')]
+                query = query.filter(Task.status.in_(status_list))
+            else:
+                query = query.filter(Task.status == status)
         
         if not include_scheduled:
             # Only show active tasks (not scheduled for future)
@@ -53,6 +61,10 @@ def get_tasks():
             # Fallback ordering if project column doesn't exist
             tasks = query.order_by(Task.priority.desc(), Task.created_at.desc()).all()
         
+        print(f"📊 Found {len(tasks)} tasks")
+        for task in tasks:
+            print(f"  - Task: {getattr(task, 'title', 'No title')} | Status: {task.status} | Project: {getattr(task, 'project', 'No project')}")
+        
         # Group tasks by project
         projects = {}
         for task in tasks:
@@ -61,6 +73,8 @@ def get_tasks():
             if project_name not in projects:
                 projects[project_name] = []
             projects[project_name].append(task.to_dict())
+        
+        print(f"📁 Grouped into {len(projects)} projects: {list(projects.keys())}")
         
         return jsonify({
             'projects': projects,
