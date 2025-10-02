@@ -485,13 +485,22 @@ def process_natural_language_request(text: str, user: User) -> str:
         
         # Parse the JSON response
         try:
-            function_data = json.loads(assistant_response)
+            telegram_logger.info(f"🔍 Raw assistant response: '{assistant_response}'")
+            telegram_logger.info(f"🔍 Response type: {type(assistant_response)}")
+            telegram_logger.info(f"🔍 Response length: {len(assistant_response)}")
+            
+            # Clean the response - remove any extra whitespace or newlines
+            cleaned_response = assistant_response.strip()
+            telegram_logger.info(f"🔍 Cleaned response: '{cleaned_response}'")
+            
+            function_data = json.loads(cleaned_response)
             function_number = function_data[0]
             parameters = function_data[1] if len(function_data) > 1 else None
             telegram_logger.info(f"🔧 Executing function {function_number} with parameters: {parameters}")
             return execute_bot_function(function_number, parameters, user, text)
         except (json.JSONDecodeError, IndexError) as parse_error:
             telegram_logger.warning(f"⚠️ Failed to parse assistant response: {parse_error}")
+            telegram_logger.warning(f"⚠️ Raw response that failed: '{assistant_response}'")
             # Fallback to search
             return search_from_telegram({"query": text, "type": "people"}, user)
         
@@ -503,10 +512,13 @@ def process_natural_language_request(text: str, user: User) -> str:
 def execute_bot_function(function_number: int, parameters: any, user: User, original_text: str) -> str:
     """Execute the function mapped by OpenAI"""
     telegram_logger.info(f"⚙️ Executing function {function_number} with params: {parameters} for user {user.full_name}")
+    telegram_logger.info(f"⚙️ Function number type: {type(function_number)}")
+    telegram_logger.info(f"⚙️ Parameters type: {type(parameters)}")
     
     try:
         # TASKS
         if function_number == 1:  # add_task
+            telegram_logger.info(f"🎯 Calling add_task_from_telegram with: {parameters}")
             return add_task_from_telegram(parameters, user)
             
         elif function_number == 2:  # show_all_tasks
