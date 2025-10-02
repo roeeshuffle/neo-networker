@@ -1237,6 +1237,9 @@ def telegram_webhook():
         else:
             telegram_logger.info(f"👤 Existing user found: {user.full_name} (ID: {user.id})")
         
+        # Check if user's Telegram ID is connected in the web app
+        webapp_user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        
         # User is already the webapp user since we're using the same model
         
         # Handle different commands

@@ -171,6 +171,13 @@ class WhatsAppService:
                 return None
                 
             value = change.get('value', {})
+            
+            # Handle status updates (sent, delivered, read, etc.)
+            if 'statuses' in value and value['statuses']:
+                whatsapp_logger.info(f"📊 WhatsApp status update received: {value['statuses'][0].get('status')}")
+                return None  # Don't process status updates as messages
+            
+            # Handle actual messages
             if 'messages' not in value or not value['messages']:
                 return None
                 
