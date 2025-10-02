@@ -351,7 +351,7 @@ def get_or_create_thread(user: User):
     """Get or create a thread for the user"""
     try:
         # Use telegram_id as thread identifier
-        thread_id = user.state_data.get('thread_id') if user.state_data else None
+        thread_id = user.state_data.get('thread_id') if user.state_data and isinstance(user.state_data, dict) else None
         
         if not thread_id:
             # Create new thread
