@@ -1,5 +1,22 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <!-- Clean A letter -->
-  <text x="256" y="360" font-family="Arial, sans-serif" font-size="320" font-weight="bold" 
-        text-anchor="middle" fill="#1F2937" letter-spacing="0">A</text>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e5e5e5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="200" height="200" fill="url(#backgroundGradient)" rx="20"/>
+  
+  <!-- Main text "A-List." -->
+  <text x="100" y="90" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#4a4a4a">A-List.</text>
+  
+  <!-- Tagline "People, Notes, Tasks." -->
+  <text x="100" y="120" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#8a8a8a">People, Notes, Tasks.</text>
+  
+  <!-- Subtle sparkle in bottom right -->
+  <g transform="translate(160, 160)">
+    <path d="M0,-8 L2,-2 L8,0 L2,2 L0,8 L-2,2 L-8,0 L-2,-2 Z" fill="#c0c0c0" opacity="0.6"/>
+  </g>
 </svg>

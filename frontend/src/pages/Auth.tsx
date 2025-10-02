@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 4.0 - FRONTEND CONSOLE LOGGING");
-  console.log("🔍 Auth page loaded with frontend console logging");
+  console.log("🚀 FRONTEND VERSION: 5.0 - NEW A-LIST LOGO");
+  console.log("🔍 Auth page loaded with new A-List logo");
 
   const handleGoogleAuth = async () => {
     setLoading(true);
@@ -205,8 +205,8 @@ const Auth = () => {
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center">
               <img 
-                src="/alist-logo.png" 
-                alt="Alist Logo" 
+                src="/alist-logo-new.svg" 
+                alt="A-List Logo" 
                 className="h-16 w-16"
               />
             </CardTitle>
