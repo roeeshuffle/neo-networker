@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 14.7 - FIX ADMIN API ENDPOINTS + MISSING ROUTES")
-    print("🔍 Starting Flask app with complete admin API endpoints")
+    print("🚀 APP VERSION: 14.8 - FIX GOOGLE AUTH SYNTAX ERROR")
+    print("🔍 Starting Flask app with fixed Google Auth syntax error")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

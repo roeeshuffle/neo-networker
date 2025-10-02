@@ -337,6 +337,10 @@ def google_auth_status():
             'authenticated': True
         })
         
+    except Exception as e:
+        logger.error(f"Error getting Google auth status: {str(e)}")
+        return jsonify({'error': 'Failed to get Google auth status'}), 500
+        
 @google_auth_bp.route('/auth/google/sync-contacts', methods=['POST'])
 def sync_google_contacts():
     """Sync Google contacts to the database"""
