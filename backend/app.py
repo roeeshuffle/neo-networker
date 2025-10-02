@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 15.1 - FIX JWT AUTHENTICATION FOR PREVIEW ENDPOINTS")
-    print("🔍 Starting Flask app with JWT authentication fix for Google sync preview")
+    print("🚀 APP VERSION: 15.2 - FIX GOOGLE AUTH UNICODE ERROR")
+    print("🔍 Starting Flask app with Google auth Unicode conversion fix")
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=False, host='0.0.0.0', port=port)

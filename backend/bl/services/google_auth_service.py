@@ -361,7 +361,7 @@ class GoogleAuthService:
         
         try:
             # Get contacts from Google
-            contacts = self.get_contacts(user)
+            contacts = self.get_contacts(user.google_access_token)
             
             # Import here to avoid circular imports
             from dal.models import Person
@@ -400,7 +400,7 @@ class GoogleAuthService:
         
         try:
             # Get calendar events from Google
-            events = self.get_calendar_events(user)
+            events = self.get_calendar_events(user.google_access_token)
             
             # Import here to avoid circular imports
             from dal.models import Event
