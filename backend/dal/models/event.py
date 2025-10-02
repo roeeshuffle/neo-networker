@@ -27,7 +27,6 @@ class Event(db.Model):
     
     # Foreign key to user
     user_id = db.Column(db.String(36), db.ForeignKey('profiles.id'), nullable=False)
-    user = db.relationship("User", foreign_keys=[user_id], backref="events")
     
     def to_dict(self):
         return {
