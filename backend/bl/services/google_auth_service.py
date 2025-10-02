@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import logging
 from datetime import datetime, timedelta
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -9,8 +10,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from dal.models import User
 from dal.database import db
-import logging
-import uuid
+
+# Suppress Google API client cache warnings
+import warnings
+warnings.filterwarnings("ignore", message="file_cache is only supported with oauth2client<4.0.0")
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +72,13 @@ class GoogleAuthService:
     
     def exchange_code_for_tokens(self, authorization_code, state=None):
         """Exchange authorization code for access and refresh tokens"""
+        if not self.enabled:
+            raise ValueError("Google OAuth is not configured")
+        
         try:
+            logger.info(f"Exchanging authorization code for tokens. Code length: {len(authorization_code) if authorization_code else 0}")
+            logger.info(f"Using redirect URI: {self.redirect_uri}")
+            
             flow = Flow.from_client_config(
                 {
                     "web": {
@@ -86,10 +95,13 @@ class GoogleAuthService:
             
             if state:
                 flow.state = state
+                logger.info(f"Using state parameter: {state}")
                 
             flow.fetch_token(code=authorization_code)
             
             credentials = flow.credentials
+            
+            logger.info("Successfully exchanged code for tokens")
             
             return {
                 'access_token': credentials.token,
@@ -99,6 +111,8 @@ class GoogleAuthService:
             }
         except Exception as e:
             logger.error(f"Error exchanging code for tokens: {str(e)}")
+            logger.error(f"Authorization code: {authorization_code[:20]}..." if authorization_code else "No authorization code")
+            logger.error(f"State: {state}")
             raise
     
     def get_user_info(self, access_token):

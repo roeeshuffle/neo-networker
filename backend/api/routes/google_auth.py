@@ -267,6 +267,8 @@ def google_auth_status():
     try:
         # Check if user is authenticated
         try:
+            from flask_jwt_extended import verify_jwt_in_request
+            verify_jwt_in_request()
             current_user_id = get_jwt_identity()
             user = User.query.get(current_user_id)
             
@@ -274,7 +276,7 @@ def google_auth_status():
                 return jsonify({'error': 'User not found', 'authenticated': False}), 404
         except Exception as auth_error:
             # JWT authentication failed - return JSON instead of HTML
-            logger.warning(f"JWT authentication failed for Google status: {str(auth_error)}")
+            # This is expected when called from auth page, so don't log as warning
             return jsonify({
                 'error': 'Authentication required',
                 'authenticated': False,
