@@ -40,8 +40,26 @@ def connect_telegram():
                     'user': existing_user.to_dict()
                 })
             else:
-                # Connected to a different user
-                return jsonify({'error': 'This Telegram account is already connected to another user'}), 400
+                # Transfer the Telegram connection to the current user
+                telegram_auth_logger.info(f"🔄 Transferring Telegram ID {telegram_id} from user {existing_user.email} to user {current_user.email}")
+                
+                # Clear the telegram_id from the existing user
+                existing_user.telegram_id = None
+                existing_user.telegram_username = None
+                
+                # Update current user with telegram_id
+                current_user.telegram_id = telegram_id
+                current_user.telegram_username = data.get('telegram_username', existing_user.telegram_username)
+                
+                db.session.commit()
+                
+                telegram_auth_logger.info(f"✅ Successfully transferred Telegram connection")
+                
+                return jsonify({
+                    'message': 'Telegram account transferred successfully',
+                    'user': current_user.to_dict(),
+                    'transferred_from': existing_user.email
+                })
         
         # Update current user with Telegram ID
         current_user.telegram_id = telegram_id
