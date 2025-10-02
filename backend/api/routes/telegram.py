@@ -90,7 +90,9 @@ def handle_callback_query(callback_query):
                 
                 # Clear the state data
                 user.state_data = None
-                user.current_state = None
+                if not user.state_data:
+                    user.state_data = {}
+                user.state_data['current_state'] = None
                 db.session.commit()
             else:
                 telegram_logger.error(f"❌ No pending transcription found for user {user_id}")
@@ -110,7 +112,9 @@ def handle_callback_query(callback_query):
             telegram_user = TelegramUser.query.filter_by(telegram_id=user_id).first()
             if telegram_user:
                 user.state_data = None
-                user.current_state = None
+                if not user.state_data:
+                    user.state_data = {}
+                user.state_data['current_state'] = None
                 db.session.commit()
             
             # Delete the approval message (no response message needed)
@@ -162,7 +166,9 @@ def handle_voice_message(message, chat_id, user_id, first_name, username):
             
             if transcription:
                 # Set state to waiting for voice approval
-                user.current_state = 'waiting_voice_approval'
+                if not user.state_data:
+                    user.state_data = {}
+                user.state_data['current_state'] = 'waiting_voice_approval'
                 user.state_data = {'transcription': transcription}
                 db.session.commit()
                 
@@ -682,7 +688,9 @@ def remove_task_from_telegram(args: any, user: User) -> str:
                     response += "\n"
                 
                 # Set state to wait for user selection
-                user.current_state = 'waiting_task_delete_confirmation'
+                if not user.state_data:
+                    user.state_data = {}
+                user.state_data['current_state'] = 'waiting_task_delete_confirmation'
                 # Store the search term to recreate the list
                 user.state_data = {'search_term': search_term}
                 db.session.commit()
@@ -916,7 +924,9 @@ def delete_person_from_telegram(args: any, user: User) -> str:
                     response += "\n"
                 
                 # Set state to wait for user selection
-                user.current_state = 'waiting_delete_confirmation'
+                if not user.state_data:
+                    user.state_data = {}
+                user.state_data['current_state'] = 'waiting_delete_confirmation'
                 # Store the search term to recreate the list
                 user.state_data = {'search_term': search_term}
                 db.session.commit()
@@ -1237,7 +1247,9 @@ def telegram_webhook():
         
         if text == '/start':
             telegram_logger.info(f"🚀 User {user.full_name} started the bot")
-            user.current_state = 'idle'
+            if not user.state_data:
+                user.state_data = {}
+            user.state_data['current_state'] = 'idle'
             user.state_data = {}
             db.session.commit()
             
@@ -1268,8 +1280,8 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 response_text = f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         else:
             # Handle state-based responses
-            telegram_logger.info(f"🔍 Current state for user {user.full_name}: '{user.current_state}'")
-            if user.current_state == 'waiting_delete_confirmation':
+            telegram_logger.info(f"🔍 Current state for user {user.full_name}: '{user.state_data.get('current_state') if user.state_data else None}'")
+            if user.state_data and user.state_data.get('current_state') == 'waiting_delete_confirmation':
                 # User is selecting which contact to delete
                 try:
                     selection = int(text.strip())
@@ -1284,7 +1296,9 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                             db.session.commit()
                             
                             # Reset state
-                            user.current_state = 'idle'
+                            if not user.state_data:
+                user.state_data = {}
+            user.state_data['current_state'] = 'idle'
                             user.state_data = None
                             db.session.commit()
                             
@@ -1297,7 +1311,7 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                     response_text = "❌ Please enter a valid number to select the contact to delete."
                 except Exception as e:
                     response_text = f"❌ Error deleting contact: {str(e)}"
-            elif user.current_state == 'waiting_email':
+            elif user.state_data and user.state_data.get('current_state') == 'waiting_email':
                 # User is trying to authenticate but needs to connect via webapp first
                 telegram_logger.info(f"📧 User {user.full_name} tried to authenticate but not connected to webapp")
                 response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
