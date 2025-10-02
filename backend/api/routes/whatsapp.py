@@ -120,7 +120,10 @@ def convert_whatsapp_voice_to_text(audio_id):
         try:
             # Transcribe using OpenAI Whisper (force English)
             with open(temp_file_path, 'rb') as audio_file:
-                client = openai.OpenAI(api_key=openai.api_key)
+                client = openai.OpenAI(
+                    api_key=openai.api_key,
+                    default_headers={"OpenAI-Beta": "assistants=v2"}
+                )
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,
