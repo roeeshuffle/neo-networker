@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 12.4 - PURE DYNAMIC PROJECTS ONLY")
-    print("🔍 Starting Flask app with pure dynamic projects only")
+    print("🚀 APP VERSION: 12.6 - STANDARDIZE BUTTON SIZES")
+    print("🔍 Starting Flask app with standardized button sizes")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

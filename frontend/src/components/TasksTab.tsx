@@ -67,7 +67,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   // Fetch available projects from backend
   const fetchProjects = async () => {
     try {
-      console.log('🚀 FRONTEND VERSION: 12.3 - DYNAMIC PROJECT MANAGEMENT');
+      console.log('🚀 FRONTEND VERSION: 12.5 - FIX PROJECT LIST REFRESH');
       console.log('Fetching distinct projects from backend...');
       
       const { data, error } = await apiClient.getProjects();
@@ -78,7 +78,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       }
       
       const projects = data?.projects || [];
-      console.log('Available projects:', projects);
+      console.log('Available projects received:', projects);
+      console.log('Setting availableProjects to:', projects);
       setAvailableProjects(projects);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -241,17 +242,13 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       if (error) throw error;
       
-      // Refresh projects list to include new project
-      await fetchProjects();
+      console.log('Task created successfully:', data);
       
-      // Update local state
-      const newTask = data.task;
-      const projectName = newTask.project;
-      
-      setProjects(prev => ({
-        ...prev,
-        [projectName]: [...(prev[projectName] || []), newTask]
-      }));
+      // Refresh both tasks and projects after creation
+      await Promise.all([
+        fetchTasks(),
+        fetchProjects()
+      ]);
       
       setIsAddDialogOpen(false);
       resetForm();
@@ -284,37 +281,11 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       console.log('Task updated successfully:', data);
       
-      // Refresh projects list in case project changed
-      await fetchProjects();
-      
-      // Update local state
-      const updatedTask = data.task;
-      const oldProject = editingTask.project || 'personal';
-      const newProject = updatedTask.project || 'personal';
-      
-      setProjects(prev => {
-        const newProjects = { ...prev };
-        
-        // Remove from old project
-        if (oldProject !== newProject) {
-          newProjects[oldProject] = newProjects[oldProject]?.filter(task => task.id !== editingTask.id) || [];
-        }
-        
-        // Add to new project
-        if (!newProjects[newProject]) {
-          newProjects[newProject] = [];
-        }
-        
-        if (oldProject === newProject) {
-          newProjects[newProject] = newProjects[newProject].map(task => 
-            task.id === editingTask.id ? updatedTask : task
-          );
-        } else {
-          newProjects[newProject] = [...newProjects[newProject], updatedTask];
-        }
-        
-        return newProjects;
-      });
+      // Refresh both tasks and projects after update
+      await Promise.all([
+        fetchTasks(),
+        fetchProjects()
+      ]);
       
       setIsEditDialogOpen(false);
       setEditingTask(null);
@@ -566,7 +537,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Task
               </Button>
