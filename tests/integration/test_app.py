@@ -8,14 +8,17 @@ import unittest
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Add the backend directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'backend'))
 
+# Set testing environment before importing app
+os.environ['TESTING'] = 'true'
+
 from api.app import app
 from dal.database import db
-from dal.models import User, Person, Company, Task, SharedData, TelegramUser
+from dal.models import User, Person, Task, Event
 from flask_jwt_extended import create_access_token
 
 class TestNeoNetworkerAPI(unittest.TestCase):
@@ -39,7 +42,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
                 email='admin@test.com',
                 full_name='Admin User',
                 is_approved=True,
-                approved_at=datetime.utcnow()
+                approved_at=datetime.now(timezone.utc)
             )
             self.admin_user.approved_by = self.admin_user.id
             db.session.add(self.admin_user)
@@ -50,7 +53,7 @@ class TestNeoNetworkerAPI(unittest.TestCase):
                 email='user@test.com',
                 full_name='Regular User',
                 is_approved=True,
-                approved_at=datetime.utcnow()
+                approved_at=datetime.now(timezone.utc)
             )
             self.regular_user.approved_by = self.admin_user.id
             db.session.add(self.regular_user)
@@ -239,60 +242,8 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data['message'], 'Person deleted successfully')
     
-    def test_companies_crud(self):
-        """Test companies CRUD operations"""
-        # Create company
-        company_data = {
-            'record': 'Test Company Inc',
-            'categories': 'Technology',
-            'description': 'A test company',
-            'tags': ['tech', 'startup'],
-            'domains': ['testcompany.com']
-        }
-        
-        response = self.client.post('/api/companies',
-                                  data=json.dumps(company_data),
-                                  content_type='application/json',
-                                  headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 201)
-        data = json.loads(response.data)
-        company_id = data['id']
-        self.assertEqual(data['record'], 'Test Company Inc')
-        self.assertEqual(data['categories'], 'Technology')
-        
-        # Get companies
-        response = self.client.get('/api/companies',
-                                 headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 1)
-        
-        # Update company
-        update_data = {
-            'record': 'Updated Test Company',
-            'description': 'An updated test company'
-        }
-        
-        response = self.client.put(f'/api/companies/{company_id}',
-                                 data=json.dumps(update_data),
-                                 content_type='application/json',
-                                 headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertEqual(data['record'], 'Updated Test Company')
-        self.assertEqual(data['description'], 'An updated test company')
-        
-        # Delete company
-        response = self.client.delete(f'/api/companies/{company_id}',
-                                    headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertEqual(data['message'], 'Company deleted successfully')
+    # Companies CRUD test removed - Company model was deleted
+    
     
     def test_tasks_crud(self):
         """Test tasks CRUD operations"""
@@ -425,33 +376,8 @@ class TestNeoNetworkerAPI(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data['status'], 'ok')
     
-    def test_data_sharing(self):
-        """Test data sharing functionality"""
-        with self.app.app_context():
-            # Create a person to share
-            person = Person(
-                id='share-person-123',
-                full_name='Shareable Person',
-                company='Test Company',
-                owner_id=self.regular_user.id
-            )
-            db.session.add(person)
-            db.session.commit()
-        
-        # Share person with admin
-        share_data = {
-            'shared_with_user_id': self.admin_user.id
-        }
-        
-        response = self.client.post(f'/api/people/{person.id}/share',
-                                  data=json.dumps(share_data),
-                                  content_type='application/json',
-                                  headers=self.get_headers(self.user_token))
-        
-        self.assertEqual(response.status_code, 201)
-        data = json.loads(response.data)
-        self.assertEqual(data['table_name'], 'people')
-        self.assertEqual(data['record_id'], person.id)
+    # Data sharing test removed - SharedData model was deleted
+    
     
     def test_unauthorized_access(self):
         """Test unauthorized access protection"""

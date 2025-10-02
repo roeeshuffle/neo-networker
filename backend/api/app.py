@@ -30,8 +30,14 @@ werkzeug_logger.setLevel(logging.ERROR)  # Only show errors, not INFO requests
 # Load environment variables
 load_dotenv()
 
+# Check if we're in testing mode before configuring database
+TESTING = os.getenv('TESTING', 'false').lower() == 'true'
+
 # Initialize Flask app
 app = Flask(__name__)
+
+# Set testing flag
+app.config['TESTING'] = TESTING
 
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -39,11 +45,20 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 # Database configuration - use environment variable or default
 database_url = os.getenv('DATABASE_URL')
 if not database_url:
-    # Try to use a default production database URL
-    database_url = 'postgresql://postgres:123456@localhost:5432/neo_networker'
-    print(f"⚠️  WARNING: DATABASE_URL not set, using default: {database_url}")
+    if TESTING:
+        # Use SQLite for testing
+        database_url = 'sqlite:///:memory:'
+        print(f"🧪 TESTING: Using SQLite in-memory database")
+    else:
+        # Try to use a default production database URL
+        database_url = 'postgresql://postgres:123456@localhost:5432/neo_networker'
+        print(f"⚠️  WARNING: DATABASE_URL not set, using default: {database_url}")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# Only set database URL if not in testing mode
+if not TESTING:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
