@@ -45,7 +45,6 @@ class TelegramBotTester:
                 def __init__(self, user):
                     self.telegram_id = user.telegram_id
                     self.user_id = user.id
-                    self.is_authenticated = True
                     self.current_state = 'idle'
                     self.first_name = user.full_name
             

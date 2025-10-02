@@ -111,7 +111,6 @@ class AssistantAPITester:
                 def __init__(self, user):
                     self.telegram_id = user.telegram_id
                     self.user_id = user.id
-                    self.is_authenticated = True
                     self.current_state = 'idle'
             
             mock_telegram_user = MockTelegramUser(self.test_user)
@@ -185,7 +184,6 @@ class AssistantAPITester:
                     def __init__(self, user):
                         self.telegram_id = user.telegram_id
                         self.user_id = user.id
-                        self.is_authenticated = True
                         self.current_state = 'idle'
                 
                 mock_telegram_user = MockTelegramUser(self.test_user)

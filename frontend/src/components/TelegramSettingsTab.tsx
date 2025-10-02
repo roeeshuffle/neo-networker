@@ -17,8 +17,6 @@ interface TelegramStatus {
     telegram_id: string;
     telegram_username: string;
     first_name: string;
-    is_authenticated: boolean;
-    authenticated_at: string;
   } | null;
 }
 
@@ -206,7 +204,7 @@ export const TelegramSettingsTab: React.FC = () => {
                     <div>
                       <div className="text-sm font-medium">Authentication Status</div>
                       <div className="text-sm text-muted-foreground">
-                        {telegramStatus.telegram_user.is_authenticated ? 'Authenticated' : 'Not authenticated'}
+                        Connected
                       </div>
                     </div>
                   </div>
