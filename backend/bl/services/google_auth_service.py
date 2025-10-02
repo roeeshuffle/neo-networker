@@ -391,6 +391,8 @@ class GoogleAuthService:
                     )
                     db.session.add(person)
                     synced_count += 1
+                else:
+                    logger.info(f"Skipping duplicate contact: {contact.get('name', 'Unknown')} ({contact.get('email', 'No email')})")
             
             db.session.commit()
             logger.info(f"Synced {synced_count} Google contacts for user {user.id}")
@@ -417,19 +419,32 @@ class GoogleAuthService:
             for event_data in events:
                 # Check if event already exists (by Google event ID or title + start time)
                 existing_event = None
+                
+                # First check by Google event ID
                 if event_data.get('id'):
                     existing_event = Event.query.filter_by(
                         user_id=user.id,
                         google_event_id=event_data['id']
                     ).first()
                 
+                # If not found by Google ID, check by title + start time
+                if not existing_event:
+                    event_title = event_data.get('summary', 'Untitled Event')
+                    event_start = datetime.fromisoformat(event_data['start']['dateTime'].replace('Z', '+00:00'))
+                    
+                    existing_event = Event.query.filter_by(
+                        user_id=user.id,
+                        title=event_title,
+                        start_datetime=event_start
+                    ).first()
+                
                 if not existing_event:
                     # Create new event
                     event = Event(
                         id=str(uuid.uuid4()),
-                        title=event_data.get('summary', 'Untitled Event'),
+                        title=event_title,
                         description=event_data.get('description'),
-                        start_datetime=datetime.fromisoformat(event_data['start']['dateTime'].replace('Z', '+00:00')),
+                        start_datetime=event_start,
                         end_datetime=datetime.fromisoformat(event_data['end']['dateTime'].replace('Z', '+00:00')),
                         location=event_data.get('location'),
                         google_event_id=event_data.get('id'),
@@ -439,6 +454,8 @@ class GoogleAuthService:
                     )
                     db.session.add(event)
                     synced_count += 1
+                else:
+                    logger.info(f"Skipping duplicate event: {event_title} at {event_start}")
             
             db.session.commit()
             logger.info(f"Synced {synced_count} Google calendar events for user {user.id}")

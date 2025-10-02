@@ -67,6 +67,27 @@ def google_auth_callback():
         # Create or update user
         user = google_auth_service.create_or_update_user(user_info, tokens)
         
+        # Auto-sync Google data after successful authentication
+        try:
+            logger.info(f"Auto-syncing Google data for user {user.id}")
+            
+            # Sync contacts
+            contacts_synced = google_auth_service.sync_contacts(user)
+            logger.info(f"Auto-synced {contacts_synced} contacts for user {user.id}")
+            
+            # Sync calendar events
+            events_synced = google_auth_service.sync_calendar_events(user)
+            logger.info(f"Auto-synced {events_synced} events for user {user.id}")
+            
+            # Update sync timestamps
+            user.google_contacts_synced_at = datetime.utcnow()
+            user.google_calendar_synced_at = datetime.utcnow()
+            db.session.commit()
+            
+        except Exception as sync_error:
+            logger.warning(f"Auto-sync failed for user {user.id}: {str(sync_error)}")
+            # Don't fail the authentication if sync fails
+        
         # Create JWT token
         access_token = create_access_token(identity=user.id)
         

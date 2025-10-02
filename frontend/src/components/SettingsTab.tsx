@@ -3,7 +3,7 @@ import { apiClient } from '@/integrations/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 
@@ -30,9 +30,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleContactsSynced, setGoogleContactsSynced] = useState(false);
   const [googleCalendarSynced, setGoogleCalendarSynced] = useState(false);
+  
+  // Collapse/Expand state for settings sections
+  const [expandedSections, setExpandedSections] = useState({
+    telegram: true,
+    whatsapp: true,
+    google: true
+  });
+
+  const toggleSection = (section: 'telegram' | 'whatsapp' | 'google') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   useEffect(() => {
-    console.log('🔧 SettingsTab loaded with WhatsApp and Google support!');
+    console.log('🚀 FRONTEND VERSION: 14.0 - COLLAPSIBLE SETTINGS + WHITE BACKGROUNDS');
+    console.log('🔧 SettingsTab loaded with collapsible sections and white backgrounds!');
     checkAllStatus();
   }, []);
 
@@ -405,7 +420,60 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  const syncGoogleCalendar = async () => {
+  const syncAllGoogleData = async () => {
+    setGoogleLoading(true);
+    try {
+      // Sync contacts first
+      const contactsResponse = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-contacts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let contactsMessage = '';
+      if (contactsResponse.ok) {
+        const contactsData = await contactsResponse.json();
+        contactsMessage = contactsData.message;
+      } else {
+        contactsMessage = 'Failed to sync contacts';
+      }
+
+      // Then sync calendar
+      const calendarResponse = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-calendar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let calendarMessage = '';
+      if (calendarResponse.ok) {
+        const calendarData = await calendarResponse.json();
+        calendarMessage = calendarData.message;
+      } else {
+        calendarMessage = 'Failed to sync calendar';
+      }
+
+      toast({
+        title: "Sync Complete",
+        description: `${contactsMessage}. ${calendarMessage}`,
+      });
+      
+      await checkGoogleStatus(); // Refresh status
+    } catch (error: any) {
+      console.error('Error syncing all Google data:', error);
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync Google data",
+        variant: "destructive",
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
     setGoogleLoading(true);
     try {
       const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-calendar`, {
@@ -517,11 +585,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </div>
 
           {/* Telegram Connection */}
-          <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="font-medium text-blue-800">Telegram Connection</span>
+          <div className="space-y-4 p-4 border rounded-lg bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="font-medium text-blue-800">Telegram Connection</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSection('telegram')}
+                className="p-1 h-auto"
+              >
+                {expandedSections.telegram ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
             </div>
+            {expandedSections.telegram && (
+              <div className="space-y-4">
             {telegramConnected ? (
               <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
                 <div>
@@ -561,14 +641,28 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </Button>
               </div>
             )}
+              </div>
+            )}
           </div>
 
           {/* WhatsApp Connection */}
-          <div className="space-y-4 p-4 border rounded-lg bg-green-50">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="font-medium text-green-800">WhatsApp Connection</span>
+          <div className="space-y-4 p-4 border rounded-lg bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium text-green-800">WhatsApp Connection</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSection('whatsapp')}
+                className="p-1 h-auto"
+              >
+                {expandedSections.whatsapp ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
             </div>
+            {expandedSections.whatsapp && (
+              <div className="space-y-4">
             {whatsappConnected ? (
               <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
                 <div>
@@ -606,6 +700,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 >
                   {whatsappLoading ? 'Connecting...' : 'Connect WhatsApp'}
                 </Button>
+              </div>
+            )}
               </div>
             )}
           </div>
@@ -649,11 +745,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Google Connection */}
-          <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="font-medium text-blue-800">Google Account</span>
+          <div className="space-y-4 p-4 border rounded-lg bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="font-medium text-blue-800">Google Account</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSection('google')}
+                className="p-1 h-auto"
+              >
+                {expandedSections.google ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
             </div>
+            {expandedSections.google && (
+              <div className="space-y-4">
             {googleConnected ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
@@ -669,6 +777,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     className="border-red-300 text-red-600 hover:bg-red-50"
                   >
                     Disconnect
+                  </Button>
+                </div>
+                
+                {/* Sync All Button */}
+                <div className="flex justify-center">
+                  <Button
+                    onClick={syncAllGoogleData}
+                    disabled={googleLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {googleLoading ? 'Syncing...' : 'Sync All Google Data'}
                   </Button>
                 </div>
                 
@@ -722,6 +841,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 >
                   {googleLoading ? 'Connecting...' : 'Connect Google Account'}
                 </Button>
+              </div>
+            )}
               </div>
             )}
           </div>
