@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 2.0 - WITH DEBUG LOGGING")
-    print("🔍 Starting Flask app with enhanced logging")
+    print("🚀 APP VERSION: 13.7 - FORCE REBUILD FOR OPENAI API V2 FIXES")
+    print("🔍 Starting Flask app with OpenAI API v2 headers fix")
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=False, host='0.0.0.0', port=port)
