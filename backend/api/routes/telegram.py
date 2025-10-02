@@ -636,7 +636,7 @@ def add_task_from_telegram(args: dict, user: User) -> str:
             task_id=next_task_id,
             title=args.get('title') or args.get('text'),  # Support both new and old field names
             description=args.get('description'),
-            project=args.get('project', 'personal'),
+            project=args.get('project', 'Unrecognized project'),
             status=args.get('status', 'todo'),
             priority=args.get('priority', 'medium'),
             due_date=due_date,

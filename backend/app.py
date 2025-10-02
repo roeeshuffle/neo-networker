@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 13.8 - UPDATED TELEGRAM FUNCTIONS FOR NEW PROMPT")
-    print("🔍 Starting Flask app with updated Telegram function mapping")
+    print("🚀 APP VERSION: 13.9 - DEFAULT PROJECT FOR TELEGRAM TASKS")
+    print("🔍 Starting Flask app with 'Unrecognized project' default")
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=False, host='0.0.0.0', port=port)
