@@ -1840,38 +1840,76 @@ def show_events_from_telegram(args: dict, user: User) -> str:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         period = args.get('period', 'today')
+        start_date = args.get('start_date')
+        end_date = args.get('end_date')
         filter_obj = args.get('filter', {})
         
         # Build query
         query = Event.query.filter_by(user_id=user.id, is_active=True)
         
-        # Apply period filter
+        # Apply date filters
         now = datetime.utcnow()
-        if period == 'today':
-            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_of_day = start_of_day + timedelta(days=1)
-            query = query.filter(Event.start_datetime >= start_of_day, Event.start_datetime < end_of_day)
-        elif period == 'weekly':
-            start_of_week = now - timedelta(days=now.weekday())
-            start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_of_week = start_of_week + timedelta(days=7)
-            query = query.filter(Event.start_datetime >= start_of_week, Event.start_datetime < end_of_week)
-        elif period == 'monthly':
-            start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            if start_of_month.month == 12:
-                end_of_month = start_of_month.replace(year=start_of_month.year + 1, month=1)
-            else:
-                end_of_month = start_of_month.replace(month=start_of_month.month + 1)
-            query = query.filter(Event.start_datetime >= start_of_month, Event.start_datetime < end_of_month)
-        # 'all' period shows all events
+        
+        if start_date:
+            try:
+                start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H:%M')
+                query = query.filter(Event.start_datetime >= start_datetime)
+                telegram_logger.info(f"📅 Applied start_date filter: {start_datetime}")
+            except ValueError:
+                try:
+                    start_datetime = datetime.fromisoformat(start_date.replace('Z', ''))
+                    query = query.filter(Event.start_datetime >= start_datetime)
+                    telegram_logger.info(f"📅 Applied start_date filter (isoformat): {start_datetime}")
+                except:
+                    return f"❌ Invalid start_date format: {start_date}"
+        
+        if end_date:
+            try:
+                end_datetime = datetime.strptime(end_date, '%Y-%m-%d %H:%M')
+                query = query.filter(Event.start_datetime <= end_datetime)
+                telegram_logger.info(f"📅 Applied end_date filter: {end_datetime}")
+            except ValueError:
+                try:
+                    end_datetime = datetime.fromisoformat(end_date.replace('Z', ''))
+                    query = query.filter(Event.start_datetime <= end_datetime)
+                    telegram_logger.info(f"📅 Applied end_date filter (isoformat): {end_datetime}")
+                except:
+                    return f"❌ Invalid end_date format: {end_date}"
+        
+        # Apply period filter only if no specific dates are provided
+        if not start_date and not end_date:
+            if period == 'today':
+                start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_of_day = start_of_day + timedelta(days=1)
+                query = query.filter(Event.start_datetime >= start_of_day, Event.start_datetime < end_of_day)
+            elif period == 'weekly':
+                start_of_week = now - timedelta(days=now.weekday())
+                start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_of_week = start_of_week + timedelta(days=7)
+                query = query.filter(Event.start_datetime >= start_of_week, Event.start_datetime < end_of_week)
+            elif period == 'monthly':
+                start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                if start_of_month.month == 12:
+                    end_of_month = start_of_month.replace(year=start_of_month.year + 1, month=1)
+                else:
+                    end_of_month = start_of_month.replace(month=start_of_month.month + 1)
+                query = query.filter(Event.start_datetime >= start_of_month, Event.start_datetime < end_of_month)
+            # 'all' period shows all events (no additional filter)
         
         events = query.order_by(Event.start_datetime).all()
         
         if not events:
-            return f"📅 No events found for {period} period."
+            if start_date or end_date:
+                return f"📅 No events found for the specified date range."
+            else:
+                return f"📅 No events found for {period} period."
         
         # Format response
-        response = f"📅 **Events ({period}):**\n\n"
+        if start_date or end_date:
+            response = f"📅 **Events (Custom Date Range):**\n\n"
+        else:
+            response = f"📅 **Events ({period}):**\n\n"
+            
         for event in events:
             start_time = event.start_datetime.strftime('%H:%M')
             end_time = event.end_datetime.strftime('%H:%M')
