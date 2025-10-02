@@ -7,15 +7,14 @@ import uuid
 
 tasks_bp = Blueprint('tasks', __name__)
 
-@tasks_bp.route('/projects', methods=['OPTIONS'])
-def handle_projects_options():
-    """Handle CORS preflight for projects endpoint"""
-    return '', 200
-
-@tasks_bp.route('/projects', methods=['GET'])
-@jwt_required()
+@tasks_bp.route('/projects', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
 def get_projects():
     """Get distinct projects for the current user"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
         current_user_id = get_jwt_identity()
         current_user = User.query.get(current_user_id)
@@ -23,7 +22,7 @@ def get_projects():
         if not current_user or not current_user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        print(f"🚀 APP VERSION: 12.7 - DEBUG PROJECTS DROPDOWN")
+        print(f"🚀 APP VERSION: 12.8 - FIX PROJECTS CORS")
         print(f"📋 GET /projects - user_id: {current_user_id}")
         
         # First, let's check if there are any tasks for this user at all
