@@ -17,7 +17,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, refreshUser } = useAuth();
+  const { login, refreshUser, isAuthenticated } = useAuth();
 
   const handleGoogleAuth = async () => {
     setLoading(true);
@@ -196,14 +196,16 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-4 mb-8">
-          <Link to="/">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-        </div>
+        {isAuthenticated && (
+          <div className="flex items-center gap-4 mb-8">
+            <Link to="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <Card>
           <CardHeader className="text-center">
