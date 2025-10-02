@@ -913,21 +913,58 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
             <div>
               <Label htmlFor="edit-project">Project</Label>
-              <Select
-                value={formData.project}
-                onValueChange={(value) => setFormData({ ...formData, project: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getProjectsList().map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {project}
+              {isCreatingNewProject ? (
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-project"
+                    placeholder="Enter new project name"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleCreateNewProject()}
+                  />
+                  <Button onClick={handleCreateNewProject} size="sm">
+                    Create
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsCreatingNewProject(false);
+                      setNewProjectName('');
+                    }} 
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={formData.project}
+                  onValueChange={(value) => {
+                    if (value === 'new_project') {
+                      setIsCreatingNewProject(true);
+                    } else {
+                      setFormData({ ...formData, project: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getProjectsList().map((project) => (
+                      <SelectItem key={project} value={project}>
+                        {project}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="new_project">
+                      <div className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        New Project...
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

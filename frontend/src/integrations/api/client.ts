@@ -218,7 +218,7 @@ class ApiClient {
   async connectWhatsapp(whatsappPhone: string) {
     return this.request('/whatsapp/connect', {
       method: 'POST',
-      body: JSON.stringify({ whatsapp_phone: whatsappPhone }),
+      body: JSON.stringify({ whatsapp_phone_number: whatsappPhone }),
     });
   }
 

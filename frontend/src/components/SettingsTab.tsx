@@ -52,10 +52,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       }
       
       // Update WhatsApp status
-      if (user?.whatsapp_phone) {
-        console.log('✅ WhatsApp phone found:', user.whatsapp_phone);
+      if (user?.whatsapp_phone_number) {
+        console.log('✅ WhatsApp phone found:', user.whatsapp_phone_number);
         setWhatsappConnected(true);
-        setWhatsappPhone(user.whatsapp_phone);
+        setWhatsappPhone(user.whatsapp_phone_number);
       } else {
         console.log('❌ No WhatsApp phone found');
         setWhatsappConnected(false);
@@ -235,12 +235,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         setGoogleContactsSynced(!!data.contacts_synced_at);
         setGoogleCalendarSynced(!!data.calendar_synced_at);
       } else {
+        // Google Auth might not be configured - this is OK
+        console.log('Google Auth not configured or not available');
         setGoogleConnected(false);
         setGoogleContactsSynced(false);
         setGoogleCalendarSynced(false);
       }
     } catch (error) {
-      console.error('Error checking Google status:', error);
+      // Google Auth might not be configured - this is OK, don't log as error
+      console.log('Google Auth not available:', error.message);
       setGoogleConnected(false);
       setGoogleContactsSynced(false);
       setGoogleCalendarSynced(false);
