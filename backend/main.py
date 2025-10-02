@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-        print("🚀 APP VERSION: 8.0 - BACKEND STATUS FILTER FIX")
-        print("🔍 Starting Flask app with backend status filter fix")
+        print("🚀 APP VERSION: 9.0 - CLIENT-SIDE FILTER & TASK UPDATE FIX")
+        print("🔍 Starting Flask app with client-side filter and task update fixes")
         port = int(os.environ.get('PORT', 5002))
         app.run(debug=True, host='0.0.0.0', port=port)

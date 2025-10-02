@@ -87,46 +87,72 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [showDone]);
+  }, []); // Only fetch once on mount
 
   useEffect(() => {
-    console.log('🔄 Filtering projects based on search query:', searchQuery);
+    console.log('🔄 Client-side filtering based on showDone:', showDone);
     console.log('Current projects:', projects);
     
     if (!searchQuery || searchQuery.trim() === '') {
-      console.log('No search query, setting filteredProjects to projects');
-      setFilteredProjects(projects);
-    } else {
-      const searchTerm = searchQuery.toLowerCase();
+      // Apply status filter based on showDone
       const filtered: Record<string, Task[]> = {};
       
       Object.keys(projects).forEach(project => {
-        const filteredTasks = projects[project].filter(task =>
-          task.title.toLowerCase().includes(searchTerm) ||
-          task.description.toLowerCase().includes(searchTerm) ||
-          task.project.toLowerCase().includes(searchTerm)
-        );
+        let filteredTasks = projects[project];
+        
+        // Apply status filter
+        if (!showDone) {
+          // Show only active tasks (todo, in_progress)
+          filteredTasks = projects[project].filter(task => 
+            task.status === 'todo' || task.status === 'in_progress'
+          );
+        }
+        // If showDone is true, show all tasks (no filter)
+        
         if (filteredTasks.length > 0) {
           filtered[project] = filteredTasks;
         }
       });
       
-      console.log('Filtered projects:', filtered);
+      console.log('Client-side filtered projects:', filtered);
+      setFilteredProjects(filtered);
+    } else {
+      // Apply both search and status filter
+      const searchTerm = searchQuery.toLowerCase();
+      const filtered: Record<string, Task[]> = {};
+      
+      Object.keys(projects).forEach(project => {
+        let filteredTasks = projects[project].filter(task =>
+          task.title.toLowerCase().includes(searchTerm) ||
+          task.description.toLowerCase().includes(searchTerm) ||
+          task.project.toLowerCase().includes(searchTerm)
+        );
+        
+        // Apply status filter
+        if (!showDone) {
+          filteredTasks = filteredTasks.filter(task => 
+            task.status === 'todo' || task.status === 'in_progress'
+          );
+        }
+        
+        if (filteredTasks.length > 0) {
+          filtered[project] = filteredTasks;
+        }
+      });
+      
+      console.log('Search + status filtered projects:', filtered);
       setFilteredProjects(filtered);
     }
-  }, [projects, searchQuery]);
+  }, [projects, searchQuery, showDone]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      // When showDone is false: show only active tasks (todo, in_progress)
-      // When showDone is true: show all tasks (including completed, cancelled)
-      const status = showDone ? undefined : 'todo,in_progress';
-      console.log('🚀 FRONTEND VERSION: 7.0 - BUTTON FIXES & TASK FILTER DEBUG');
-      console.log('Fetching tasks with status filter:', status, 'showDone:', showDone);
-      console.log('API call: getTasks(undefined, status, true)');
+      // Always fetch ALL tasks, filter on client-side
+      console.log('🚀 FRONTEND VERSION: 9.0 - CLIENT-SIDE FILTER & TASK UPDATE FIX');
+      console.log('Fetching ALL tasks (no backend filter)');
       
-      const { data, error } = await apiClient.getTasks(undefined, status, true);
+      const { data, error } = await apiClient.getTasks(undefined, undefined, true);
       
       if (error) {
         console.error('API Error:', error);
@@ -205,10 +231,18 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     if (!editingTask) return;
     
     try {
-      const response = await apiClient.put(`/tasks/${editingTask.id}`, formData);
+      console.log('Updating task:', editingTask.id, 'with data:', formData);
+      const { data, error } = await apiClient.updateTask(editingTask.id, formData);
+      
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+      
+      console.log('Task updated successfully:', data);
       
       // Update local state
-      const updatedTask = response.data.task;
+      const updatedTask = data.task;
       const oldProject = editingTask.project;
       const newProject = updatedTask.project;
       
