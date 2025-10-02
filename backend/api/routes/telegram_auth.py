@@ -43,14 +43,21 @@ def connect_telegram():
                 # Transfer the Telegram connection to the current user
                 telegram_auth_logger.info(f"🔄 Transferring Telegram ID {telegram_id} from user {existing_user.email} to user {current_user.email}")
                 
-                # Clear the telegram_id from the existing user
+                # Store the username before clearing
+                old_username = existing_user.telegram_username
+                
+                # Clear the telegram_id from the existing user first
                 existing_user.telegram_id = None
                 existing_user.telegram_username = None
                 
-                # Update current user with telegram_id
-                current_user.telegram_id = telegram_id
-                current_user.telegram_username = data.get('telegram_username', existing_user.telegram_username)
+                # Commit the clearing first to avoid unique constraint violation
+                db.session.commit()
                 
+                # Now update current user with telegram_id
+                current_user.telegram_id = telegram_id
+                current_user.telegram_username = data.get('telegram_username', old_username)
+                
+                # Commit the assignment
                 db.session.commit()
                 
                 telegram_auth_logger.info(f"✅ Successfully transferred Telegram connection")
