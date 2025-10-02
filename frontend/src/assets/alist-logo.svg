@@ -1,16 +1,28 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#A855F7;stop-opacity:1" />
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F8F9FA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E9ECEF;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="url(#gradient)" stroke="#7C3AED" stroke-width="4"/>
+  <!-- Background with subtle gradient -->
+  <rect width="512" height="512" fill="url(#backgroundGradient)" rx="0"/>
+  
+  <!-- Main rounded square container -->
+  <rect x="106" y="106" width="300" height="300" rx="60" 
+        fill="#F1F3F4" stroke="#2D3748" stroke-width="8"/>
   
   <!-- Letter A -->
-  <text x="256" y="340" font-family="Arial, sans-serif" font-size="280" font-weight="bold" 
-        text-anchor="middle" fill="white" letter-spacing="0">A</text>
+  <text x="256" y="320" font-family="Arial, sans-serif" font-size="180" font-weight="bold" 
+        text-anchor="middle" fill="#2D3748" letter-spacing="0">A</text>
+  
+  <!-- Dot -->
+  <circle cx="320" cy="340" r="12" fill="#2D3748"/>
+  
+  <!-- Subtle sparkle decoration -->
+  <g opacity="0.3">
+    <path d="M450 450 L460 450 L455 460 Z" fill="#9CA3AF"/>
+    <path d="M470 470 L480 470 L475 480 Z" fill="#9CA3AF"/>
+  </g>
 </svg>

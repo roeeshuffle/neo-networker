@@ -53,6 +53,7 @@ const Dashboard = () => {
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
   const [activeTab, setActiveTab] = useState("contacts");
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -199,22 +200,38 @@ const Dashboard = () => {
 
 
   const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
     if (!query.trim()) {
       setFilteredPeople(people);
       return;
     }
 
     const searchTerm = query.toLowerCase();
-    const filtered = people.filter(person => 
-      person.full_name.toLowerCase().includes(searchTerm) ||
-      person.company?.toLowerCase().includes(searchTerm) ||
-      person.categories?.toLowerCase().includes(searchTerm) ||
-      person.email?.toLowerCase().includes(searchTerm) ||
-      person.status?.toLowerCase().includes(searchTerm) ||
-      person.more_info?.toLowerCase().includes(searchTerm)
-    );
-
-    setFilteredPeople(filtered);
+    
+    if (activeTab === 'contacts') {
+      const filtered = people.filter(person => 
+        person.full_name.toLowerCase().includes(searchTerm) ||
+        person.company?.toLowerCase().includes(searchTerm) ||
+        person.categories?.toLowerCase().includes(searchTerm) ||
+        person.email?.toLowerCase().includes(searchTerm) ||
+        person.status?.toLowerCase().includes(searchTerm) ||
+        person.more_info?.toLowerCase().includes(searchTerm)
+      );
+      setFilteredPeople(filtered);
+    } else if (activeTab === 'events') {
+      // For events, we'll need to pass the search query to EventsTab
+      // This will be handled by the EventsTab component itself
+      // For now, just clear the people filter
+      setFilteredPeople(people);
+    } else if (activeTab === 'tasks') {
+      // For tasks, we'll need to pass the search query to TasksTab
+      // This will be handled by the TasksTab component itself
+      // For now, just clear the people filter
+      setFilteredPeople(people);
+    } else {
+      setFilteredPeople(people);
+    }
   };
 
   const handleLogout = async () => {
@@ -324,54 +341,7 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="border-primary/20 bg-gradient-to-br from-primary-soft/30 to-primary-soft/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Today Events</p>
-                  <p className="text-2xl font-bold text-foreground">{todayEvents}</p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="border-secondary/20 bg-gradient-to-br from-secondary-soft/30 to-secondary-soft/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Today Tasks</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {todayTasks}
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-secondary" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-accent/20 bg-gradient-to-br from-accent-soft/30 to-accent-soft/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground/80">Total Open Tasks</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {totalOpenTasks}
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-accent" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
+        {/* Main content tabs */}
 
         {/* Main content with tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -409,7 +379,7 @@ const Dashboard = () => {
           </TabsContent>
           
           <TabsContent value="events">
-            <EventsTab onEventsChange={fetchEventsCount} />
+            <EventsTab onEventsChange={fetchEventsCount} searchQuery={searchQuery} />
           </TabsContent>
           
           <TabsContent value="settings">

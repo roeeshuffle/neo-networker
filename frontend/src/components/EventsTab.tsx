@@ -52,10 +52,12 @@ interface EventFormData {
 
 interface EventsTabProps {
   onEventsChange?: () => void;
+  searchQuery?: string;
 }
 
-const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
+const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) => {
   const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>('weekly');
 
@@ -109,6 +111,21 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
       });
     }
   }, [editingEvent]);
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim() === '') {
+      setFilteredEvents(events);
+    } else {
+      const searchTerm = searchQuery.toLowerCase();
+      const filtered = events.filter(event =>
+        event.title.toLowerCase().includes(searchTerm) ||
+        event.description.toLowerCase().includes(searchTerm) ||
+        event.location.toLowerCase().includes(searchTerm) ||
+        event.notes.toLowerCase().includes(searchTerm)
+      );
+      setFilteredEvents(filtered);
+    }
+  }, [events, searchQuery]);
 
   useEffect(() => {
     fetchEvents();
@@ -205,6 +222,9 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
     try {
       await apiClient.deleteEvent(eventId);
       setEvents(events.filter(event => event.id !== eventId));
+      setIsEditDialogOpen(false);
+      setEditingEvent(null);
+      resetForm();
       onEventsChange?.(); // Trigger count update
       toast({
         title: "Success",
@@ -284,7 +304,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
+    return filteredEvents.filter(event => {
       const eventDate = parseISO(event.start_datetime);
       return eventDate.toDateString() === date.toDateString();
     });
@@ -592,7 +612,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                   <div
                     key={event.id}
                     className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50"
-                    onClick={() => openEditDialog(event)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditDialog(event);
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -655,7 +678,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                     <div
                       key={event.id}
                       className="p-2 bg-blue-50 rounded text-xs cursor-pointer hover:bg-blue-100"
-                      onClick={() => openEditDialog(event)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(event);
+                      }}
                     >
                       <TooltipProvider>
                         <Tooltip>
@@ -728,7 +754,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange }) => {
                           <div
                             key={event.id}
                             className="text-xs bg-blue-100 text-blue-800 rounded px-1 truncate cursor-pointer hover:bg-blue-200"
-                            onClick={() => openEditDialog(event)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(event);
+                            }}
                           >
                             <TooltipProvider>
                               <Tooltip>

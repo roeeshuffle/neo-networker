@@ -89,7 +89,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange }) => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const status = showDone ? undefined : 'todo,in_progress';
+      const status = showDone ? undefined : 'todo,in_progress,pending';
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
       if (error) throw error;
