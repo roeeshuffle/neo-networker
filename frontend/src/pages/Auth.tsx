@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 12.1 - HORIZONTAL HEADER LAYOUT");
-  console.log("🔍 Auth page loaded with horizontal header layout");
+  console.log("🚀 FRONTEND VERSION: 12.2 - TABS IN HEADER");
+  console.log("🔍 Auth page loaded with tabs in header");
 
   const handleGoogleAuth = async () => {
     setLoading(true);

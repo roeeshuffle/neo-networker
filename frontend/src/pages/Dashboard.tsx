@@ -299,17 +299,40 @@ const Dashboard = () => {
                   className="h-8 w-8 object-contain"
                 />
               </div>
+              
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+                <TabsList className="grid w-fit grid-cols-4 bg-muted">
+                  <TabsTrigger value="contacts" className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Contacts
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4" />
+                    Tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="events" className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Events
+                  </TabsTrigger>
+                  <TabsTrigger value="settings" className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            
+            {/* Right: Search Bar, Settings, and User */}
+            <div className="flex items-center gap-3">
               {/* Search Bar */}
-              <div className="flex-1 max-w-md">
+              <div className="w-64">
                 <SearchBar 
                   onSearch={handleSearch} 
                   placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
                 />
               </div>
-            </div>
-            
-            {/* Right: User and Settings */}
-            <div className="flex items-center gap-3">
+              
               {/* Settings Button */}
               {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
                 <Button 
@@ -346,51 +369,28 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-6 py-12 space-y-8">
 
-        {/* Main content tabs */}
-
-        {/* Main content with tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-fit grid-cols-4 bg-muted">
-            <TabsTrigger value="contacts" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4" />
-              Tasks
-            </TabsTrigger>
-            <TabsTrigger value="events" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Events
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="contacts">
-            <ContactsPanel 
-              filteredPeople={filteredPeople}
-              onDelete={handleDelete}
-              onView={handleView}
-              onRefresh={fetchPeople}
-              onShowForm={() => setShowForm(true)}
-            />
-          </TabsContent>
-          
-          <TabsContent value="tasks">
-            <TasksTab onTasksChange={fetchTasksCount} searchQuery={searchQuery} />
-          </TabsContent>
-          
-          <TabsContent value="events">
-            <EventsTab onEventsChange={fetchEventsCount} searchQuery={searchQuery} />
-          </TabsContent>
-          
-          <TabsContent value="settings">
-            <SettingsTab currentUser={user} />
-          </TabsContent>
-        </Tabs>
+        {/* Main content based on active tab */}
+        {activeTab === "contacts" && (
+          <ContactsPanel 
+            filteredPeople={filteredPeople}
+            onDelete={handleDelete}
+            onView={handleView}
+            onRefresh={fetchPeople}
+            onShowForm={() => setShowForm(true)}
+          />
+        )}
+        
+        {activeTab === "tasks" && (
+          <TasksTab onTasksChange={fetchTasksCount} searchQuery={searchQuery} />
+        )}
+        
+        {activeTab === "events" && (
+          <EventsTab onEventsChange={fetchEventsCount} searchQuery={searchQuery} />
+        )}
+        
+        {activeTab === "settings" && (
+          <SettingsTab currentUser={user} />
+        )}
 
         {showForm && (
           <PersonForm
