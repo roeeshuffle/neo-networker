@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 
@@ -47,6 +47,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const [filteredProjects, setFilteredProjects] = useState<Record<string, Task[]>>({});
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
+  const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -116,12 +117,28 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       // When showDone is false: show only active tasks (todo, in_progress)
       // When showDone is true: show all tasks (including completed, cancelled)
       const status = showDone ? undefined : 'todo,in_progress';
+      console.log('🚀 FRONTEND VERSION: 6.0 - TASKS UI IMPROVEMENTS');
       console.log('Fetching tasks with status filter:', status, 'showDone:', showDone);
       const { data, error } = await apiClient.getTasks(undefined, status, true);
       
       if (error) throw error;
       console.log('Tasks data received:', data);
-      setProjects(data?.projects || {});
+      console.log('Projects data:', data?.projects);
+      
+      const projectsData = data?.projects || {};
+      console.log('Setting projects to:', projectsData);
+      setProjects(projectsData);
+      
+      // Initialize collapsed state for new projects
+      const newCollapsedState: Record<string, boolean> = {};
+      Object.keys(projectsData).forEach(project => {
+        if (!(project in collapsedProjects)) {
+          newCollapsedState[project] = false; // Default to expanded
+        }
+      });
+      if (Object.keys(newCollapsedState).length > 0) {
+        setCollapsedProjects(prev => ({ ...prev, ...newCollapsedState }));
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({
@@ -344,6 +361,46 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     return isAfter(parseISO(task.scheduled_date), new Date());
   };
 
+  const toggleProjectCollapse = (projectName: string) => {
+    setCollapsedProjects(prev => ({
+      ...prev,
+      [projectName]: !prev[projectName]
+    }));
+  };
+
+  const collapseAllProjects = () => {
+    const allCollapsed: Record<string, boolean> = {};
+    Object.keys(filteredProjects).forEach(project => {
+      allCollapsed[project] = true;
+    });
+    setCollapsedProjects(allCollapsed);
+  };
+
+  const expandAllProjects = () => {
+    const allExpanded: Record<string, boolean> = {};
+    Object.keys(filteredProjects).forEach(project => {
+      allExpanded[project] = false;
+    });
+    setCollapsedProjects(allExpanded);
+  };
+
+  const getProjectStatusCounts = (tasks: Task[]) => {
+    const counts = {
+      todo: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0
+    };
+    
+    tasks.forEach(task => {
+      if (task.status in counts) {
+        counts[task.status as keyof typeof counts]++;
+      }
+    });
+    
+    return counts;
+  };
+
   const getTotalTasks = () => {
     return Object.values(projects).reduce((total, tasks) => total + tasks.length, 0);
   };
@@ -370,18 +427,38 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           <p className="text-muted-foreground">Manage your project-based tasks</p>
         </div>
         <div className="flex gap-2">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="show-done"
-              checked={showDone}
-              onChange={(e) => setShowDone(e.target.checked)}
-              className="rounded"
-            />
-            <label htmlFor="show-done" className="text-sm font-medium">
-              Show all
-            </label>
-          </div>
+          <Button
+            variant={showDone ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowDone(!showDone)}
+            className="flex items-center gap-2"
+          >
+            {showDone ? "Show Active Only" : "Show All"}
+          </Button>
+          
+          {Object.keys(filteredProjects).length > 1 && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={collapseAllProjects}
+                className="flex items-center gap-2"
+              >
+                <ChevronRight className="w-4 h-4" />
+                Collapse All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={expandAllProjects}
+                className="flex items-center gap-2"
+              >
+                <ChevronDown className="w-4 h-4" />
+                Expand All
+              </Button>
+            </>
+          )}
+          
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -541,96 +618,140 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(filteredProjects).map(([projectName, tasks]) => (
-            <Card key={projectName}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{projectName}</span>
-                  <Badge variant="secondary">{tasks.length} tasks</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {tasks.map((task) => {
-                    const StatusIcon = getStatusIcon(task.status);
-                    const isDisabled = isTaskDisabled(task);
-                    
-                    return (
-                      <div
-                        key={task.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          isDisabled ? 'bg-gray-50 opacity-60' : 'bg-white'
-                        }`}
+          {Object.entries(filteredProjects).map(([projectName, tasks]) => {
+            const isCollapsed = collapsedProjects[projectName];
+            const statusCounts = getProjectStatusCounts(tasks);
+            const totalTasks = tasks.length;
+            
+            return (
+              <Card key={projectName}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleProjectCollapse(projectName)}
+                        className="p-1 h-6 w-6"
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          <StatusIcon className="w-4 h-4 text-muted-foreground" />
-                          <div className="flex-1">
-                            <div className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}>
-                              {task.title}
-                            </div>
-                            {task.description && (
-                              <div className={`text-sm text-muted-foreground ${isDisabled ? 'text-gray-400' : ''}`}>
-                                {task.description}
+                        {isCollapsed ? (
+                          <ChevronRight className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <span>{projectName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{totalTasks} tasks</Badge>
+                      {statusCounts.todo > 0 && (
+                        <Badge variant="outline" className="text-blue-600">
+                          {statusCounts.todo} open
+                        </Badge>
+                      )}
+                      {statusCounts.in_progress > 0 && (
+                        <Badge variant="outline" className="text-orange-600">
+                          {statusCounts.in_progress} in process
+                        </Badge>
+                      )}
+                      {statusCounts.completed > 0 && (
+                        <Badge variant="outline" className="text-green-600">
+                          {statusCounts.completed} done
+                        </Badge>
+                      )}
+                      {statusCounts.cancelled > 0 && (
+                        <Badge variant="outline" className="text-red-600">
+                          {statusCounts.cancelled} cancelled
+                        </Badge>
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                {!isCollapsed && (
+                  <CardContent>
+                    <div className="space-y-3">
+                      {tasks.map((task) => {
+                        const StatusIcon = getStatusIcon(task.status);
+                        const isDisabled = isTaskDisabled(task);
+                        
+                        return (
+                          <div
+                            key={task.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              isDisabled ? 'bg-gray-50 opacity-60' : 'bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <StatusIcon className="w-4 h-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}>
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className={`text-sm text-muted-foreground ${isDisabled ? 'text-gray-400' : ''}`}>
+                                    {task.description}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge className={getPriorityColor(task.priority)}>
+                                    {getPriorityLabel(task.priority)}
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {getStatusLabel(task.status)}
+                                  </Badge>
+                                  {task.scheduled_date && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Calendar className="w-3 h-3 mr-1" />
+                                      {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
+                                    </Badge>
+                                  )}
+                                  {task.due_date && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      {format(parseISO(task.due_date), 'MMM d, yyyy')}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className={getPriorityColor(task.priority)}>
-                                {getPriorityLabel(task.priority)}
-                              </Badge>
-                              <Badge variant="outline">
-                                {getStatusLabel(task.status)}
-                              </Badge>
-                              {task.scheduled_date && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Calendar className="w-3 h-3 mr-1" />
-                                  {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
-                                </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {task.status !== 'completed' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => !isDisabled && handleQuickDone(task.id)}
+                                  disabled={isDisabled}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
                               )}
-                              {task.due_date && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {format(parseISO(task.due_date), 'MMM d, yyyy')}
-                                </Badge>
-                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => !isDisabled && openEditDialog(task)}
+                                disabled={isDisabled}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => !isDisabled && handleDeleteTask(task.id)}
+                                disabled={isDisabled}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {task.status !== 'completed' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuickDone(task.id)}
-                              disabled={isDisabled}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(task)}
-                            disabled={isDisabled}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteTask(task.id)}
-                            disabled={isDisabled}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
 
