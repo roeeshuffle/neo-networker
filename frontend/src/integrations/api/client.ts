@@ -236,6 +236,10 @@ class ApiClient {
   }
 
   // Admin methods
+  async getAllUsers() {
+    return this.request('/admin/users');
+  }
+
   async getPendingUsers() {
     return this.request('/admin/pending-users');
   }
@@ -248,9 +252,14 @@ class ApiClient {
   }
 
   async rejectUser(userId: string) {
-    return this.request(`/admin/users/${userId}/approve`, {
+    return this.request(`/admin/users/${userId}/reject`, {
       method: 'POST',
-      body: JSON.stringify({ approved: false }),
+    });
+  }
+
+  async deleteUser(userId: string) {
+    return this.request(`/admin/users/${userId}`, {
+      method: 'DELETE',
     });
   }
 

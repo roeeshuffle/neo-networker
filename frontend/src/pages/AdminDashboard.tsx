@@ -7,7 +7,7 @@ import { ArrowLeft, UserCheck, UserX, Users, Mail, Calendar } from "lucide-react
 import { apiClient } from "@/integrations/api/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface PendingUser {
+interface User {
   id: string;
   email: string;
   full_name: string;
@@ -15,29 +15,34 @@ interface PendingUser {
   is_approved: boolean;
   approved_at?: string;
   approved_by?: string;
+  telegram_id?: string;
+  whatsapp_phone_number?: string;
 }
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   useEffect(() => {
-    fetchPendingUsers();
+    console.log('🚀 FRONTEND VERSION: 14.1 - ENHANCED ADMIN DASHBOARD');
+    console.log('👑 AdminDashboard loaded with full user management!');
+    fetchAllUsers();
   }, []);
 
-  const fetchPendingUsers = async () => {
+  const fetchAllUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await apiClient.getPendingUsers();
+      const { data, error } = await apiClient.getAllUsers();
       
       if (error) throw error;
-      setPendingUsers(data || []);
+      setUsers(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to fetch pending users",
+        description: "Failed to fetch users",
         variant: "destructive",
       });
     } finally {
@@ -56,7 +61,7 @@ const AdminDashboard = () => {
         description: "User approved successfully",
       });
       
-      fetchPendingUsers();
+      fetchAllUsers();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -77,7 +82,7 @@ const AdminDashboard = () => {
         description: "User rejected successfully",
       });
       
-      fetchPendingUsers();
+      fetchAllUsers();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -86,6 +91,44 @@ const AdminDashboard = () => {
       });
     }
   };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const { error } = await apiClient.deleteUser(userId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+      
+      fetchAllUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    switch (filter) {
+      case 'pending':
+        return !user.is_approved;
+      case 'approved':
+        return user.is_approved;
+      case 'rejected':
+        return user.is_approved === false;
+      default:
+        return true;
+    }
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -113,14 +156,36 @@ const AdminDashboard = () => {
           <p className="text-gray-600 mt-2">Manage user registrations and approvals</p>
         </div>
 
+        {/* Filter Buttons */}
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilter('all')}
+          >
+            All Users ({users.length})
+          </Button>
+          <Button
+            variant={filter === 'pending' ? 'default' : 'outline'}
+            onClick={() => setFilter('pending')}
+          >
+            Pending ({users.filter(u => !u.is_approved).length})
+          </Button>
+          <Button
+            variant={filter === 'approved' ? 'default' : 'outline'}
+            onClick={() => setFilter('approved')}
+          >
+            Approved ({users.filter(u => u.is_approved).length})
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="border-primary/20 bg-gradient-to-br from-primary-soft/30 to-primary-soft/10">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground/80">Pending Users</p>
+                  <p className="text-sm font-medium text-foreground/80">Total Users</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {pendingUsers.filter(user => !user.is_approved).length}
+                    {users.length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -172,11 +237,11 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/20 border-t-primary"></div>
               </div>
-            ) : pendingUsers.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <p className="text-gray-600 text-center py-8">No users found</p>
             ) : (
               <div className="space-y-4">
-                {pendingUsers.map((user) => (
+                {filteredUsers.map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 border rounded-lg bg-card"
@@ -193,6 +258,16 @@ const AdminDashboard = () => {
                           <span className="text-xs text-muted-foreground">
                             Registered: {formatDate(user.created_at)}
                           </span>
+                          {user.telegram_id && (
+                            <span className="text-xs text-blue-600">
+                              Telegram: {user.telegram_id}
+                            </span>
+                          )}
+                          {user.whatsapp_phone_number && (
+                            <span className="text-xs text-green-600">
+                              WhatsApp: {user.whatsapp_phone_number}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -222,6 +297,15 @@ const AdminDashboard = () => {
                           </Button>
                         </>
                       )}
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 ))}

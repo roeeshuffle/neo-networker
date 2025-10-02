@@ -128,6 +128,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   }, [events, searchQuery]);
 
   useEffect(() => {
+    console.log('🚀 FRONTEND VERSION: 14.1 - FIX MONTHLY CALENDAR DATE ALIGNMENT');
+    console.log('📅 EventsTab loaded with fixed monthly calendar date alignment!');
     fetchEvents();
   }, [currentWeek, currentDay, currentMonth, viewMode]);
 
@@ -734,7 +736,14 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
               </div>
               <div className="grid grid-cols-7 gap-2">
                 {Array.from({ length: 35 }, (_, i) => {
-                  const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i - 6);
+                  // Calculate the first day of the week that contains the first day of the month
+                  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                  const firstDayOfWeek = new Date(firstDayOfMonth);
+                  firstDayOfWeek.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay());
+                  
+                  const date = new Date(firstDayOfWeek);
+                  date.setDate(firstDayOfWeek.getDate() + i);
+                  
                   const dayEvents = getEventsForDate(date);
                   const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
                   
