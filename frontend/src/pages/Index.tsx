@@ -12,12 +12,12 @@ const Index = () => {
             <div className="flex items-center gap-4">
               <img 
                 src="/lovable-uploads/756c1423-2a04-4806-8117-719d07336118.png" 
-                alt="VCrm Logo" 
+                alt="ALIST Logo" 
                 className="h-12 w-12"
               />
               <div>
-                <h1 className="text-2xl font-bold">VCrm</h1>
-                <p className="text-muted-foreground">Customer Relationship Management</p>
+                <h1 className="text-2xl font-bold">ALIST</h1>
+                <p className="text-muted-foreground">People, Notes, Tasks</p>
               </div>
             </div>
             <Link to="/auth">
@@ -31,7 +31,7 @@ const Index = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Manage Your Contacts Effectively</h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            VCrm helps you organize, track, and manage your professional contacts with powerful features and an intuitive interface.
+            ALIST helps you organize, track, and manage your professional contacts with powerful features and an intuitive interface.
           </p>
           <Link to="/auth">
             <Button size="lg" className="text-lg px-8 py-3">
