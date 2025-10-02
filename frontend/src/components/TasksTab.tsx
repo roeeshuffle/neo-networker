@@ -243,8 +243,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       // Update local state
       const updatedTask = data.task;
-      const oldProject = editingTask.project;
-      const newProject = updatedTask.project;
+      const oldProject = editingTask.project || 'personal';
+      const newProject = updatedTask.project || 'personal';
       
       setProjects(prev => {
         const newProjects = { ...prev };
@@ -409,6 +409,11 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   };
 
   const isTaskDisabled = (task: Task) => {
+    // Always enable buttons - just change visual styling for future tasks
+    return false;
+  };
+
+  const isTaskFutureScheduled = (task: Task) => {
     if (!task.is_scheduled || !task.scheduled_date) return false;
     return isAfter(parseISO(task.scheduled_date), new Date());
   };
@@ -420,20 +425,34 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     }));
   };
 
-  const collapseAllProjects = () => {
-    const allCollapsed: Record<string, boolean> = {};
-    Object.keys(filteredProjects).forEach(project => {
-      allCollapsed[project] = true;
-    });
-    setCollapsedProjects(allCollapsed);
+  const toggleAllProjectsCollapse = () => {
+    const allCollapsed = Object.values(collapsedProjects).every(collapsed => collapsed);
+    const allExpanded = Object.values(collapsedProjects).every(collapsed => !collapsed);
+    
+    if (allCollapsed || (!allCollapsed && !allExpanded)) {
+      // Expand all
+      const allExpanded: Record<string, boolean> = {};
+      Object.keys(filteredProjects).forEach(project => {
+        allExpanded[project] = false;
+      });
+      setCollapsedProjects(allExpanded);
+    } else {
+      // Collapse all
+      const allCollapsed: Record<string, boolean> = {};
+      Object.keys(filteredProjects).forEach(project => {
+        allCollapsed[project] = true;
+      });
+      setCollapsedProjects(allCollapsed);
+    }
   };
 
-  const expandAllProjects = () => {
-    const allExpanded: Record<string, boolean> = {};
-    Object.keys(filteredProjects).forEach(project => {
-      allExpanded[project] = false;
-    });
-    setCollapsedProjects(allExpanded);
+  const getCollapseButtonText = () => {
+    const allCollapsed = Object.values(collapsedProjects).every(collapsed => collapsed);
+    const allExpanded = Object.values(collapsedProjects).every(collapsed => !collapsed);
+    
+    if (allCollapsed) return "Expand All";
+    if (allExpanded) return "Collapse All";
+    return "Collapse All"; // Default when mixed state
   };
 
   const getProjectStatusCounts = (tasks: Task[]) => {
@@ -489,26 +508,14 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           </Button>
           
           {Object.keys(filteredProjects).length > 0 && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={collapseAllProjects}
-                className="flex items-center gap-2"
-              >
-                <ChevronRight className="w-4 h-4" />
-                Collapse All
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={expandAllProjects}
-                className="flex items-center gap-2"
-              >
-                <ChevronDown className="w-4 h-4" />
-                Expand All
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleAllProjectsCollapse}
+              className="flex items-center gap-2"
+            >
+              {getCollapseButtonText()}
+            </Button>
           )}
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -725,22 +732,23 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                       {tasks.map((task) => {
                         const StatusIcon = getStatusIcon(task.status);
                         const isDisabled = isTaskDisabled(task);
+                        const isFutureScheduled = isTaskFutureScheduled(task);
                         
                         return (
                           <div
                             key={task.id}
                             className={`flex items-center justify-between p-3 rounded-lg border ${
-                              isDisabled ? 'bg-gray-50 opacity-60' : 'bg-white'
+                              isFutureScheduled ? 'bg-blue-50 border-blue-200' : 'bg-white'
                             }`}
                           >
                             <div className="flex items-center gap-3 flex-1">
                               <StatusIcon className="w-4 h-4 text-muted-foreground" />
                               <div className="flex-1">
-                                <div className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}>
+                                <div className={`font-medium ${isFutureScheduled ? 'text-blue-700' : ''}`}>
                                   {task.title}
                                 </div>
                                 {task.description && (
-                                  <div className={`text-sm text-muted-foreground ${isDisabled ? 'text-gray-400' : ''}`}>
+                                  <div className={`text-sm text-muted-foreground ${isFutureScheduled ? 'text-blue-600' : ''}`}>
                                     {task.description}
                                   </div>
                                 )}
@@ -752,7 +760,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                                     {getStatusLabel(task.status)}
                                   </Badge>
                                   {task.scheduled_date && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className={`text-xs ${isFutureScheduled ? 'bg-blue-100 text-blue-700 border-blue-300' : ''}`}>
                                       <Calendar className="w-3 h-3 mr-1" />
                                       {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
                                     </Badge>
@@ -771,9 +779,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => !isDisabled && handleQuickDone(task.id)}
-                                  disabled={isDisabled}
-                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => handleQuickDone(task.id)}
+                                  className={`text-green-600 hover:text-green-700 ${isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}`}
                                 >
                                   <CheckCircle className="w-4 h-4" />
                                 </Button>
@@ -781,16 +788,16 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => !isDisabled && openEditDialog(task)}
-                                disabled={isDisabled}
+                                onClick={() => openEditDialog(task)}
+                                className={isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => !isDisabled && handleDeleteTask(task.id)}
-                                disabled={isDisabled}
+                                onClick={() => handleDeleteTask(task.id)}
+                                className={isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
