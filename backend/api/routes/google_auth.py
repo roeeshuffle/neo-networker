@@ -342,6 +342,7 @@ def google_auth_status():
         return jsonify({'error': 'Failed to get Google auth status'}), 500
         
 @google_auth_bp.route('/auth/google/preview-contacts', methods=['POST'])
+@jwt_required()
 def preview_google_contacts():
     """Preview Google contacts before syncing"""
     try:
@@ -370,6 +371,7 @@ def preview_google_contacts():
         return jsonify({'error': 'Failed to preview contacts'}), 500
 
 @google_auth_bp.route('/auth/google/preview-calendar', methods=['POST'])
+@jwt_required()
 def preview_google_calendar():
     """Preview Google calendar events before syncing"""
     try:
@@ -398,6 +400,7 @@ def preview_google_calendar():
         return jsonify({'error': 'Failed to preview calendar events'}), 500
 
 @google_auth_bp.route('/auth/google/sync-selected-contacts', methods=['POST'])
+@jwt_required()
 def sync_selected_contacts():
     """Sync only selected Google contacts (non-duplicates)"""
     try:
@@ -450,6 +453,7 @@ def sync_selected_contacts():
         return jsonify({'error': 'Failed to sync selected contacts'}), 500
 
 @google_auth_bp.route('/auth/google/sync-selected-calendar', methods=['POST'])
+@jwt_required()
 def sync_selected_calendar():
     """Sync only selected Google calendar events (non-duplicates)"""
     try:

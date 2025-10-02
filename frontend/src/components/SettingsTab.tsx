@@ -53,8 +53,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 14.3 - GOOGLE SYNC PREVIEW DIALOG');
-    console.log('🔧 SettingsTab loaded with Google sync preview functionality!');
+    console.log('🚀 FRONTEND VERSION: 14.4 - REMOVED SYNC ALL GOOGLE DATA BUTTON');
+    console.log('🔧 SettingsTab loaded with individual preview & sync buttons only!');
     checkAllStatus();
   }, []);
 
@@ -557,60 +557,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  const syncAllGoogleData = async () => {
-    setGoogleLoading(true);
-    try {
-      // Sync contacts first
-      const contactsResponse = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-contacts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      let contactsMessage = '';
-      if (contactsResponse.ok) {
-        const contactsData = await contactsResponse.json();
-        contactsMessage = contactsData.message;
-      } else {
-        contactsMessage = 'Failed to sync contacts';
-      }
-
-      // Then sync calendar
-      const calendarResponse = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-calendar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      let calendarMessage = '';
-      if (calendarResponse.ok) {
-        const calendarData = await calendarResponse.json();
-        calendarMessage = calendarData.message;
-      } else {
-        calendarMessage = 'Failed to sync calendar';
-      }
-
-      toast({
-        title: "Sync Complete",
-        description: `${contactsMessage}. ${calendarMessage}`,
-      });
-      
-      await checkGoogleStatus(); // Refresh status
-    } catch (error: any) {
-      console.error('Error syncing all Google data:', error);
-      toast({
-        title: "Sync Failed",
-        description: error.message || "Failed to sync Google data",
-        variant: "destructive",
-      });
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
 
   const updatePreferredPlatform = async (platform: string) => {
     try {
@@ -881,17 +827,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     className="border-red-300 text-red-600 hover:bg-red-50"
                   >
                     Disconnect
-                  </Button>
-                </div>
-                
-                {/* Sync All Button */}
-                <div className="flex justify-center">
-                  <Button
-                    onClick={syncAllGoogleData}
-                    disabled={googleLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {googleLoading ? 'Syncing...' : 'Sync All Google Data'}
                   </Button>
                 </div>
                 
