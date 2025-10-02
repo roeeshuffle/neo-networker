@@ -276,7 +276,18 @@ def google_auth_status():
         has_google = bool(user.google_id)
         token_valid = False
         
-        if has_google and google_auth_service:
+        # Check if Google Auth service is available
+        if not google_auth_service:
+            return jsonify({
+                'has_google_account': False,
+                'google_id': None,
+                'token_valid': False,
+                'contacts_synced_at': None,
+                'calendar_synced_at': None,
+                'service_configured': False
+            })
+        
+        if has_google:
             token_valid = google_auth_service.is_token_valid(user)
         
         return jsonify({
@@ -284,7 +295,8 @@ def google_auth_status():
             'google_id': user.google_id,
             'token_valid': token_valid,
             'contacts_synced_at': user.google_contacts_synced_at.isoformat() if user.google_contacts_synced_at else None,
-            'calendar_synced_at': user.google_calendar_synced_at.isoformat() if user.google_calendar_synced_at else None
+            'calendar_synced_at': user.google_calendar_synced_at.isoformat() if user.google_calendar_synced_at else None,
+            'service_configured': True
         })
         
     except Exception as e:

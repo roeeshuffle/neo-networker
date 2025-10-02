@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 14.2 - ADD START/END DATE FILTER FOR EVENTS")
-    print("🔍 Starting Flask app with enhanced event filtering")
+    print("🚀 APP VERSION: 14.3 - FIX GOOGLE AUTH STATUS ENDPOINT")
+    print("🔍 Starting Flask app with improved Google Auth handling")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)

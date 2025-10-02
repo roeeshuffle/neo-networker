@@ -31,6 +31,7 @@ class GoogleAuthService:
         self.enabled = all([self.client_id, self.client_secret, self.redirect_uri])
         if not self.enabled:
             logger.warning("Google OAuth credentials not configured - Google Auth disabled")
+            # Don't raise an error, just disable the service
     
     def get_authorization_url(self, state=None):
         """Generate Google OAuth authorization URL"""
