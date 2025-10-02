@@ -209,7 +209,7 @@ const Auth = () => {
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2">
               <img 
-                src="/alist-logo-new.svg" 
+                src="/alist-logo-final.svg" 
                 alt="Alist Logo" 
                 className="h-8 w-8"
               />

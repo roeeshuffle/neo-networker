@@ -17,7 +17,7 @@ import TasksTab from "@/components/TasksTab";
 import EventsTab from "@/components/EventsTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
 import { SettingsTab } from "@/components/SettingsTab";
-import alistLogo from "@/assets/alist-logo-new.svg";
+import alistLogo from "@/assets/alist-logo-final.svg";
 
 export interface Person {
   id: string;

@@ -12,7 +12,7 @@ import { EditableCompanyModal } from "@/components/EditableCompanyModal";
 import { LogOut, Plus, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompaniesPanel } from "@/components/CompaniesPanel";
-import alistLogo from "@/assets/alist-logo-new.svg";
+import alistLogo from "@/assets/alist-logo-final.svg";
 
 export interface Company {
   id: string;
