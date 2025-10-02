@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-        print("🚀 APP VERSION: 10.0 - FUTURE TASKS BUTTONS & COLLAPSE FIX")
-        print("🔍 Starting Flask app with future tasks buttons and collapse fix")
+        print("🚀 APP VERSION: 11.0 - PROJECT MANAGEMENT FEATURES")
+        print("🔍 Starting Flask app with project management features")
         port = int(os.environ.get('PORT', 5002))
         app.run(debug=True, host='0.0.0.0', port=port)

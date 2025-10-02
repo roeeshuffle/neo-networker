@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight, Minus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 
@@ -51,6 +51,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isCreatingNewProject, setIsCreatingNewProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
     description: '',
@@ -61,16 +63,64 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     due_date: ''
   });
 
-  const projectsList = [
-    'Personal',
-    'Work',
-    'Company',
-    'Health',
-    'Finance',
-    'Learning',
-    'Home',
-    'Travel'
-  ];
+  // Get dynamic project list from current projects
+  const getProjectsList = () => {
+    const existingProjects = Object.keys(projects);
+    const defaultProjects = ['Personal', 'Work', 'Company', 'Health', 'Finance', 'Learning', 'Home', 'Travel'];
+    
+    // Combine existing projects with default ones, remove duplicates
+    const allProjects = [...new Set([...existingProjects, ...defaultProjects])];
+    return allProjects.sort();
+  };
+
+  const handleDeleteEmptyProject = (projectName: string) => {
+    if (projects[projectName] && projects[projectName].length === 0) {
+      setProjects(prev => {
+        const newProjects = { ...prev };
+        delete newProjects[projectName];
+        return newProjects;
+      });
+      
+      // Remove from collapsed state
+      setCollapsedProjects(prev => {
+        const newCollapsed = { ...prev };
+        delete newCollapsed[projectName];
+        return newCollapsed;
+      });
+      
+      toast({
+        title: "Success",
+        description: `Project "${projectName}" deleted successfully`,
+      });
+    }
+  };
+
+  const handleCreateNewProject = () => {
+    if (newProjectName.trim()) {
+      setProjects(prev => ({
+        ...prev,
+        [newProjectName.trim()]: []
+      }));
+      
+      setCollapsedProjects(prev => ({
+        ...prev,
+        [newProjectName.trim()]: false
+      }));
+      
+      setFormData(prev => ({
+        ...prev,
+        project: newProjectName.trim()
+      }));
+      
+      setIsCreatingNewProject(false);
+      setNewProjectName('');
+      
+      toast({
+        title: "Success",
+        description: `Project "${newProjectName.trim()}" created successfully`,
+      });
+    }
+  };
 
   const statusOptions = [
     { value: 'todo', label: 'To Do', icon: Circle },
@@ -552,21 +602,58 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
                 <div>
                   <Label htmlFor="project">Project</Label>
-                  <Select
-                    value={formData.project}
-                    onValueChange={(value) => setFormData({ ...formData, project: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projectsList.map((project) => (
-                        <SelectItem key={project} value={project}>
-                          {project}
+                  {isCreatingNewProject ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id="project"
+                        placeholder="Enter new project name"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCreateNewProject()}
+                      />
+                      <Button onClick={handleCreateNewProject} size="sm">
+                        Create
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsCreatingNewProject(false);
+                          setNewProjectName('');
+                        }} 
+                        size="sm"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.project}
+                      onValueChange={(value) => {
+                        if (value === 'new_project') {
+                          setIsCreatingNewProject(true);
+                        } else {
+                          setFormData({ ...formData, project: value });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getProjectsList().map((project) => (
+                          <SelectItem key={project} value={project}>
+                            {project}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new_project">
+                          <div className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            New Project...
+                          </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -722,6 +809,16 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                         <Badge variant="outline" className="text-red-600">
                           {statusCounts.cancelled} cancelled
                         </Badge>
+                      )}
+                      {totalTasks === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEmptyProject(projectName)}
+                          className="p-1 h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
                   </CardTitle>

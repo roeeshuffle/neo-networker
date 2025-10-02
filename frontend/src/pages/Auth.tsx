@@ -20,8 +20,8 @@ const Auth = () => {
   const { login, refreshUser, isAuthenticated } = useAuth();
 
   // Frontend version logging
-  console.log("🚀 FRONTEND VERSION: 10.0 - FUTURE TASKS BUTTONS & COLLAPSE FIX");
-  console.log("🔍 Auth page loaded with future tasks buttons and collapse fix");
+  console.log("🚀 FRONTEND VERSION: 11.0 - PROJECT MANAGEMENT FEATURES");
+  console.log("🔍 Auth page loaded with project management features");
 
   const handleGoogleAuth = async () => {
     setLoading(true);
