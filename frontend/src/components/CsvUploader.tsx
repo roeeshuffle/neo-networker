@@ -44,13 +44,26 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
 
   const getKnownColumns = (): string[] => {
     return [
+      // New schema fields
+      'First Name', 'first name', 'firstname', 'first_name',
+      'Last Name', 'last name', 'lastname', 'last_name',
+      'Email', 'email', 'e-mail', 'E-mail',
+      'Organization', 'organization', 'org', 'company', 'Company',
+      'Job Title', 'job title', 'job_title', 'title', 'position',
+      'Phone', 'phone', 'telephone', 'tel',
+      'Mobile', 'mobile', 'cell', 'cellphone',
+      'Address', 'address', 'location',
+      'LinkedIn', 'linkedin', 'linkedin_url', 'linkedin_profile',
+      'Status', 'status', 'state',
+      'Notes', 'notes', 'description', 'comments',
+      'Tags', 'tags', 'categories', 'Categories',
+      'Source', 'source', 'origin',
+      'Priority', 'priority', 'importance',
+      'Group', 'group', 'category', 'type',
+      
+      // Legacy field mappings (for backward compatibility)
       'Full Name', 'full name', 'fullname', 'name',
-      'Categories', 'categories', 'category',
-      'E-mail', 'Email', 'email',
       'Newsletter', 'newsletter',
-      'Company', 'company',
-      'Status', 'status',
-      'Linkedin', 'LinkedIn', 'linkedin', 'linkedin_profile',
       'POC in APEX', 'poc in apex', 'poc_in_apex',
       'Who warm intro', 'who warm intro', 'who_warm_intro',
       'Agenda', 'agenda',
@@ -164,7 +177,9 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
             </div>
           )}
           <div className="text-xs text-muted-foreground">
-            Expected columns: Full Name, Categories, Email, Newsletter, Company, Status, LinkedIn, POC in APEX, Who Warm Intro, Agenda, Meeting Notes, Should Avishag Meet, More Info
+            Expected columns: First Name, Last Name, Email, Organization, Job Title, Phone, Mobile, Address, LinkedIn, Status, Notes, Tags, Source, Priority, Group
+            <br />
+            <span className="text-blue-600">Legacy columns will be automatically mapped: Full Name → First Name/Last Name, Company → Organization, etc.</span>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
