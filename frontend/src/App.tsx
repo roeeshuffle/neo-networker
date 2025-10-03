@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-console.log('🚀 FRONTEND VERSION: 18.7 - UPDATED CONTACT FORM WITH TABS AND CSV MAPPING');
+console.log('🚀 FRONTEND VERSION: 18.8 - SHOW ALL STANDARD FIELDS BY DEFAULT');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

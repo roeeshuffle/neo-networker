@@ -79,71 +79,43 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
   const [newCustomField, setNewCustomField] = useState({ name: '', type: 'text' });
 
   useEffect(() => {
-    if (contact) {
-      // Load existing contact data
-      const contactData: Record<string, any> = {};
-      const fields: ContactField[] = [];
-      
-      // Add all standard fields
-      FIELD_OPTIONS.forEach(fieldOption => {
-        const value = contact[fieldOption.field];
-        if (value !== null && value !== undefined && value !== '') {
-          contactData[fieldOption.field] = value;
+    const contactData: Record<string, any> = {};
+    const fields: ContactField[] = [];
+    
+    // Always include all standard fields
+    FIELD_OPTIONS.forEach(fieldOption => {
+      const value = contact ? contact[fieldOption.field] : '';
+      contactData[fieldOption.field] = value || '';
+      fields.push({
+        field: fieldOption.field,
+        display_name: fieldOption.display_name,
+        value: value || '',
+        type: fieldOption.type,
+        category: fieldOption.category,
+        required: fieldOption.required,
+        options: fieldOption.options
+      });
+    });
+    
+    // Add custom fields if editing existing contact
+    if (contact && contact.custom_fields) {
+      Object.keys(contact.custom_fields).forEach(key => {
+        const customField = customFields.find(cf => cf.key === key);
+        if (customField && contact.custom_fields[key] !== null && contact.custom_fields[key] !== undefined && contact.custom_fields[key] !== '') {
+          contactData[`custom_${key}`] = contact.custom_fields[key];
           fields.push({
-            field: fieldOption.field,
-            display_name: fieldOption.display_name,
-            value: value,
-            type: fieldOption.type,
-            category: fieldOption.category,
-            required: fieldOption.required,
-            options: fieldOption.options
-          });
-        } else if (fieldOption.required) {
-          // Include required fields even if empty
-          contactData[fieldOption.field] = '';
-          fields.push({
-            field: fieldOption.field,
-            display_name: fieldOption.display_name,
-            value: '',
-            type: fieldOption.type,
-            category: fieldOption.category,
-            required: fieldOption.required,
-            options: fieldOption.options
+            field: `custom_${key}`,
+            display_name: customField.name,
+            value: contact.custom_fields[key],
+            type: customField.type,
+            category: 'custom'
           });
         }
       });
-      
-      // Add custom fields
-      if (contact.custom_fields) {
-        Object.keys(contact.custom_fields).forEach(key => {
-          const customField = customFields.find(cf => cf.key === key);
-          if (customField && contact.custom_fields[key] !== null && contact.custom_fields[key] !== undefined && contact.custom_fields[key] !== '') {
-            contactData[`custom_${key}`] = contact.custom_fields[key];
-            fields.push({
-              field: `custom_${key}`,
-              display_name: customField.name,
-              value: contact.custom_fields[key],
-              type: customField.type,
-              category: 'custom'
-            });
-          }
-        });
-      }
-      
-      setFormData(contactData);
-      setAvailableFields(fields);
-    } else {
-      // New contact - start with required fields
-      const initialFormData = {
-        first_name: '',
-        last_name: ''
-      };
-      setFormData(initialFormData);
-      setAvailableFields([
-        { field: 'first_name', display_name: 'First Name', value: '', type: 'text', category: 'general', required: true },
-        { field: 'last_name', display_name: 'Last Name', value: '', type: 'text', category: 'general', required: true }
-      ]);
     }
+    
+    setFormData(contactData);
+    setAvailableFields(fields);
   }, [contact]);
 
   const handleFieldChange = (field: string, value: any) => {
@@ -334,21 +306,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
   const renderFieldsForCategory = (category: string) => {
     const fields = getFieldsByCategory(category);
     
-    if (fields.length === 0) {
+    if (fields.length === 0 && category === 'custom') {
       return (
         <div className="text-center py-8 text-muted-foreground">
-          <p>No {CATEGORIES.find(c => c.id === category)?.name.toLowerCase()} fields added yet.</p>
-          {category !== 'custom' && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowAddField(true)}
-              className="mt-2"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Field
-            </Button>
-          )}
+          <p>No custom fields added yet.</p>
         </div>
       );
     }
@@ -364,7 +325,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
               </Label>
               {renderField(field)}
             </div>
-            {!field.required && (
+            {category === 'custom' && (
               <Button
                 type="button"
                 variant="ghost"
@@ -377,18 +338,6 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             )}
           </div>
         ))}
-        
-        {category !== 'custom' && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowAddField(true)}
-            className="w-full mt-4"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add More Fields
-          </Button>
-        )}
       </div>
     );
   };
@@ -461,49 +410,6 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
           ))}
         </Tabs>
         
-        {/* Add Field Modal */}
-        {showAddField && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-              <h3 className="text-lg font-medium mb-4">Add Field</h3>
-              <div className="space-y-4">
-                <Select value={selectedFieldToAdd} onValueChange={setSelectedFieldToAdd}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a field to add" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableFieldsToAdd().map(field => (
-                      <SelectItem key={field.field} value={field.field}>
-                        {field.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={handleAddField}
-                    disabled={!selectedFieldToAdd}
-                    className="flex-1"
-                  >
-                    Add Field
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddField(false);
-                      setSelectedFieldToAdd('');
-                    }}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
