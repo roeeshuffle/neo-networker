@@ -7,7 +7,7 @@ import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users }
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
-import { DuplicateManager } from './DuplicateManager';
+import DuplicateManager from './DuplicateManager';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -71,6 +71,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     startWeekday: 'sunday'
   });
   
+  // Loading state for preferences
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
+  
   // Contact management state
   const [showDuplicates, setShowDuplicates] = useState(false);
 
@@ -82,9 +85,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 15.0 - REORGANIZED SETTINGS WITH COLLAPSIBLE CONTAINERS');
-    console.log('🔧 SettingsTab loaded with collapsible containers and contact management!');
+    console.log('🚀 FRONTEND VERSION: 15.1 - USER PREFERENCES WITH BACKEND STORAGE');
+    console.log('🔧 SettingsTab loaded with user preferences backend integration!');
     checkAllStatus();
+    loadUserPreferences();
   }, []);
 
   const checkAllStatus = async () => {
@@ -652,17 +656,98 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
+  // Load user preferences from backend
+  const loadUserPreferences = async () => {
+    try {
+      setPreferencesLoading(true);
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user/preferences', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const preferences = data.preferences || {};
+        
+        // Update calendar settings if available
+        if (preferences.calendar) {
+          setCalendarSettings(prev => ({
+            ...prev,
+            ...preferences.calendar
+          }));
+        }
+        
+        console.log('✅ User preferences loaded:', preferences);
+      } else {
+        console.log('⚠️ Could not load user preferences, using defaults');
+      }
+    } catch (error) {
+      console.error('❌ Error loading user preferences:', error);
+    } finally {
+      setPreferencesLoading(false);
+    }
+  };
+
+  // Save user preferences to backend
+  const saveUserPreferences = async (category: string, settings: any) => {
+    try {
+      setPreferencesLoading(true);
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user/preferences', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category,
+          settings
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ User preferences saved:', data);
+        return true;
+      } else {
+        const error = await response.json();
+        console.error('❌ Error saving preferences:', error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error saving user preferences:', error);
+      return false;
+    } finally {
+      setPreferencesLoading(false);
+    }
+  };
+
   // Calendar Settings Functions
-  const updateCalendarSettings = (key: string, value: string) => {
-    setCalendarSettings(prev => ({
-      ...prev,
+  const updateCalendarSettings = async (key: string, value: string) => {
+    const newSettings = {
+      ...calendarSettings,
       [key]: value
-    }));
-    // TODO: Save to backend/localStorage
-    toast({
-      title: "Settings Updated",
-      description: `Calendar ${key} updated to ${value}`,
-    });
+    };
+    
+    setCalendarSettings(newSettings);
+    
+    // Save to backend
+    const success = await saveUserPreferences('calendar', newSettings);
+    
+    if (success) {
+      toast({
+        title: "Settings Updated",
+        description: `Calendar ${key} updated to ${value}`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to save calendar settings",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -1114,40 +1199,49 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </CardHeader>
         {expandedSections.calendar && (
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Default View</label>
-                <Select 
-                  value={calendarSettings.defaultView} 
-                  onValueChange={(value) => updateCalendarSettings('defaultView', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
+            {preferencesLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading preferences...</p>
               </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Start Weekday</label>
-                <Select 
-                  value={calendarSettings.startWeekday} 
-                  onValueChange={(value) => updateCalendarSettings('startWeekday', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sunday">Sunday</SelectItem>
-                    <SelectItem value="monday">Monday</SelectItem>
-                  </SelectContent>
-                </Select>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Default View</label>
+                  <Select 
+                    value={calendarSettings.defaultView} 
+                    onValueChange={(value) => updateCalendarSettings('defaultView', value)}
+                    disabled={preferencesLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Start Weekday</label>
+                  <Select 
+                    value={calendarSettings.startWeekday} 
+                    onValueChange={(value) => updateCalendarSettings('startWeekday', value)}
+                    disabled={preferencesLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sunday">Sunday</SelectItem>
+                      <SelectItem value="monday">Monday</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
             <div className="text-xs text-muted-foreground">
               <p>• Default View: Choose how the calendar displays by default</p>
               <p>• Start Weekday: Choose which day the week starts on</p>

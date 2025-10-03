@@ -21,6 +21,7 @@ class User(db.Model):
     provider = db.Column(db.String(50), nullable=True)
     preferred_messaging_platform = db.Column(db.String(20), default='telegram')
     state_data = db.Column(db.JSON, nullable=True)
+    user_preferences = db.Column(db.JSON, nullable=True)
     google_id = db.Column(db.String(100), unique=True, nullable=True)
     google_refresh_token = db.Column(db.Text, nullable=True)
     google_access_token = db.Column(db.Text, nullable=True)
@@ -55,6 +56,7 @@ class User(db.Model):
             'provider': self.provider,
             'preferred_messaging_platform': self.preferred_messaging_platform,
             'state_data': self.state_data,
+            'user_preferences': self.user_preferences,
             'google_id': self.google_id,
             'google_refresh_token': self.google_refresh_token,
             'google_access_token': self.google_access_token,
