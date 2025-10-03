@@ -152,7 +152,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
             </th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
-                Name
+                Full Name
                 <Button
                   variant="ghost"
                   size="sm"
@@ -186,24 +186,24 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
             </th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
-                Company
+                Organization
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`h-6 w-6 p-0 ${filters.company ? 'text-green-600' : ''}`}
+                      className={`h-6 w-6 p-0 ${filters.organization ? 'text-green-600' : ''}`}
                     >
                       <Filter className="h-3 w-3" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by company</label>
+                      <label className="text-sm font-medium">Filter by organization</label>
                       <Input
-                        placeholder="Enter company..."
-                        value={filters.company || ''}
-                        onChange={(e) => handleFilter('company', e.target.value)}
+                        placeholder="Enter organization..."
+                        value={filters.organization || ''}
+                        onChange={(e) => handleFilter('organization', e.target.value)}
                       />
                     </div>
                   </PopoverContent>
@@ -212,24 +212,24 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
             </th>
             <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
               <div className="flex items-center gap-2">
-                Categories
+                Role
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`h-6 w-6 p-0 ${filters.categories ? 'text-green-600' : ''}`}
+                      className={`h-6 w-6 p-0 ${filters.job_title ? 'text-green-600' : ''}`}
                     >
                       <Filter className="h-3 w-3" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by categories</label>
+                      <label className="text-sm font-medium">Filter by role</label>
                       <Input
-                        placeholder="Enter category..."
-                        value={filters.categories || ''}
-                        onChange={(e) => handleFilter('categories', e.target.value)}
+                        placeholder="Enter role..."
+                        value={filters.job_title || ''}
+                        onChange={(e) => handleFilter('job_title', e.target.value)}
                       />
                     </div>
                   </PopoverContent>
@@ -287,54 +287,25 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                     }}
                   />
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {person.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    {(person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </td>
               <td className="px-6 py-4">
-                <div className="font-semibold text-foreground" title={person.full_name}>
-                  {person.full_name.length > 20 ? `${person.full_name.substring(0, 20)}...` : person.full_name}
+                <div className="font-semibold text-foreground" title={person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown'}>
+                  {person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown'}
                 </div>
-                {person.linkedin_profile && (
-                  <a 
-                    href={person.linkedin_profile} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:text-primary-hover transition-colors font-medium"
-                  >
-                    LinkedIn Profile →
-                  </a>
+                {person.email && (
+                  <div className="text-xs text-muted-foreground">
+                    {person.email}
+                  </div>
                 )}
               </td>
               <td className="px-6 py-4">
-                <span className="text-sm font-medium text-foreground">{person.company || "—"}</span>
+                <span className="text-sm font-medium text-foreground">{person.organization || "—"}</span>
               </td>
                <td className="px-6 py-4">
-                {person.categories ? (
-                  person.categories.split(',').map((category, index) => {
-                    const trimmedCategory = category.trim();
-                    const firstWord = trimmedCategory.split(' ')[0];
-                    const bgColor = getColorFromText(trimmedCategory);
-                    const textColor = getTextColorFromBg(bgColor);
-                     return (
-                       <Badge 
-                         key={index} 
-                         variant="secondary" 
-                         className="text-xs mr-1 mb-1 rounded-full font-medium px-3 py-1 shadow-sm"
-                         style={{ 
-                           backgroundColor: bgColor, 
-                           color: textColor,
-                           border: 'none'
-                         }}
-                         title={trimmedCategory}
-                       >
-                         {firstWord}
-                       </Badge>
-                     );
-                  })
-                 ) : (
-                   <span className="text-sm text-muted-foreground">—</span>
-                 )}
+                <span className="text-sm font-medium text-foreground">{person.job_title || "—"}</span>
                </td>
                <td className="px-6 py-4">
                  <span className="text-sm font-medium text-foreground">{person.status || "—"}</span>

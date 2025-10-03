@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
 import DuplicateManager from './DuplicateManager';
+import CustomFieldsSettings from './CustomFieldsSettings';
+import TableColumnsSettings from './TableColumnsSettings';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -59,7 +61,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     whatsapp: false,
     google: false,
     contacts: false,
-    calendar: false
+    calendar: false,
+    customFields: false,
+    tableColumns: false
   });
 
   // Loading state for initial data load
@@ -77,7 +81,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Contact management state
   const [showDuplicates, setShowDuplicates] = useState(false);
 
-  const toggleSection = (section: 'telegram' | 'whatsapp' | 'google' | 'contacts' | 'calendar') => {
+  const toggleSection = (section: 'telegram' | 'whatsapp' | 'google' | 'contacts' | 'calendar' | 'customFields' | 'tableColumns') => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -1253,6 +1257,72 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <p>• Default View: Choose how the calendar displays by default</p>
               <p>• Start Weekday: Choose which day the week starts on</p>
             </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Custom Fields Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Custom Fields
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Create custom fields to store additional information about your contacts
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('customFields')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.customFields ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {expandedSections.customFields && (
+          <CardContent>
+            <CustomFieldsSettings 
+              isOpen={expandedSections.customFields}
+              onClose={() => setExpandedSections(prev => ({ ...prev, customFields: false }))}
+            />
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Table Columns Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Table Columns
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Choose which columns to display in the contacts table
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('tableColumns')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.tableColumns ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {expandedSections.tableColumns && (
+          <CardContent>
+            <TableColumnsSettings 
+              isOpen={expandedSections.tableColumns}
+              onClose={() => setExpandedSections(prev => ({ ...prev, tableColumns: false }))}
+            />
           </CardContent>
         )}
       </Card>

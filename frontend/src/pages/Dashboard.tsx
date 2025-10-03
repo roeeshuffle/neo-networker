@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
-import { PersonForm } from "@/components/PersonForm";
-import { EditablePersonModal } from "@/components/EditablePersonModal";
+import DynamicContactForm from "@/components/DynamicContactForm";
+import ContactViewModal from "@/components/ContactViewModal";
 import { CsvUploader } from "@/components/CsvUploader";
 import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -282,6 +282,49 @@ const Dashboard = () => {
     fetchPeople();
   };
 
+  const handleSavePerson = async (contactData: any) => {
+    try {
+      if (editingPerson || viewingPerson) {
+        // Update existing person
+        const personId = editingPerson?.id || viewingPerson?.id;
+        const { error } = await apiClient.updatePerson(personId, contactData);
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Contact updated successfully",
+        });
+        
+        // Close the form/modal and refresh data
+        if (editingPerson) {
+          handleFormClose();
+        } else {
+          setViewingPerson(null);
+        }
+      } else {
+        // Create new person
+        const { error } = await apiClient.createPerson(contactData);
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Contact created successfully",
+        });
+        
+        handleFormClose();
+      }
+      
+      fetchPeople();
+    } catch (error) {
+      console.error('Error saving contact:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save contact",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   if (loading) {
     return (
@@ -414,17 +457,21 @@ const Dashboard = () => {
         )}
 
         {showForm && (
-          <PersonForm
-            person={editingPerson}
+          <DynamicContactForm
+            isOpen={showForm}
+            contact={editingPerson}
             onClose={handleFormClose}
+            onSave={handleSavePerson}
+            isLoading={false}
           />
         )}
 
-        <EditablePersonModal
+        <ContactViewModal
           person={viewingPerson}
           isOpen={!!viewingPerson}
           onClose={() => setViewingPerson(null)}
-          onSave={fetchPeople}
+          onSave={handleSavePerson}
+          isLoading={false}
         />
       </main>
     </div>
