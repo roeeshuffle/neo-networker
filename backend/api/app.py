@@ -90,6 +90,7 @@ from api.routes.whatsapp import whatsapp_bp
 from api.routes.google_auth import google_auth_bp
 from api.routes.admin import admin_bp
 from api.routes.user_preferences import user_preferences_bp
+from api.routes.custom_fields import custom_fields_bp
 # Removed db_migration import - migration completed
 # Removed temporary fix routes - no longer needed
 
@@ -106,6 +107,7 @@ app.register_blueprint(whatsapp_bp, url_prefix='/api')
 app.register_blueprint(google_auth_bp, url_prefix='/api')
 app.register_blueprint(admin_bp, url_prefix='/api')
 app.register_blueprint(user_preferences_bp, url_prefix='/api')
+app.register_blueprint(custom_fields_bp, url_prefix='/api')
 # app.register_blueprint(migration_bp, url_prefix='/api')  # Disabled - using direct endpoint instead
 # Removed temporary fix blueprint registrations - no longer needed
 

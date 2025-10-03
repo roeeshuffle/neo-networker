@@ -48,24 +48,38 @@ def create_person():
         
         data = request.get_json()
         
-        person = Person(
-            id=str(uuid.uuid4()),
-            full_name=data['full_name'],
-            company=data.get('company'),
-            categories=data.get('categories'),
-            email=data.get('email'),
-            newsletter=data.get('newsletter', False),
-            status=data.get('status'),
-            linkedin_profile=data.get('linkedin_profile'),
-            poc_in_apex=data.get('poc_in_apex'),
-            who_warm_intro=data.get('who_warm_intro'),
-            agenda=data.get('agenda'),
-            meeting_notes=data.get('meeting_notes'),
-            should_avishag_meet=data.get('should_avishag_meet', False),
-            more_info=data.get('more_info'),
-            owner_id=current_user_id,
-            created_by=current_user_id
-        )
+        # Validate required fields
+        if not data.get('first_name') and not data.get('last_name'):
+            return jsonify({'error': 'At least first_name or last_name is required'}), 400
+        
+            person = Person(
+                first_name=data.get('first_name'),
+                last_name=data.get('last_name'),
+                gender=data.get('gender'),
+                birthday=datetime.strptime(data['birthday'], '%Y-%m-%d').date() if data.get('birthday') else None,
+                organization=data.get('organization'),
+                job_title=data.get('job_title'),
+                job_status=data.get('job_status'),
+                email=data.get('email'),
+                phone=data.get('phone'),
+                mobile=data.get('mobile'),
+                address=data.get('address'),
+                linkedin_url=data.get('linkedin_url'),
+                github_url=data.get('github_url'),
+                facebook_url=data.get('facebook_url'),
+                twitter_url=data.get('twitter_url'),
+                website_url=data.get('website_url'),
+                notes=data.get('notes'),
+                source=data.get('source', 'manual'),
+                tags=data.get('tags'),
+                last_contact_date=datetime.fromisoformat(data['last_contact_date'].replace('Z', '+00:00')) if data.get('last_contact_date') else None,
+                next_follow_up_date=datetime.fromisoformat(data['next_follow_up_date'].replace('Z', '+00:00')) if data.get('next_follow_up_date') else None,
+                status=data.get('status', 'active'),
+                priority=data.get('priority', 'medium'),
+                group=data.get('group'),
+                custom_fields=data.get('custom_fields', {}),
+                owner_id=current_user_id
+            )
         
         db.session.add(person)
         db.session.commit()
@@ -99,20 +113,33 @@ def update_person(person_id):
         
         data = request.get_json()
         
-        person.full_name = data.get('full_name', person.full_name)
-        person.company = data.get('company', person.company)
-        person.categories = data.get('categories', person.categories)
+        # Update fields dynamically
+        person.first_name = data.get('first_name', person.first_name)
+        person.last_name = data.get('last_name', person.last_name)
+        person.gender = data.get('gender', person.gender)
+        person.birthday = datetime.strptime(data['birthday'], '%Y-%m-%d').date() if data.get('birthday') else person.birthday
+        person.organization = data.get('organization', person.organization)
+        person.job_title = data.get('job_title', person.job_title)
+        person.job_status = data.get('job_status', person.job_status)
         person.email = data.get('email', person.email)
-        person.newsletter = data.get('newsletter', person.newsletter)
-        person.status = data.get('status', person.status)
-        person.linkedin_profile = data.get('linkedin_profile', person.linkedin_profile)
-        person.poc_in_apex = data.get('poc_in_apex', person.poc_in_apex)
-        person.who_warm_intro = data.get('who_warm_intro', person.who_warm_intro)
-        person.agenda = data.get('agenda', person.agenda)
-        person.meeting_notes = data.get('meeting_notes', person.meeting_notes)
-        person.should_avishag_meet = data.get('should_avishag_meet', person.should_avishag_meet)
-        person.more_info = data.get('more_info', person.more_info)
-        person.updated_at = datetime.utcnow()
+        person.phone = data.get('phone', person.phone)
+        person.mobile = data.get('mobile', person.mobile)
+        person.address = data.get('address', person.address)
+        person.linkedin_url = data.get('linkedin_url', person.linkedin_url)
+        person.github_url = data.get('github_url', person.github_url)
+        person.facebook_url = data.get('facebook_url', person.facebook_url)
+        person.twitter_url = data.get('twitter_url', person.twitter_url)
+        person.website_url = data.get('website_url', person.website_url)
+        person.notes = data.get('notes', person.notes)
+        person.source = data.get('source', person.source)
+        person.tags = data.get('tags', person.tags)
+        person.last_contact_date = datetime.fromisoformat(data['last_contact_date'].replace('Z', '+00:00')) if data.get('last_contact_date') else person.last_contact_date
+        person.next_follow_up_date = datetime.fromisoformat(data['next_follow_up_date'].replace('Z', '+00:00')) if data.get('next_follow_up_date') else person.next_follow_up_date
+            person.status = data.get('status', person.status)
+            person.priority = data.get('priority', person.priority)
+            person.group = data.get('group', person.group)
+            person.custom_fields = data.get('custom_fields', person.custom_fields)
+            person.updated_at = datetime.utcnow()
         
         db.session.commit()
         

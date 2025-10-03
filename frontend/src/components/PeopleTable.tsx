@@ -16,7 +16,7 @@ interface PeopleTableProps {
   onView: (person: Person) => void;
 }
 
-type SortField = 'full_name' | 'status';
+type SortField = 'first_name' | 'last_name' | 'organization' | 'job_title' | 'status';
 type SortOrder = 'asc' | 'desc';
 
 // Generate consistent color from text
@@ -88,8 +88,16 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   const sortedPeople = [...people].sort((a, b) => {
     if (!sortField) return 0;
     
-    const aValue = a[sortField] || '';
-    const bValue = b[sortField] || '';
+    let aValue, bValue;
+    
+    if (sortField === 'first_name' || sortField === 'last_name') {
+      // For name sorting, use the full name
+      aValue = getFullName(a);
+      bValue = getFullName(b);
+    } else {
+      aValue = a[sortField] || '';
+      bValue = b[sortField] || '';
+    }
     
     if (sortOrder === 'asc') {
       return aValue.localeCompare(bValue);
@@ -103,7 +111,13 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
     return Object.entries(filters).every(([column, filterValue]) => {
       if (!filterValue) return true;
       
-      const personValue = person[column as keyof Person]?.toString()?.toLowerCase() || '';
+      let personValue;
+      if (column === 'full_name') {
+        personValue = getFullName(person).toLowerCase();
+      } else {
+        personValue = person[column as keyof Person]?.toString()?.toLowerCase() || '';
+      }
+      
       return personValue.includes(filterValue.toLowerCase());
     });
   });
@@ -122,6 +136,13 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       ...prev,
       [column]: value
     }));
+  };
+
+  const getFullName = (person: Person) => {
+    const firstName = person.first_name || '';
+    const lastName = person.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || 'Unknown';
   };
 
   const getSortIcon = (field: SortField) => {
@@ -156,10 +177,10 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleSort('full_name')}
+                  onClick={() => handleSort('first_name')}
                   className="h-6 w-6 p-0"
                 >
-                  {getSortIcon('full_name')}
+                  {getSortIcon('first_name')}
                 </Button>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -280,7 +301,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 <Avatar className="h-10 w-10">
                   <AvatarImage 
                     src={profileImages[person.id] || ""} 
-                    alt={person.full_name}
+                    alt={getFullName(person)}
                     onError={(e) => {
                       // If image fails to load, hide it to show fallback
                       e.currentTarget.style.display = 'none';

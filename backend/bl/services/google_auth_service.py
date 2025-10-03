@@ -203,7 +203,8 @@ class GoogleAuthService:
                     'email': emails[0].get('value', '') if emails else '',
                     'phone': phones[0].get('value', '') if phones else '',
                     'company': organizations[0].get('name', '') if organizations else '',
-                    'job_title': organizations[0].get('title', '') if organizations else ''
+                    'job_title': organizations[0].get('title', '') if organizations else '',
+                    'is_duplicate': False  # Will be set later in get_contacts_preview
                 }
                 processed_contacts.append(processed_contact)
             

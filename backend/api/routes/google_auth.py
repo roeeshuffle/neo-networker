@@ -437,13 +437,12 @@ def sync_selected_contacts():
         synced_count = 0
         for contact in selected_contacts:
             person = Person(
-                id=str(uuid.uuid4()),
-                full_name=contact['name'],
+                first_name=contact.get('first_name', ''),
+                last_name=contact.get('last_name', ''),
                 email=contact['email'],
-                company=contact['company'],
+                organization=contact['company'],
                 phone=contact['phone'],
                 owner_id=user.id,
-                created_by=user.id,
                 source='google_contacts'
             )
             db.session.add(person)

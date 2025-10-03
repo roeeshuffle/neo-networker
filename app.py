@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bac
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 16.0 - ENHANCED GOOGLE SYNC WITH SELECTION")
-    print("🔍 Starting Flask app with enhanced Google sync features")
+          print("🚀 APP VERSION: 18.1 - FIXED PERSON MODEL")
+    print("🔍 Starting Flask app with dynamic contact management system")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)
