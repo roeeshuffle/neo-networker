@@ -38,6 +38,10 @@ def preview_csv():
         except json.JSONDecodeError:
             custom_mapping = {}
         
+        # Add logging for debugging
+        print(f"📊 Starting CSV preview for user {current_user_id}")
+        print(f"📋 Custom mapping: {custom_mapping}")
+        
         # Read and parse CSV
         content = file.read().decode('utf-8')
         lines = content.strip().split('\n')
@@ -276,7 +280,9 @@ def preview_csv():
                     'message': f"Row {row_num}: Skipped - no first_name or last_name provided"
                 })
         
+        
         return jsonify({
+            'success': True,
             'preview_data': preview_data,
             'all_warnings': all_warnings,
             'total_rows': len(preview_data),
@@ -284,8 +290,11 @@ def preview_csv():
         })
         
     except Exception as e:
-        print(f"Error previewing CSV: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error previewing CSV: {str(e)}")
+        print(f"🔍 Error type: {type(e).__name__}")
+        import traceback
+        print(f"Stack trace: {traceback.format_exc()}")
+        return jsonify({'error': str(e), 'details': 'Check server logs for more information'}), 500
 
 @csv_bp.route('/csv-processor', methods=['POST'])
 @jwt_required()

@@ -347,16 +347,23 @@ def preview_google_contacts():
     """Preview Google contacts before syncing"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"👥 Starting Google contacts preview for user {current_user_id}")
+        
         user = User.query.get(current_user_id)
         
         if not user:
+            print(f"❌ User {current_user_id} not found")
             return jsonify({'error': 'User not found'}), 404
         
         if not user.google_id:
+            print(f"❌ User {current_user_id} has no Google account linked")
             return jsonify({'error': 'Google account not connected'}), 400
+        
+        print(f"✅ User {current_user_id} has Google account: {user.google_id}")
         
         # Get preview data
         preview_data = google_auth_service.get_contacts_preview(user)
+        print(f"📊 Retrieved {len(preview_data)} contacts for preview")
         
         return jsonify({
             'success': True,
@@ -367,8 +374,12 @@ def preview_google_contacts():
         })
         
     except Exception as e:
+        print(f"❌ Error previewing Google contacts: {str(e)}")
+        print(f"🔍 Error type: {type(e).__name__}")
+        import traceback
+        print(f"Stack trace: {traceback.format_exc()}")
         logger.error(f"Error previewing Google contacts: {str(e)}")
-        return jsonify({'error': 'Failed to preview contacts'}), 500
+        return jsonify({'error': 'Failed to preview contacts', 'details': str(e)}), 500
 
 @google_auth_bp.route('/auth/google/preview-calendar', methods=['POST'])
 @jwt_required()

@@ -52,14 +52,29 @@ def create_person():
         if not data.get('first_name') and not data.get('last_name'):
             return jsonify({'error': 'At least first_name or last_name is required'}), 400
         
+        # Helper function to clean empty strings to None for constrained fields
+        def clean_constrained_field(value, allowed_values=None):
+            if not value or value.strip() == '':
+                return None
+            if allowed_values and value.lower() not in allowed_values:
+                return None
+            return value.lower() if allowed_values else value
+
+        # Clean gender field - must be valid or None
+        gender = clean_constrained_field(data.get('gender'), ['male', 'female', 'other'])
+        
+        # Add logging for debugging
+        print(f"📝 Creating person: {data.get('first_name', 'Unknown')} {data.get('last_name', '')}")
+        print(f"🔍 Gender field: '{data.get('gender')}' -> '{gender}'")
+        
         person = Person(
                 first_name=data.get('first_name'),
                 last_name=data.get('last_name'),
-                gender=data.get('gender'),
+                gender=gender,
                 birthday=datetime.strptime(data['birthday'], '%Y-%m-%d').date() if data.get('birthday') else None,
                 organization=data.get('organization'),
                 job_title=data.get('job_title'),
-                job_status=data.get('job_status'),
+                job_status=clean_constrained_field(data.get('job_status'), ['employed', 'unemployed', 'student', 'retired', 'other']),
                 email=data.get('email'),
                 phone=data.get('phone'),
                 mobile=data.get('mobile'),
@@ -74,7 +89,7 @@ def create_person():
                 tags=data.get('tags'),
                 last_contact_date=datetime.fromisoformat(data['last_contact_date'].replace('Z', '+00:00')) if data.get('last_contact_date') else None,
                 next_follow_up_date=datetime.fromisoformat(data['next_follow_up_date'].replace('Z', '+00:00')) if data.get('next_follow_up_date') else None,
-                status=data.get('status', 'active'),
+                status=clean_constrained_field(data.get('status'), ['active', 'inactive', 'prospect', 'client', 'partner']) or 'active',
                 priority=data.get('priority', 'medium'),
                 group=data.get('group'),
                 custom_fields=data.get('custom_fields', {}),
@@ -113,6 +128,24 @@ def update_person(person_id):
         
         data = request.get_json()
         
+        # Helper function to clean empty strings to None for constrained fields
+        def clean_constrained_field(value, allowed_values=None):
+            if not value or value.strip() == '':
+                return None
+            if allowed_values and value.lower() not in allowed_values:
+                return None
+            return value.lower() if allowed_values else value
+
+        # Clean constrained fields
+        if 'gender' in data:
+            data['gender'] = clean_constrained_field(data.get('gender'), ['male', 'female', 'other'])
+        if 'job_status' in data:
+            data['job_status'] = clean_constrained_field(data.get('job_status'), ['employed', 'unemployed', 'student', 'retired', 'other'])
+        if 'status' in data:
+            data['status'] = clean_constrained_field(data.get('status'), ['active', 'inactive', 'prospect', 'client', 'partner']) or 'active'
+        if 'priority' in data:
+            data['priority'] = clean_constrained_field(data.get('priority'), ['low', 'medium', 'high']) or 'medium'
+
         # Update fields dynamically
         person.first_name = data.get('first_name', person.first_name)
         person.last_name = data.get('last_name', person.last_name)

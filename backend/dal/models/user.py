@@ -35,7 +35,7 @@ class User(db.Model):
     # Relationships
     people = db.relationship('Person', foreign_keys='Person.owner_id', backref='owner', lazy='dynamic')
     tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
-    events = db.relationship('Event', foreign_keys='Event.user_id', backref='user', lazy='dynamic')
+    # events = db.relationship('Event', foreign_keys='Event.user_id', backref='event_owner', lazy='dynamic')  # Temporarily disabled
     
     def __repr__(self):
         return f'<User {self.email}>'
