@@ -382,7 +382,7 @@ class GoogleAuthService:
                 existing_person = None
                 if contact.get('email'):
                     existing_person = Person.query.filter_by(
-                        user_id=user.id,
+                        owner_id=user.id,
                         email=contact['email']
                     ).first()
                 
@@ -444,6 +444,14 @@ class GoogleAuthService:
                 event_start = None
                 event_end = None
                 
+                # Debug logging to see what we're getting
+                logger.info(f"Processing event: {event_title}")
+                logger.info(f"Event data keys: {list(event_data.keys())}")
+                if 'start' in event_data:
+                    logger.info(f"Start data: {event_data['start']}")
+                if 'end' in event_data:
+                    logger.info(f"End data: {event_data['end']}")
+                
                 # Handle different date formats
                 if 'start' in event_data:
                     start_data = event_data['start']
@@ -465,7 +473,7 @@ class GoogleAuthService:
                 
                 # Skip events without valid start time
                 if not event_start:
-                    logger.warning(f"Skipping event '{event_title}' - no valid start time")
+                    logger.warning(f"Skipping event '{event_title}' - no valid start time. Event data: {event_data}")
                     continue
                 
                 # If no end time, set it to 1 hour after start
