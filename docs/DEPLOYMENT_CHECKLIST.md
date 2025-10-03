@@ -4,9 +4,12 @@
 
 ### 1. **Database Schema Issues**
 - **❌ Error**: `column tasks.title does not exist` (500 Internal Server Error)
+- **❌ Error**: `column profiles.user_preferences does not exist` (500 Internal Server Error)
 - **✅ Solution**: Ensure Task model is backward compatible with `getattr()` fallbacks
+- **✅ Solution**: Always add new columns to production database BEFORE deploying code
 - **🔍 Check**: Verify `to_dict()` method handles missing columns gracefully
-- **📝 Files**: `backend/models/task.py`, `backend/routes/tasks.py`
+- **🔍 Check**: Run database migration scripts before code deployment
+- **📝 Files**: `backend/models/task.py`, `backend/routes/tasks.py`, `backend/dal/models/user.py`
 
 ### 2. **API Authentication Issues**
 - **❌ Error**: `401 Unauthorized` on events API
@@ -95,15 +98,19 @@
 - [ ] Date parameters are properly formatted as strings
 
 ### Database Checks:
+- [ ] **🚨 CRITICAL: New columns added to production database BEFORE code deployment**
 - [ ] Migration scripts handle existing columns
 - [ ] Models are backward compatible
 - [ ] No duplicate relationship definitions
+- [ ] **🚨 CRITICAL: Test database operations locally with SQLite before deploying**
 
 ### Testing Checks:
+- [ ] **🚨 CRITICAL: Run local database tests with SQLite**
 - [ ] Build completes without errors
 - [ ] No console errors in browser
 - [ ] API endpoints return expected status codes
 - [ ] Authentication works properly
+- [ ] **🚨 CRITICAL: Test User model operations locally**
 
 ---
 
