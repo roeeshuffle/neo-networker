@@ -234,9 +234,12 @@ class GoogleAuthService:
             
             # Set default time range if not provided
             if not time_min:
-                time_min = datetime.utcnow().isoformat() + 'Z'
+                time_min = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + 'Z'
             if not time_max:
-                time_max = (datetime.utcnow() + timedelta(days=30)).isoformat() + 'Z'
+                # Default to next year if not specified
+                today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                next_year = datetime(today.year + 1, 12, 31, 23, 59, 59)
+                time_max = next_year.isoformat() + 'Z'
             
             events_result = service.events().list(
                 calendarId=primary_calendar,
@@ -408,8 +411,17 @@ class GoogleAuthService:
             # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
-            # Get calendar events from Google
-            events = self.get_calendar_events(access_token)
+            # Set date range: today to next year
+            today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            next_year = datetime(today.year + 1, 12, 31, 23, 59, 59)
+            
+            # Get calendar events from Google with date range
+            events = self.get_calendar_events(
+                access_token, 
+                max_results=1000,
+                time_min=today.isoformat() + 'Z',
+                time_max=next_year.isoformat() + 'Z'
+            )
             
             # Import here to avoid circular imports
             from dal.models import Event

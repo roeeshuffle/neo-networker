@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 15.4 - FIX GOOGLE CALENDAR DATE PARSING")
-    print("🔍 Starting Flask app with robust calendar event date handling")
+    print("🚀 APP VERSION: 15.5 - GOOGLE CALENDAR DATE RANGE: TODAY TO NEXT YEAR")
+    print("🔍 Starting Flask app with calendar events from today to next year")
     port = int(os.environ.get('PORT', 8080))
     app.run(debug=False, host='0.0.0.0', port=port)
