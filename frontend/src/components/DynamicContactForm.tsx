@@ -115,13 +115,14 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       setAvailableFields(fields);
     } else {
       // New contact - start with required fields
-      setFormData({
+      const initialFormData = {
         first_name: '',
         last_name: ''
-      });
+      };
+      setFormData(initialFormData);
       setAvailableFields([
-        { field: 'first_name', display_name: 'First Name', value: '', type: 'text' },
-        { field: 'last_name', display_name: 'Last Name', value: '', type: 'text' }
+        { field: 'first_name', display_name: 'First Name', value: initialFormData.first_name, type: 'text' },
+        { field: 'last_name', display_name: 'Last Name', value: initialFormData.last_name, type: 'text' }
       ]);
     }
   }, [contact, customFields]);
@@ -131,6 +132,13 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       ...prev,
       [field]: value
     }));
+    
+    // Also update the availableFields to keep them in sync
+    setAvailableFields(prev => 
+      prev.map(f => 
+        f.field === field ? { ...f, value } : f
+      )
+    );
   };
 
   const handleAddField = () => {

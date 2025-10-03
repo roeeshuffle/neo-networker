@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-console.log('🚀 FRONTEND VERSION: 18.3 - UPDATED CSV IMPORT FOR NEW SCHEMA');
+console.log('🚀 FRONTEND VERSION: 18.4 - FIXED FORM INPUT SYNCHRONIZATION');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
