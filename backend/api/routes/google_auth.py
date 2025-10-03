@@ -402,7 +402,7 @@ def preview_google_calendar():
 @google_auth_bp.route('/auth/google/sync-selected-contacts', methods=['POST'])
 @jwt_required()
 def sync_selected_contacts():
-    """Sync only selected Google contacts (non-duplicates)"""
+    """Sync only selected Google contacts"""
     try:
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
@@ -413,16 +413,29 @@ def sync_selected_contacts():
         if not user.google_id:
             return jsonify({'error': 'Google account not connected'}), 400
         
-        # Get preview data and sync only non-duplicates
+        # Get selected indices from request
+        data = request.get_json()
+        selected_indices = data.get('selected_indices', [])
+        show_duplicates = data.get('show_duplicates', False)
+        
+        # Get preview data
         preview_data = google_auth_service.get_contacts_preview(user)
-        new_contacts = [c for c in preview_data if not c['is_duplicate']]
+        
+        # Filter based on show_duplicates flag
+        if show_duplicates:
+            items_to_sync = [c for c in preview_data if c['is_duplicate']]
+        else:
+            items_to_sync = [c for c in preview_data if not c['is_duplicate']]
+        
+        # Get only selected items
+        selected_contacts = [items_to_sync[i] for i in selected_indices if i < len(items_to_sync)]
         
         # Import here to avoid circular imports
         from dal.models import Person
         import uuid
         
         synced_count = 0
-        for contact in new_contacts:
+        for contact in selected_contacts:
             person = Person(
                 id=str(uuid.uuid4()),
                 full_name=contact['name'],
@@ -445,7 +458,7 @@ def sync_selected_contacts():
         return jsonify({
             'success': True,
             'contacts_synced': synced_count,
-            'message': f'Successfully synced {synced_count} new contacts (skipped {len(preview_data) - synced_count} duplicates)'
+            'message': f'Successfully synced {synced_count} selected contacts'
         })
         
     except Exception as e:
@@ -455,7 +468,7 @@ def sync_selected_contacts():
 @google_auth_bp.route('/auth/google/sync-selected-calendar', methods=['POST'])
 @jwt_required()
 def sync_selected_calendar():
-    """Sync only selected Google calendar events (non-duplicates)"""
+    """Sync only selected Google calendar events"""
     try:
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
@@ -466,16 +479,29 @@ def sync_selected_calendar():
         if not user.google_id:
             return jsonify({'error': 'Google account not connected'}), 400
         
-        # Get preview data and sync only non-duplicates
+        # Get selected indices from request
+        data = request.get_json()
+        selected_indices = data.get('selected_indices', [])
+        show_duplicates = data.get('show_duplicates', False)
+        
+        # Get preview data
         preview_data = google_auth_service.get_calendar_events_preview(user)
-        new_events = [e for e in preview_data if not e['is_duplicate']]
+        
+        # Filter based on show_duplicates flag
+        if show_duplicates:
+            items_to_sync = [e for e in preview_data if e['is_duplicate']]
+        else:
+            items_to_sync = [e for e in preview_data if not e['is_duplicate']]
+        
+        # Get only selected items
+        selected_events = [items_to_sync[i] for i in selected_indices if i < len(items_to_sync)]
         
         # Import here to avoid circular imports
         from dal.models import Event
         import uuid
         
         synced_count = 0
-        for event_data in new_events:
+        for event_data in selected_events:
             event = Event(
                 id=str(uuid.uuid4()),
                 title=event_data['title'],
@@ -500,7 +526,7 @@ def sync_selected_calendar():
         return jsonify({
             'success': True,
             'events_synced': synced_count,
-            'message': f'Successfully synced {synced_count} new events (skipped {len(preview_data) - synced_count} duplicates)'
+            'message': f'Successfully synced {synced_count} selected events'
         })
         
     except Exception as e:

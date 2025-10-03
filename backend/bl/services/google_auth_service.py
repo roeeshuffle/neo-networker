@@ -369,8 +369,8 @@ class GoogleAuthService:
             # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
-            # Get contacts from Google
-            contacts = self.get_contacts(access_token)
+            # Get ALL contacts from Google (not limited to 1000)
+            contacts = self.get_contacts(access_token, max_results=10000)
             
             # Import here to avoid circular imports
             from dal.models import Person
@@ -447,29 +447,35 @@ class GoogleAuthService:
                 # Debug logging to see what we're getting
                 logger.info(f"Processing event: {event_title}")
                 logger.info(f"Event data keys: {list(event_data.keys())}")
-                if 'start' in event_data:
-                    logger.info(f"Start data: {event_data['start']}")
-                if 'end' in event_data:
-                    logger.info(f"End data: {event_data['end']}")
                 
-                # Handle different date formats
-                if 'start' in event_data:
-                    start_data = event_data['start']
-                    if 'dateTime' in start_data:
-                        # Regular event with specific time
-                        event_start = datetime.fromisoformat(start_data['dateTime'].replace('Z', '+00:00'))
-                    elif 'date' in start_data:
-                        # All-day event
-                        event_start = datetime.fromisoformat(start_data['date'] + 'T00:00:00+00:00')
+                # Handle different date formats - events come with start_time and end_time already processed
+                if 'start_time' in event_data and event_data['start_time']:
+                    try:
+                        # Parse the start time (could be dateTime or date format)
+                        start_time_str = event_data['start_time']
+                        if 'T' in start_time_str:
+                            # DateTime format: 2025-10-25T00:00:00+03:00
+                            event_start = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                        else:
+                            # Date format: 2025-10-25
+                            event_start = datetime.fromisoformat(start_time_str + 'T00:00:00+00:00')
+                    except Exception as e:
+                        logger.warning(f"Error parsing start_time '{event_data['start_time']}': {e}")
+                        event_start = None
                 
-                if 'end' in event_data:
-                    end_data = event_data['end']
-                    if 'dateTime' in end_data:
-                        # Regular event with specific time
-                        event_end = datetime.fromisoformat(end_data['dateTime'].replace('Z', '+00:00'))
-                    elif 'date' in end_data:
-                        # All-day event
-                        event_end = datetime.fromisoformat(end_data['date'] + 'T23:59:59+00:00')
+                if 'end_time' in event_data and event_data['end_time']:
+                    try:
+                        # Parse the end time (could be dateTime or date format)
+                        end_time_str = event_data['end_time']
+                        if 'T' in end_time_str:
+                            # DateTime format: 2025-10-25T01:00:00+03:00
+                            event_end = datetime.fromisoformat(end_time_str.replace('Z', '+00:00'))
+                        else:
+                            # Date format: 2025-10-25
+                            event_end = datetime.fromisoformat(end_time_str + 'T23:59:59+00:00')
+                    except Exception as e:
+                        logger.warning(f"Error parsing end_time '{event_data['end_time']}': {e}")
+                        event_end = None
                 
                 # Skip events without valid start time
                 if not event_start:

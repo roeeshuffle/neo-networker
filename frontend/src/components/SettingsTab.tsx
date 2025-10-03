@@ -85,7 +85,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 15.2 - CLEANED UP CONTACTS PANEL');
+    console.log('🚀 FRONTEND VERSION: 16.0 - ENHANCED GOOGLE SYNC WITH SELECTION');
     console.log('🔧 SettingsTab loaded with user preferences backend integration!');
     checkAllStatus();
     loadUserPreferences();
@@ -360,7 +360,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
-  const handlePreviewApprove = async () => {
+  const handlePreviewApprove = async (selectedIndices: number[], showDuplicates: boolean) => {
     try {
       setPreviewLoading(true);
       
@@ -374,6 +374,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          selected_indices: selectedIndices,
+          show_duplicates: showDuplicates
+        }),
       });
       
       if (response.ok) {
