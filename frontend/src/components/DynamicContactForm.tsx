@@ -5,13 +5,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { X, Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { X, Plus, Trash2 } from 'lucide-react';
 
 interface ContactField {
   field: string;
   display_name: string;
   value: any;
   type: string;
+  category: string;
+  required?: boolean;
+  options?: string[];
 }
 
 interface DynamicContactFormProps {
@@ -24,59 +28,55 @@ interface DynamicContactFormProps {
 }
 
 const FIELD_OPTIONS = [
-  { field: 'first_name', display_name: 'First Name', type: 'text' },
-  { field: 'last_name', display_name: 'Last Name', type: 'text' },
-  { field: 'email', display_name: 'Email', type: 'email' },
-  { field: 'phone', display_name: 'Phone', type: 'tel' },
-  { field: 'mobile', display_name: 'Mobile', type: 'tel' },
-  { field: 'organization', display_name: 'Organization', type: 'text' },
-  { field: 'job_title', display_name: 'Job Title', type: 'text' },
-  { field: 'address', display_name: 'Address', type: 'textarea' },
-  { field: 'linkedin_url', display_name: 'LinkedIn URL', type: 'url' },
-  { field: 'github_url', display_name: 'GitHub URL', type: 'url' },
-  { field: 'website_url', display_name: 'Website URL', type: 'url' },
-  { field: 'notes', display_name: 'Notes', type: 'textarea' },
-  { field: 'tags', display_name: 'Tags', type: 'text' },
-  { field: 'source', display_name: 'Source', type: 'text' },
-  { field: 'priority', display_name: 'Priority', type: 'select' },
-  { field: 'group', display_name: 'Group', type: 'text' },
-  { field: 'gender', display_name: 'Gender', type: 'select' },
-  { field: 'job_status', display_name: 'Job Status', type: 'select' },
-  { field: 'status', display_name: 'Status', type: 'select' }
+  // Core Identifiers
+  { field: 'first_name', display_name: 'First Name', type: 'text', required: true, category: 'general' },
+  { field: 'last_name', display_name: 'Last Name', type: 'text', required: true, category: 'general' },
+  { field: 'gender', display_name: 'Gender', type: 'select', options: ['male', 'female', 'other'], category: 'general' },
+  { field: 'birthday', display_name: 'Birthday', type: 'date', category: 'general' },
+  
+  // Communication Info
+  { field: 'email', display_name: 'Email', type: 'email', category: 'general' },
+  { field: 'phone', display_name: 'Phone', type: 'tel', category: 'general' },
+  { field: 'mobile', display_name: 'Mobile', type: 'tel', category: 'general' },
+  { field: 'address', display_name: 'Address', type: 'textarea', category: 'general' },
+  
+  // Professional Info
+  { field: 'organization', display_name: 'Organization', type: 'text', category: 'professional' },
+  { field: 'job_title', display_name: 'Job Title', type: 'text', category: 'professional' },
+  { field: 'job_status', display_name: 'Job Status', type: 'select', options: ['employed', 'unemployed', 'student', 'retired', 'other'], category: 'professional' },
+  
+  // Social & Online Profiles
+  { field: 'linkedin_url', display_name: 'LinkedIn', type: 'url', category: 'social' },
+  { field: 'github_url', display_name: 'GitHub', type: 'url', category: 'social' },
+  { field: 'facebook_url', display_name: 'Facebook', type: 'url', category: 'social' },
+  { field: 'twitter_url', display_name: 'Twitter', type: 'url', category: 'social' },
+  { field: 'website_url', display_name: 'Website', type: 'url', category: 'social' },
+  
+  // Connection Management
+  { field: 'notes', display_name: 'Notes', type: 'textarea', category: 'connection' },
+  { field: 'source', display_name: 'Source', type: 'text', category: 'connection' },
+  { field: 'tags', display_name: 'Tags', type: 'text', category: 'connection' },
+  { field: 'last_contact_date', display_name: 'Last Contact Date', type: 'datetime-local', category: 'connection' },
+  { field: 'next_follow_up_date', display_name: 'Next Follow-up Date', type: 'datetime-local', category: 'connection' },
+  { field: 'status', display_name: 'Status', type: 'select', options: ['active', 'inactive', 'prospect', 'client', 'partner'], category: 'connection' },
+  { field: 'priority', display_name: 'Priority', type: 'select', options: ['low', 'medium', 'high'], category: 'connection' },
+  { field: 'group', display_name: 'Group', type: 'text', category: 'connection' }
 ];
 
-const SELECT_OPTIONS = {
-  priority: [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' }
-  ],
-  gender: [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'other', label: 'Other' }
-  ],
-  job_status: [
-    { value: 'employed', label: 'Employed' },
-    { value: 'unemployed', label: 'Unemployed' },
-    { value: 'student', label: 'Student' },
-    { value: 'retired', label: 'Retired' },
-    { value: 'other', label: 'Other' }
-  ],
-  status: [
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-    { value: 'prospect', label: 'Prospect' },
-    { value: 'client', label: 'Client' },
-    { value: 'partner', label: 'Partner' }
-  ]
-};
+const CATEGORIES = [
+  { id: 'general', name: 'General Info', description: 'Basic contact information' },
+  { id: 'professional', name: 'Professional Info', description: 'Work and career details' },
+  { id: 'social', name: 'Social & Online Profiles', description: 'Social media and online presence' },
+  { id: 'connection', name: 'Connection Management', description: 'Relationship and interaction data' },
+  { id: 'custom', name: 'Custom Fields', description: 'User-defined fields' }
+];
 
 export default function DynamicContactForm({ isOpen, onClose, contact, onSave, isLoading = false, customFields = [] }: DynamicContactFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [availableFields, setAvailableFields] = useState<ContactField[]>([]);
   const [showAddField, setShowAddField] = useState(false);
   const [selectedFieldToAdd, setSelectedFieldToAdd] = useState('');
+  const [newCustomField, setNewCustomField] = useState({ name: '', type: 'text' });
 
   useEffect(() => {
     if (contact) {
@@ -84,19 +84,32 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       const contactData: Record<string, any> = {};
       const fields: ContactField[] = [];
       
-      // Add all non-null standard fields from the contact
-      Object.keys(contact).forEach(key => {
-        if (key !== 'custom_fields' && contact[key] !== null && contact[key] !== undefined && contact[key] !== '') {
-          contactData[key] = contact[key];
-          const fieldOption = FIELD_OPTIONS.find(f => f.field === key);
-          if (fieldOption) {
-            fields.push({
-              field: key,
-              display_name: fieldOption.display_name,
-              value: contact[key],
-              type: fieldOption.type
-            });
-          }
+      // Add all standard fields
+      FIELD_OPTIONS.forEach(fieldOption => {
+        const value = contact[fieldOption.field];
+        if (value !== null && value !== undefined && value !== '') {
+          contactData[fieldOption.field] = value;
+          fields.push({
+            field: fieldOption.field,
+            display_name: fieldOption.display_name,
+            value: value,
+            type: fieldOption.type,
+            category: fieldOption.category,
+            required: fieldOption.required,
+            options: fieldOption.options
+          });
+        } else if (fieldOption.required) {
+          // Include required fields even if empty
+          contactData[fieldOption.field] = '';
+          fields.push({
+            field: fieldOption.field,
+            display_name: fieldOption.display_name,
+            value: '',
+            type: fieldOption.type,
+            category: fieldOption.category,
+            required: fieldOption.required,
+            options: fieldOption.options
+          });
         }
       });
       
@@ -110,7 +123,8 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
               field: `custom_${key}`,
               display_name: customField.name,
               value: contact.custom_fields[key],
-              type: customField.type
+              type: customField.type,
+              category: 'custom'
             });
           }
         });
@@ -126,17 +140,14 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       };
       setFormData(initialFormData);
       setAvailableFields([
-        { field: 'first_name', display_name: 'First Name', value: initialFormData.first_name, type: 'text' },
-        { field: 'last_name', display_name: 'Last Name', value: initialFormData.last_name, type: 'text' }
+        { field: 'first_name', display_name: 'First Name', value: '', type: 'text', category: 'general', required: true },
+        { field: 'last_name', display_name: 'Last Name', value: '', type: 'text', category: 'general', required: true }
       ]);
     }
-  }, [contact]); // Remove customFields from dependencies to prevent infinite loop
+  }, [contact]);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      return newData;
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     // Also update the availableFields to keep them in sync
     setAvailableFields(prev => 
@@ -156,7 +167,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
           field: selectedFieldToAdd,
           display_name: fieldOption.display_name,
           value: '',
-          type: fieldOption.type
+          type: fieldOption.type,
+          category: fieldOption.category,
+          required: fieldOption.required,
+          options: fieldOption.options
         };
         setAvailableFields(prev => [...prev, newField]);
         setFormData(prev => ({ ...prev, [selectedFieldToAdd]: '' }));
@@ -169,7 +183,8 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             field: `custom_${selectedFieldToAdd}`,
             display_name: customField.name,
             value: '',
-            type: customField.type
+            type: customField.type,
+            category: 'custom'
           };
           setAvailableFields(prev => [...prev, newField]);
           setFormData(prev => ({ ...prev, [`custom_${selectedFieldToAdd}`]: '' }));
@@ -177,6 +192,22 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       }
       setSelectedFieldToAdd('');
       setShowAddField(false);
+    }
+  };
+
+  const handleAddCustomField = () => {
+    if (newCustomField.name.trim()) {
+      const fieldKey = newCustomField.name.toLowerCase().replace(/\s+/g, '_');
+      const newField: ContactField = {
+        field: `custom_${fieldKey}`,
+        display_name: newCustomField.name,
+        value: '',
+        type: newCustomField.type,
+        category: 'custom'
+      };
+      setAvailableFields(prev => [...prev, newField]);
+      setFormData(prev => ({ ...prev, [`custom_${fieldKey}`]: '' }));
+      setNewCustomField({ name: '', type: 'text' });
     }
   };
 
@@ -216,7 +247,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
   };
 
   const renderField = (field: ContactField) => {
-    const { field: fieldName, display_name, value, type } = field;
+    const { field: fieldName, display_name, value, type, options } = field;
     
     switch (type) {
       case 'textarea':
@@ -230,16 +261,15 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
         );
       
       case 'select':
-        const options = SELECT_OPTIONS[fieldName as keyof typeof SELECT_OPTIONS] || [];
         return (
           <Select value={value || ''} onValueChange={(value) => handleFieldChange(fieldName, value)}>
             <SelectTrigger>
               <SelectValue placeholder={`Select ${display_name}`} />
             </SelectTrigger>
             <SelectContent>
-              {options.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+              {options?.map(option => (
+                <SelectItem key={option} value={option}>
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -250,6 +280,16 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
         return (
           <Input
             type="date"
+            value={value || ''}
+            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+            placeholder={`Enter ${display_name}`}
+          />
+        );
+
+      case 'datetime-local':
+        return (
+          <Input
+            type="datetime-local"
             value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
@@ -271,6 +311,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     }
   };
 
+  const getFieldsByCategory = (category: string) => {
+    return availableFields.filter(field => field.category === category);
+  };
+
   const getAvailableFieldsToAdd = () => {
     const standardFields = FIELD_OPTIONS.filter(field => 
       !availableFields.find(af => af.field === field.field)
@@ -287,77 +331,162 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     return [...standardFields, ...customFieldsToAdd];
   };
 
+  const renderFieldsForCategory = (category: string) => {
+    const fields = getFieldsByCategory(category);
+    
+    if (fields.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No {CATEGORIES.find(c => c.id === category)?.name.toLowerCase()} fields added yet.</p>
+          {category !== 'custom' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddField(true)}
+              className="mt-2"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Field
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {fields.map((field) => (
+          <div key={field.field} className="flex items-start gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor={field.field}>
+                {field.display_name}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </Label>
+              {renderField(field)}
+            </div>
+            {!field.required && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveField(field.field)}
+                className="mt-6"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ))}
+        
+        {category !== 'custom' && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowAddField(true)}
+            className="w-full mt-4"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add More Fields
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {contact ? 'Edit Contact' : 'Add New Contact'}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
-          {/* Existing Fields */}
-          <div className="space-y-4">
-            {availableFields.map((field) => (
-              <div key={field.field} className="flex items-start gap-4">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor={field.field}>
-                    {field.display_name}
-                    {(field.field === 'first_name' || field.field === 'last_name') && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
-                  </Label>
-                  {renderField(field)}
-                </div>
-                {(field.field !== 'first_name' && field.field !== 'last_name') && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveField(field.field)}
-                    className="mt-6"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            {CATEGORIES.map((category) => (
+              <TabsTrigger key={category.id} value={category.id}>
+                {category.name}
+              </TabsTrigger>
             ))}
-          </div>
-
-          {/* Add Field Section */}
-          <div className="border-t pt-4">
-            {!showAddField ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddField(true)}
-                className="w-full"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Field
-              </Button>
-            ) : (
+          </TabsList>
+          
+          {CATEGORIES.map((category) => (
+            <TabsContent key={category.id} value={category.id} className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">{category.name}</h3>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
+              </div>
+              
+              {renderFieldsForCategory(category.id)}
+              
+              {category.id === 'custom' && (
+                <div className="border-t pt-4">
+                  <h4 className="text-md font-medium mb-4">Add Custom Field</h4>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Field name"
+                      value={newCustomField.name}
+                      onChange={(e) => setNewCustomField(prev => ({ ...prev, name: e.target.value }))}
+                      className="flex-1"
+                    />
+                    <Select
+                      value={newCustomField.type}
+                      onValueChange={(value) => setNewCustomField(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="tel">Phone</SelectItem>
+                        <SelectItem value="url">URL</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="textarea">Textarea</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      onClick={handleAddCustomField}
+                      disabled={!newCustomField.name.trim()}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+        
+        {/* Add Field Modal */}
+        {showAddField && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+              <h3 className="text-lg font-medium mb-4">Add Field</h3>
               <div className="space-y-4">
+                <Select value={selectedFieldToAdd} onValueChange={setSelectedFieldToAdd}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a field to add" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableFieldsToAdd().map(field => (
+                      <SelectItem key={field.field} value={field.field}>
+                        {field.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex gap-2">
-                  <Select value={selectedFieldToAdd} onValueChange={setSelectedFieldToAdd}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a field to add" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableFieldsToAdd().map(field => (
-                        <SelectItem key={field.field} value={field.field}>
-                          {field.display_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <Button
                     type="button"
                     onClick={handleAddField}
                     disabled={!selectedFieldToAdd}
+                    className="flex-1"
                   >
-                    Add
+                    Add Field
                   </Button>
                   <Button
                     type="button"
@@ -366,14 +495,15 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
                       setShowAddField(false);
                       setSelectedFieldToAdd('');
                     }}
+                    className="flex-1"
                   >
                     Cancel
                   </Button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>

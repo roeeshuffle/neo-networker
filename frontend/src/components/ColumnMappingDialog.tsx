@@ -13,19 +13,51 @@ interface ColumnMappingDialogProps {
 }
 
 const DATABASE_COLUMNS = [
-  { value: 'full_name', label: 'Full Name' },
-  { value: 'categories', label: 'Categories' },
+  // Core Identifiers
+  { value: 'first_name', label: 'First Name' },
+  { value: 'last_name', label: 'Last Name' },
+  { value: 'gender', label: 'Gender' },
+  { value: 'birthday', label: 'Birthday' },
+  
+  // Communication Info
   { value: 'email', label: 'Email' },
-  { value: 'newsletter', label: 'Newsletter' },
-  { value: 'company', label: 'Company' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'mobile', label: 'Mobile' },
+  { value: 'address', label: 'Address' },
+  
+  // Professional Info
+  { value: 'organization', label: 'Organization' },
+  { value: 'job_title', label: 'Job Title' },
+  { value: 'job_status', label: 'Job Status' },
+  
+  // Social & Online Profiles
+  { value: 'linkedin_url', label: 'LinkedIn URL' },
+  { value: 'github_url', label: 'GitHub URL' },
+  { value: 'facebook_url', label: 'Facebook URL' },
+  { value: 'twitter_url', label: 'Twitter URL' },
+  { value: 'website_url', label: 'Website URL' },
+  
+  // Connection Management
+  { value: 'notes', label: 'Notes' },
+  { value: 'source', label: 'Source' },
+  { value: 'tags', label: 'Tags' },
+  { value: 'last_contact_date', label: 'Last Contact Date' },
+  { value: 'next_follow_up_date', label: 'Next Follow-up Date' },
   { value: 'status', label: 'Status' },
-  { value: 'linkedin_profile', label: 'LinkedIn' },
-  { value: 'poc_in_apex', label: 'POC in APEX' },
-  { value: 'who_warm_intro', label: 'Who Warm Intro' },
-  { value: 'agenda', label: 'Agenda' },
-  { value: 'meeting_notes', label: 'Meeting Notes' },
-  { value: 'should_avishag_meet', label: 'Should Avishag Meet' },
-  { value: 'more_info', label: 'More Info' },
+  { value: 'priority', label: 'Priority' },
+  { value: 'group', label: 'Group' },
+  
+  // Legacy field mappings
+  { value: 'full_name_legacy', label: 'Full Name (Legacy - will split to First/Last)' },
+  { value: 'company_legacy', label: 'Company (Legacy - maps to Organization)' },
+  { value: 'categories_legacy', label: 'Categories (Legacy - maps to Tags)' },
+  { value: 'newsletter_legacy', label: 'Newsletter (Legacy - custom field)' },
+  { value: 'poc_in_apex_legacy', label: 'POC in APEX (Legacy - custom field)' },
+  { value: 'who_warm_intro_legacy', label: 'Who Warm Intro (Legacy - custom field)' },
+  { value: 'agenda_legacy', label: 'Agenda (Legacy - custom field)' },
+  { value: 'meeting_notes_legacy', label: 'Meeting Notes (Legacy - custom field)' },
+  { value: 'should_avishag_meet_legacy', label: 'Should Avishag Meet (Legacy - custom field)' },
+  { value: 'more_info_legacy', label: 'More Info (Legacy - custom field)' },
 ];
 
 export const ColumnMappingDialog = ({ open, onOpenChange, csvHeaders, onMappingComplete }: ColumnMappingDialogProps) => {
