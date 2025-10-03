@@ -3,10 +3,23 @@ import { apiClient } from '@/integrations/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
+import { DuplicateManager } from './DuplicateManager';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SettingsTabProps {
   onDeleteAllTelegramUsers?: () => Promise<void>;
@@ -42,12 +55,26 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   
   // Collapse/Expand state for settings sections
   const [expandedSections, setExpandedSections] = useState({
-    telegram: true,
-    whatsapp: true,
-    google: true
+    telegram: false,
+    whatsapp: false,
+    google: false,
+    contacts: false,
+    calendar: false
   });
 
-  const toggleSection = (section: 'telegram' | 'whatsapp' | 'google') => {
+  // Loading state for initial data load
+  const [initialLoading, setInitialLoading] = useState(true);
+  
+  // Calendar settings
+  const [calendarSettings, setCalendarSettings] = useState({
+    defaultView: 'monthly',
+    startWeekday: 'sunday'
+  });
+  
+  // Contact management state
+  const [showDuplicates, setShowDuplicates] = useState(false);
+
+  const toggleSection = (section: 'telegram' | 'whatsapp' | 'google' | 'contacts' | 'calendar') => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -55,8 +82,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 14.5 - FIX SEPARATE LOADING STATES FOR GOOGLE SYNC BUTTONS');
-    console.log('🔧 SettingsTab loaded with separate loading states for contacts and calendar!');
+    console.log('🚀 FRONTEND VERSION: 15.0 - REORGANIZED SETTINGS WITH COLLAPSIBLE CONTAINERS');
+    console.log('🔧 SettingsTab loaded with collapsible containers and contact management!');
     checkAllStatus();
   }, []);
 
@@ -95,12 +122,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       // Check Google status separately (this might fail if Google Auth is not configured)
       checkGoogleStatus();
       
+      // Set initial loading to false after data is loaded
+      setInitialLoading(false);
+      
     } catch (error) {
       console.error('❌ Error checking status:', error);
       setTelegramConnected(false);
       setTelegramId('');
       setWhatsappConnected(false);
       setWhatsappPhone('');
+      setInitialLoading(false);
     }
   };
 
@@ -582,6 +613,58 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     }
   };
 
+  // Contact Management Functions
+  const handleDeleteAllContacts = async () => {
+    try {
+      // Get all people first, then delete them one by one
+      const { data: people, error: fetchError } = await apiClient.getPeople();
+      if (fetchError) throw fetchError;
+      
+      // Delete all people
+      for (const person of people || []) {
+        const { error } = await apiClient.deletePerson(person.id);
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "All contacts have been deleted.",
+      });
+
+      // Call the parent refresh function if provided
+      if (onDeleteAllPeople) {
+        await onDeleteAllPeople();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error deleting contacts",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicatesRemoved = () => {
+    setShowDuplicates(false);
+    // Call the parent refresh function if provided
+    if (onDeleteAllPeople) {
+      onDeleteAllPeople();
+    }
+  };
+
+  // Calendar Settings Functions
+  const updateCalendarSettings = (key: string, value: string) => {
+    setCalendarSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+    // TODO: Save to backend/localStorage
+    toast({
+      title: "Settings Updated",
+      description: `Calendar ${key} updated to ${value}`,
+    });
+  };
+
 
   // Debug current state before rendering
   console.log('🎨 Rendering SettingsTab with state:', {
@@ -590,20 +673,52 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     preferredPlatform
   });
 
+  // Show duplicates manager if active
+  if (showDuplicates) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDuplicates(false)}
+          >
+            ← Back to Settings
+          </Button>
+        </div>
+        <DuplicateManager 
+          onDuplicatesRemoved={handleDuplicatesRemoved} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Messaging Platform Connection Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowRight className="w-5 h-5" />
-            Bot Connection
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Connect your Telegram and WhatsApp accounts to receive bot messages
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowRight className="w-5 h-5" />
+                Bot Connection
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Connect your Telegram and WhatsApp accounts to receive bot messages
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('telegram')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.telegram ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {expandedSections.telegram && (
+          <CardContent className="space-y-6">
           {/* Platform Selection */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Preferred Messaging Platform</label>
@@ -615,6 +730,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   value="telegram"
                   checked={preferredPlatform === 'telegram'}
                   onChange={(e) => updatePreferredPlatform(e.target.value)}
+                  disabled={initialLoading}
                   className="w-4 h-4"
                 />
                 <span className="text-sm">Telegram</span>
@@ -626,6 +742,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   value="whatsapp"
                   checked={preferredPlatform === 'whatsapp'}
                   onChange={(e) => updatePreferredPlatform(e.target.value)}
+                  disabled={initialLoading}
                   className="w-4 h-4"
                 />
                 <span className="text-sm">WhatsApp</span>
@@ -642,19 +759,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <span className="font-medium text-blue-800">Telegram Connection</span>
+                {initialLoading && <span className="text-xs text-muted-foreground">(Loading...)</span>}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleSection('telegram')}
-                className="p-1 h-auto"
-              >
-                {expandedSections.telegram ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </Button>
             </div>
-            {expandedSections.telegram && (
-              <div className="space-y-4">
-            {telegramConnected ? (
+            <div className="space-y-4">
+            {initialLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading connection status...</p>
+              </div>
+            ) : telegramConnected ? (
               <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
                 <div>
                   <div className="font-medium text-green-800">Telegram Connected</div>
@@ -693,8 +807,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </Button>
               </div>
             )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* WhatsApp Connection */}
@@ -703,19 +816,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="font-medium text-green-800">WhatsApp Connection</span>
+                {initialLoading && <span className="text-xs text-muted-foreground">(Loading...)</span>}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleSection('whatsapp')}
-                className="p-1 h-auto"
-              >
-                {expandedSections.whatsapp ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </Button>
             </div>
-            {expandedSections.whatsapp && (
-              <div className="space-y-4">
-            {whatsappConnected ? (
+            <div className="space-y-4">
+            {initialLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500 mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading connection status...</p>
+              </div>
+            ) : whatsappConnected ? (
               <div className="flex items-center justify-between p-3 border border-green-200 rounded-lg bg-green-50">
                 <div>
                   <div className="font-medium text-green-800">WhatsApp Connected</div>
@@ -754,8 +864,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </Button>
               </div>
             )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Connection Status */}
@@ -764,38 +873,52 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <p>• Choose your preferred platform for bot messages using the radio buttons above</p>
             <p>• Phone numbers are automatically cleaned (removes + prefix and spaces)</p>
           </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Google Integration Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
-            </svg>
-            Google Integration
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Connect your Google account to sync contacts and calendar events
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Google Integration
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Connect your Google account to sync contacts and calendar events
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('google')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.google ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {expandedSections.google && (
+          <CardContent className="space-y-6">
           {/* Google Connection */}
           <div className="space-y-4 p-4 border rounded-lg bg-white">
             <div className="flex items-center justify-between">
@@ -894,7 +1017,143 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             <p>• Your data is synced securely and stored in your CRM account</p>
             <p>• You can disconnect your Google account at any time</p>
           </div>
-        </CardContent>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Contact Management Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Contact Management
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage your contacts with bulk operations and duplicate removal
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('contacts')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.contacts ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {expandedSections.contacts && (
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setShowDuplicates(true)}
+                className="flex items-center gap-2"
+              >
+                <Merge className="w-4 h-4" />
+                Remove Duplicates
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    Delete All Contacts
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all contacts. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAllContacts}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Delete All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p>• Remove Duplicates: Find and merge duplicate contact records</p>
+              <p>• Delete All Contacts: Permanently remove all contacts from your account</p>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Calendar Settings Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Calendar Settings
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Configure your calendar display preferences
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleSection('calendar')}
+              className="p-1 h-auto"
+            >
+              {expandedSections.calendar ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {expandedSections.calendar && (
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Default View</label>
+                <Select 
+                  value={calendarSettings.defaultView} 
+                  onValueChange={(value) => updateCalendarSettings('defaultView', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start Weekday</label>
+                <Select 
+                  value={calendarSettings.startWeekday} 
+                  onValueChange={(value) => updateCalendarSettings('startWeekday', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sunday">Sunday</SelectItem>
+                    <SelectItem value="monday">Monday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p>• Default View: Choose how the calendar displays by default</p>
+              <p>• Start Weekday: Choose which day the week starts on</p>
+            </div>
+          </CardContent>
+        )}
       </Card>
       
       {/* Preview Dialog */}
