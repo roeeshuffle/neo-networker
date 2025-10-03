@@ -270,8 +270,8 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
@@ -312,17 +312,19 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
           </div>
         </DialogHeader>
         
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <div className="flex-1 overflow-hidden">
+          <Tabs defaultValue="general" className="w-full h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
             <TabsTrigger value="general">General Info</TabsTrigger>
             <TabsTrigger value="professional">Professional</TabsTrigger>
             <TabsTrigger value="social">Social & Online</TabsTrigger>
             <TabsTrigger value="connection">Connection</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
-          </TabsList>
-          
-          {Object.entries(CATEGORIES).map(([categoryKey, categoryName]) => (
-            <TabsContent key={categoryKey} value={categoryKey} className="space-y-4">
+            </TabsList>
+            
+            <div className="flex-1 overflow-y-auto mt-4">
+              {Object.entries(CATEGORIES).map(([categoryKey, categoryName]) => (
+                <TabsContent key={categoryKey} value={categoryKey} className="space-y-4 h-full">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">{categoryName}</h3>
                 {isEditing && (
@@ -408,9 +410,11 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
                   </div>
                 </div>
               )}
-            </TabsContent>
-          ))}
-        </Tabs>
+                </TabsContent>
+              ))}
+            </div>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -315,27 +315,27 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     }
 
     return (
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.map((field) => (
-          <div key={field.field} className="flex items-start gap-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor={field.field}>
-                {field.display_name}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
+          <div key={field.field} className="space-y-2">
+            <Label htmlFor={field.field} className="text-sm font-medium">
+              {field.display_name}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <div className="relative">
               {renderField(field)}
+              {category === 'custom' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveField(field.field)}
+                  className="absolute -top-1 -right-1 h-6 w-6 p-0"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
             </div>
-            {category === 'custom' && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemoveField(field.field)}
-                className="mt-6"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
           </div>
         ))}
       </div>
@@ -344,24 +344,26 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {contact ? 'Edit Contact' : 'Add New Contact'}
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <div className="flex-1 overflow-hidden">
+          <Tabs defaultValue="general" className="w-full h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
             {CATEGORIES.map((category) => (
               <TabsTrigger key={category.id} value={category.id}>
                 {category.name}
               </TabsTrigger>
             ))}
-          </TabsList>
-          
-          {CATEGORIES.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="space-y-4">
+            </TabsList>
+            
+            <div className="flex-1 overflow-y-auto mt-4">
+              {CATEGORIES.map((category) => (
+                <TabsContent key={category.id} value={category.id} className="space-y-4 h-full">
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">{category.name}</h3>
                 <p className="text-sm text-muted-foreground">{category.description}</p>
@@ -406,12 +408,13 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
                   </div>
                 </div>
               )}
-            </TabsContent>
-          ))}
-        </Tabs>
+                </TabsContent>
+              ))}
+            </div>
+          </Tabs>
+        </div>
         
-        
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
