@@ -52,7 +52,7 @@ def create_person():
         if not data.get('first_name') and not data.get('last_name'):
             return jsonify({'error': 'At least first_name or last_name is required'}), 400
         
-            person = Person(
+        person = Person(
                 first_name=data.get('first_name'),
                 last_name=data.get('last_name'),
                 gender=data.get('gender'),
