@@ -427,11 +427,41 @@ class GoogleAuthService:
                         google_event_id=event_data['id']
                     ).first()
                 
+                # Parse event dates safely
+                event_title = event_data.get('summary', 'Untitled Event')
+                event_start = None
+                event_end = None
+                
+                # Handle different date formats
+                if 'start' in event_data:
+                    start_data = event_data['start']
+                    if 'dateTime' in start_data:
+                        # Regular event with specific time
+                        event_start = datetime.fromisoformat(start_data['dateTime'].replace('Z', '+00:00'))
+                    elif 'date' in start_data:
+                        # All-day event
+                        event_start = datetime.fromisoformat(start_data['date'] + 'T00:00:00+00:00')
+                
+                if 'end' in event_data:
+                    end_data = event_data['end']
+                    if 'dateTime' in end_data:
+                        # Regular event with specific time
+                        event_end = datetime.fromisoformat(end_data['dateTime'].replace('Z', '+00:00'))
+                    elif 'date' in end_data:
+                        # All-day event
+                        event_end = datetime.fromisoformat(end_data['date'] + 'T23:59:59+00:00')
+                
+                # Skip events without valid start time
+                if not event_start:
+                    logger.warning(f"Skipping event '{event_title}' - no valid start time")
+                    continue
+                
+                # If no end time, set it to 1 hour after start
+                if not event_end:
+                    event_end = event_start + timedelta(hours=1)
+                
                 # If not found by Google ID, check by title + start time
                 if not existing_event:
-                    event_title = event_data.get('summary', 'Untitled Event')
-                    event_start = datetime.fromisoformat(event_data['start']['dateTime'].replace('Z', '+00:00'))
-                    
                     existing_event = Event.query.filter_by(
                         user_id=user.id,
                         title=event_title,
@@ -442,7 +472,7 @@ class GoogleAuthService:
                     'title': event_title,
                     'description': event_data.get('description'),
                     'start_datetime': event_start.isoformat(),
-                    'end_datetime': datetime.fromisoformat(event_data['end']['dateTime'].replace('Z', '+00:00')).isoformat(),
+                    'end_datetime': event_end.isoformat(),
                     'location': event_data.get('location'),
                     'google_event_id': event_data.get('id'),
                     'is_duplicate': existing_event is not None,

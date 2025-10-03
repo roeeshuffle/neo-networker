@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from api.app import app
 
 if __name__ == '__main__':
-    print("🚀 APP VERSION: 15.3 - FIX GOOGLE TOKEN REFRESH IN PREVIEW METHODS")
-    print("🔍 Starting Flask app with proper token refresh for Google sync preview")
+    print("🚀 APP VERSION: 15.4 - FIX GOOGLE CALENDAR DATE PARSING")
+    print("🔍 Starting Flask app with robust calendar event date handling")
     port = int(os.environ.get('PORT', 5002))
     app.run(debug=True, host='0.0.0.0', port=port)
