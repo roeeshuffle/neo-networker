@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-console.log('🚀 FRONTEND VERSION: 18.4 - FIXED FORM INPUT SYNCHRONIZATION');
+console.log('🚀 FRONTEND VERSION: 18.6 - FIXED INFINITE LOOP AND INPUT ISSUES');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 
 interface ContactField {
   field: string;
@@ -14,58 +14,63 @@ interface ContactField {
   type: string;
 }
 
-interface CustomField {
-  id: number;
-  name: string;
-  key: string;
-  type: string;
-  options: string[];
-}
-
 interface DynamicContactFormProps {
   isOpen: boolean;
   onClose: () => void;
   contact?: any;
-  onSave: (contactData: any) => void;
+  onSave: (data: any) => void;
   isLoading?: boolean;
-  customFields?: CustomField[];
+  customFields?: any[];
 }
 
 const FIELD_OPTIONS = [
-  // Core Identifiers
-  { field: 'first_name', display_name: 'First Name', type: 'text', required: true },
-  { field: 'last_name', display_name: 'Last Name', type: 'text', required: true },
-  { field: 'gender', display_name: 'Gender', type: 'select', options: ['male', 'female', 'other'] },
-  { field: 'birthday', display_name: 'Birthday', type: 'date' },
-  
-  // Professional Info
-  { field: 'organization', display_name: 'Organization', type: 'text' },
-  { field: 'job_title', display_name: 'Job Title', type: 'text' },
-  { field: 'job_status', display_name: 'Job Status', type: 'select', options: ['employed', 'unemployed', 'student', 'retired', 'other'] },
-  
-  // Communication Info
+  { field: 'first_name', display_name: 'First Name', type: 'text' },
+  { field: 'last_name', display_name: 'Last Name', type: 'text' },
   { field: 'email', display_name: 'Email', type: 'email' },
   { field: 'phone', display_name: 'Phone', type: 'tel' },
   { field: 'mobile', display_name: 'Mobile', type: 'tel' },
+  { field: 'organization', display_name: 'Organization', type: 'text' },
+  { field: 'job_title', display_name: 'Job Title', type: 'text' },
   { field: 'address', display_name: 'Address', type: 'textarea' },
-  
-  // Social & Online Profiles
-  { field: 'linkedin_url', display_name: 'LinkedIn', type: 'url' },
-  { field: 'github_url', display_name: 'GitHub', type: 'url' },
-  { field: 'facebook_url', display_name: 'Facebook', type: 'url' },
-  { field: 'twitter_url', display_name: 'Twitter', type: 'url' },
-  { field: 'website_url', display_name: 'Website', type: 'url' },
-  
-  // Connection Management
+  { field: 'linkedin_url', display_name: 'LinkedIn URL', type: 'url' },
+  { field: 'github_url', display_name: 'GitHub URL', type: 'url' },
+  { field: 'website_url', display_name: 'Website URL', type: 'url' },
   { field: 'notes', display_name: 'Notes', type: 'textarea' },
-  { field: 'source', display_name: 'Source', type: 'text' },
   { field: 'tags', display_name: 'Tags', type: 'text' },
-  { field: 'last_contact_date', display_name: 'Last Contact Date', type: 'datetime-local' },
-  { field: 'next_follow_up_date', display_name: 'Next Follow-up Date', type: 'datetime-local' },
-  { field: 'status', display_name: 'Status', type: 'select', options: ['active', 'inactive', 'prospect', 'client', 'partner'] },
-  { field: 'priority', display_name: 'Priority', type: 'select', options: ['low', 'medium', 'high'] },
-  { field: 'group', display_name: 'Group', type: 'select', options: ['favourites', 'job', 'friends', 'family', 'business', 'other'] }
+  { field: 'source', display_name: 'Source', type: 'text' },
+  { field: 'priority', display_name: 'Priority', type: 'select' },
+  { field: 'group', display_name: 'Group', type: 'text' },
+  { field: 'gender', display_name: 'Gender', type: 'select' },
+  { field: 'job_status', display_name: 'Job Status', type: 'select' },
+  { field: 'status', display_name: 'Status', type: 'select' }
 ];
+
+const SELECT_OPTIONS = {
+  priority: [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' }
+  ],
+  gender: [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'other', label: 'Other' }
+  ],
+  job_status: [
+    { value: 'employed', label: 'Employed' },
+    { value: 'unemployed', label: 'Unemployed' },
+    { value: 'student', label: 'Student' },
+    { value: 'retired', label: 'Retired' },
+    { value: 'other', label: 'Other' }
+  ],
+  status: [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'prospect', label: 'Prospect' },
+    { value: 'client', label: 'Client' },
+    { value: 'partner', label: 'Partner' }
+  ]
+};
 
 export default function DynamicContactForm({ isOpen, onClose, contact, onSave, isLoading = false, customFields = [] }: DynamicContactFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -125,13 +130,13 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
         { field: 'last_name', display_name: 'Last Name', value: initialFormData.last_name, type: 'text' }
       ]);
     }
-  }, [contact, customFields]);
+  }, [contact]); // Remove customFields from dependencies to prevent infinite loop
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      return newData;
+    });
     
     // Also update the availableFields to keep them in sync
     setAvailableFields(prev => 
@@ -145,6 +150,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     if (selectedFieldToAdd) {
       // Check if it's a standard field
       const fieldOption = FIELD_OPTIONS.find(f => f.field === selectedFieldToAdd);
+      
       if (fieldOption && !availableFields.find(f => f.field === selectedFieldToAdd)) {
         const newField: ContactField = {
           field: selectedFieldToAdd,
@@ -157,6 +163,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       } else {
         // Check if it's a custom field
         const customField = customFields.find(cf => cf.key === selectedFieldToAdd);
+        
         if (customField && !availableFields.find(f => f.field === `custom_${selectedFieldToAdd}`)) {
           const newField: ContactField = {
             field: `custom_${selectedFieldToAdd}`,
@@ -177,7 +184,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     if (fieldToRemove === 'first_name' || fieldToRemove === 'last_name') {
       return; // Can't remove required fields
     }
-    
+
     setAvailableFields(prev => prev.filter(f => f.field !== fieldToRemove));
     setFormData(prev => {
       const newData = { ...prev };
@@ -187,91 +194,65 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
   };
 
   const handleSave = () => {
-    // Separate standard fields and custom fields
+    // Separate standard fields from custom fields
     const standardFields: Record<string, any> = {};
     const customFieldsData: Record<string, any> = {};
-    
-    Object.entries(formData).forEach(([key, value]) => {
+
+    Object.keys(formData).forEach(key => {
       if (key.startsWith('custom_')) {
         const customKey = key.replace('custom_', '');
-        customFieldsData[customKey] = value;
+        customFieldsData[customKey] = formData[key];
       } else {
-        standardFields[key] = value;
+        standardFields[key] = formData[key];
       }
     });
-    
-    // Filter out empty values
-    const filteredStandardFields = Object.fromEntries(
-      Object.entries(standardFields).filter(([_, value]) => value !== null && value !== undefined && value !== '')
-    );
-    
-    const filteredCustomFields = Object.fromEntries(
-      Object.entries(customFieldsData).filter(([_, value]) => value !== null && value !== undefined && value !== '')
-    );
-    
-    const finalData = {
-      ...filteredStandardFields,
-      custom_fields: filteredCustomFields
-    };
-    
-    onSave(finalData);
+
+    // Add custom fields to the data
+    if (Object.keys(customFieldsData).length > 0) {
+      standardFields.custom_fields = customFieldsData;
+    }
+
+    onSave(standardFields);
   };
 
   const renderField = (field: ContactField) => {
-    const { field: fieldName, display_name, type } = field;
-    const value = formData[fieldName] || '';
-
+    const { field: fieldName, display_name, value, type } = field;
+    
     switch (type) {
-      case 'select':
-        let options: string[] = [];
-        if (fieldName.startsWith('custom_')) {
-          const customKey = fieldName.replace('custom_', '');
-          const customField = customFields.find(cf => cf.key === customKey);
-          options = customField?.options || [];
-        } else {
-          const fieldOption = FIELD_OPTIONS.find(f => f.field === fieldName);
-          options = fieldOption?.options || [];
-        }
-        return (
-          <Select value={value} onValueChange={(val) => handleFieldChange(fieldName, val)}>
-            <SelectTrigger>
-              <SelectValue placeholder={`Select ${display_name}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map(option => (
-                <SelectItem key={option} value={option}>
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      
       case 'textarea':
         return (
           <Textarea
-            value={value}
+            value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
             rows={3}
           />
         );
       
-      case 'datetime-local':
+      case 'select':
+        const options = SELECT_OPTIONS[fieldName as keyof typeof SELECT_OPTIONS] || [];
         return (
-          <Input
-            type="datetime-local"
-            value={value}
-            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-          />
+          <Select value={value || ''} onValueChange={(value) => handleFieldChange(fieldName, value)}>
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${display_name}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       
       case 'date':
         return (
           <Input
             type="date"
-            value={value}
+            value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+            placeholder={`Enter ${display_name}`}
           />
         );
       
@@ -279,9 +260,12 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
         return (
           <Input
             type={type}
-            value={value}
+            value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
+            disabled={false}
+            autoComplete="off"
+            style={{ opacity: 1, cursor: 'text' }}
           />
         );
     }
@@ -390,7 +374,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             )}
           </div>
         </div>
-
+        
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
