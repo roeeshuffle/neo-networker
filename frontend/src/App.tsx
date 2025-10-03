@@ -13,6 +13,9 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Log frontend version
+console.log('🚀 FRONTEND VERSION: 18.1 - FIXED PERSON MODEL');
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>

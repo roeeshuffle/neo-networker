@@ -135,11 +135,11 @@ def update_person(person_id):
         person.tags = data.get('tags', person.tags)
         person.last_contact_date = datetime.fromisoformat(data['last_contact_date'].replace('Z', '+00:00')) if data.get('last_contact_date') else person.last_contact_date
         person.next_follow_up_date = datetime.fromisoformat(data['next_follow_up_date'].replace('Z', '+00:00')) if data.get('next_follow_up_date') else person.next_follow_up_date
-            person.status = data.get('status', person.status)
-            person.priority = data.get('priority', person.priority)
-            person.group = data.get('group', person.group)
-            person.custom_fields = data.get('custom_fields', person.custom_fields)
-            person.updated_at = datetime.utcnow()
+        person.status = data.get('status', person.status)
+        person.priority = data.get('priority', person.priority)
+        person.group = data.get('group', person.group)
+        person.custom_fields = data.get('custom_fields', person.custom_fields)
+        person.updated_at = datetime.utcnow()
         
         db.session.commit()
         
