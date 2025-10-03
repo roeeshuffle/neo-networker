@@ -115,7 +115,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       setAvailableFields(fields);
     } else {
       // New contact - start with required fields
-      setFormData({});
+      setFormData({
+        first_name: '',
+        last_name: ''
+      });
       setAvailableFields([
         { field: 'first_name', display_name: 'First Name', value: '', type: 'text' },
         { field: 'last_name', display_name: 'Last Name', value: '', type: 'text' }

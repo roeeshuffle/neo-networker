@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-console.log('🚀 FRONTEND VERSION: 18.1 - FIXED PERSON MODEL');
+console.log('🚀 FRONTEND VERSION: 18.2 - FIXED FORM INPUT INITIALIZATION');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
