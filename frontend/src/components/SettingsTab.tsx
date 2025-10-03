@@ -85,7 +85,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   useEffect(() => {
-    console.log('🚀 FRONTEND VERSION: 15.1 - USER PREFERENCES WITH BACKEND STORAGE');
+    console.log('🚀 FRONTEND VERSION: 15.2 - CLEANED UP CONTACTS PANEL');
     console.log('🔧 SettingsTab loaded with user preferences backend integration!');
     checkAllStatus();
     loadUserPreferences();

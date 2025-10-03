@@ -1,13 +1,8 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PeopleTable } from "@/components/PeopleTable";
-import DuplicateManager from "@/components/DuplicateManager";
 import { CsvUploader } from "@/components/CsvUploader";
-import { useToast } from "@/hooks/use-toast";
-import { apiClient } from "@/integrations/api/client";
-import { Merge, Trash2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
 interface ContactsPanelProps {
@@ -19,56 +14,6 @@ interface ContactsPanelProps {
 }
 
 export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm }: ContactsPanelProps) => {
-  const [showDuplicates, setShowDuplicates] = useState(false);
-  const { toast } = useToast();
-
-  const handleDeleteAllContacts = async () => {
-    try {
-      // Get all people first, then delete them one by one
-      const { data: people, error: fetchError } = await apiClient.getPeople();
-      if (fetchError) throw fetchError;
-      
-      // Delete all people
-      for (const person of people || []) {
-        const { error } = await apiClient.deletePerson(person.id);
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "All contacts have been deleted.",
-      });
-
-      onRefresh();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting contacts",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (showDuplicates) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowDuplicates(false)}
-          >
-            ← Back to Contacts
-          </Button>
-        </div>
-        <DuplicateManager 
-          onDuplicatesRemoved={() => {
-            onRefresh();
-            setShowDuplicates(false);
-          }} 
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -94,41 +39,6 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
                 {filteredPeople.length} entries
               </span>
             </CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setShowDuplicates(true)}
-                className="flex items-center gap-2"
-              >
-                <Merge className="w-4 h-4" />
-                Remove Duplicates
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex items-center gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Delete All Contacts
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all {filteredPeople.length} contacts. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteAllContacts}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Delete All
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
