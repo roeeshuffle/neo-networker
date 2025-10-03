@@ -7,9 +7,24 @@ import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/integrations/api/client";
 import { Upload, FileText } from "lucide-react";
 import { ColumnMappingDialog } from "./ColumnMappingDialog";
+import CsvPreviewModal from "./CsvPreviewModal";
 
 interface CsvUploaderProps {
   onDataLoaded: () => void;
+}
+
+interface CsvPreviewData {
+  row_number: number;
+  data: Record<string, any>;
+  warnings: Array<{
+    type: 'truncation' | 'validation' | 'missing_data';
+    field: string;
+    original_value: string;
+    corrected_value?: string;
+    truncated_value?: string;
+    message: string;
+  }>;
+  full_name: string;
 }
 
 export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
@@ -17,8 +32,11 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [showMapping, setShowMapping] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<string>("");
+  const [previewData, setPreviewData] = useState<CsvPreviewData[]>([]);
+  const [allWarnings, setAllWarnings] = useState<any[]>([]);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,29 +103,105 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
 
     setLoading(true);
     try {
-      const fileText = await file.text();
-      const headers = parseCSVHeaders(fileText);
-      const unknownColumns = checkForUnknownColumns(headers);
+      // First, preview the CSV to show warnings
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('custom_mapping', JSON.stringify({}));
 
-      if (unknownColumns.length > 0) {
-        // Show column mapping dialog
-        setCsvHeaders(unknownColumns);
-        setCsvData(fileText);
-        setShowMapping(true);
-        setLoading(false);
-        return;
+      const response = await apiClient.post('/csv/preview', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data) {
+        setPreviewData(response.data.preview_data);
+        setAllWarnings(response.data.all_warnings);
+        setShowPreview(true);
+        setOpen(false);
+        
+        toast({
+          title: "CSV Preview Ready",
+          description: `Found ${response.data.warnings_count} warnings in ${response.data.total_rows} rows`,
+        });
       }
-
-      // Proceed with direct upload if all columns are recognized
-      await processUpload(fileText, {});
     } catch (error: any) {
+      console.error('Error previewing CSV:', error);
       toast({
-        title: "Error processing file",
-        description: error.message,
+        title: "Error",
+        description: error.response?.data?.error || "Failed to preview CSV",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleImport = async (correctedData: CsvPreviewData[]) => {
+    setLoading(true);
+    try {
+      // Convert corrected data back to CSV format and import
+      const formData = new FormData();
+      
+      // Create a new CSV with corrected data
+      const csvContent = createCsvFromData(correctedData);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      formData.append('file', blob, 'corrected.csv');
+      formData.append('custom_mapping', JSON.stringify({}));
+
+      const response = await apiClient.post('/csv-processor', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data) {
+        toast({
+          title: "Import Successful",
+          description: `Successfully imported ${response.data.created_count} contacts`,
+        });
+        setShowPreview(false);
+        onDataLoaded();
+      }
+    } catch (error: any) {
+      console.error('Error importing CSV:', error);
+      toast({
+        title: "Import Failed",
+        description: error.response?.data?.error || "Failed to import CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCsvFromData = (data: CsvPreviewData[]): string => {
+    if (data.length === 0) return '';
+    
+    // Get all unique field names
+    const allFields = new Set<string>();
+    data.forEach(row => {
+      Object.keys(row.data).forEach(field => allFields.add(field));
+    });
+    
+    const fields = Array.from(allFields);
+    
+    // Create header row
+    const header = fields.join(',');
+    
+    // Create data rows
+    const rows = data.map(row => {
+      return fields.map(field => {
+        const value = row.data[field] || '';
+        // Escape commas and quotes in CSV
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',');
+    });
+    
+    return [header, ...rows].join('\n');
   };
 
   const handleMappingComplete = async (mapping: { [key: string]: string }) => {
@@ -201,6 +295,15 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
         onOpenChange={setShowMapping}
         csvHeaders={csvHeaders}
         onMappingComplete={handleMappingComplete}
+      />
+
+      <CsvPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        previewData={previewData}
+        allWarnings={allWarnings}
+        onImport={handleImport}
+        isLoading={loading}
       />
     </Dialog>
   );

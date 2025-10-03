@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-console.log('🚀 FRONTEND VERSION: 18.8 - SHOW ALL STANDARD FIELDS BY DEFAULT');
+console.log('🚀 FRONTEND VERSION: 18.9 - ADDED CSV PREVIEW WITH EDITING CAPABILITIES');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
