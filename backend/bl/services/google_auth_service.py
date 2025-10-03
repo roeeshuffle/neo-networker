@@ -336,7 +336,9 @@ class GoogleAuthService:
             return user.google_access_token
         
         if not user.google_refresh_token:
-            raise ValueError("No refresh token available")
+            raise ValueError("No refresh token available. Please re-authenticate with Google.")
+        
+        logger.info(f"Refreshing expired Google token for user {user.id}")
         
         try:
             refreshed_tokens = self.refresh_access_token(user.google_refresh_token)
@@ -352,7 +354,8 @@ class GoogleAuthService:
             return user.google_access_token
         except Exception as e:
             logger.error(f"Error refreshing token for user {user.id}: {str(e)}")
-            raise
+            # If refresh fails, the user needs to re-authenticate
+            raise ValueError(f"Failed to refresh Google token. Please re-authenticate with Google. Error: {str(e)}")
     
     def get_contacts_preview(self, user):
         """Get Google contacts preview (without inserting to database)"""
@@ -360,8 +363,11 @@ class GoogleAuthService:
             raise ValueError("Google OAuth is not configured")
         
         try:
+            # Get valid access token (refresh if needed)
+            access_token = self.ensure_valid_token(user)
+            
             # Get contacts from Google
-            contacts = self.get_contacts(user.google_access_token)
+            contacts = self.get_contacts(access_token)
             
             # Import here to avoid circular imports
             from dal.models import Person
@@ -399,8 +405,11 @@ class GoogleAuthService:
             raise ValueError("Google OAuth is not configured")
         
         try:
+            # Get valid access token (refresh if needed)
+            access_token = self.ensure_valid_token(user)
+            
             # Get calendar events from Google
-            events = self.get_calendar_events(user.google_access_token)
+            events = self.get_calendar_events(access_token)
             
             # Import here to avoid circular imports
             from dal.models import Event
