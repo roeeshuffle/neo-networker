@@ -318,22 +318,24 @@ export default function CsvPreviewModal({
                   )}
                   
                   {/* Data Fields */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(row.data).map(([field, value]) => (
-                      <div key={field} className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">
-                          {field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </Label>
-                        {editingRow === row.row_number ? (
-                          renderFieldEditor(field, editedData[field])
-                        ) : (
-                          <div className="p-2 bg-gray-50 rounded text-sm">
-                            {value || <span className="text-gray-400">Empty</span>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <ScrollArea className="h-[300px] border rounded-md p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(row.data).map(([field, value]) => (
+                        <div key={field} className="space-y-1">
+                          <Label className="text-xs font-medium text-gray-600">
+                            {field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Label>
+                          {editingRow === row.row_number ? (
+                            renderFieldEditor(field, editedData[field])
+                          ) : (
+                            <div className="p-2 bg-gray-50 rounded text-sm min-h-[40px] flex items-center">
+                              {value || <span className="text-gray-400">Empty</span>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               ))}
             </div>
