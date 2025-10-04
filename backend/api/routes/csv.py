@@ -15,27 +15,42 @@ csv_bp = Blueprint('csv', __name__)
 def preview_csv():
     """Preview CSV data with warnings and allow editing before import"""
     try:
+        print("🔍 CSV PREVIEW DEBUG: Starting function")
         current_user_id = get_jwt_identity()
+        print(f"🔍 CSV PREVIEW DEBUG: Current user ID: {current_user_id}")
+        
         current_user = User.query.get(current_user_id)
+        print(f"🔍 CSV PREVIEW DEBUG: User found: {current_user is not None}")
         
         if not current_user or not current_user.is_approved:
+            print(f"❌ CSV PREVIEW DEBUG: Unauthorized - user: {current_user is not None}, approved: {current_user.is_approved if current_user else 'N/A'}")
             return jsonify({'error': 'Unauthorized'}), 403
         
+        print("🔍 CSV PREVIEW DEBUG: Checking request files")
         if 'file' not in request.files:
+            print("❌ CSV PREVIEW DEBUG: No file provided")
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
+        print(f"🔍 CSV PREVIEW DEBUG: File received: {file.filename}")
+        
         if file.filename == '':
+            print("❌ CSV PREVIEW DEBUG: No file selected")
             return jsonify({'error': 'No file selected'}), 400
         
         if not file.filename.endswith('.csv'):
+            print("❌ CSV PREVIEW DEBUG: File is not CSV")
             return jsonify({'error': 'File must be a CSV'}), 400
         
         # Get custom mapping from request
-        custom_mapping = request.form.get('custom_mapping', '{}')
+        custom_mapping_raw = request.form.get('custom_mapping', '{}')
+        print(f"🔍 CSV PREVIEW DEBUG: Raw custom mapping: {custom_mapping_raw}")
+        
         try:
-            custom_mapping = json.loads(custom_mapping)
-        except json.JSONDecodeError:
+            custom_mapping = json.loads(custom_mapping_raw)
+            print(f"🔍 CSV PREVIEW DEBUG: Parsed custom mapping: {custom_mapping}")
+        except json.JSONDecodeError as e:
+            print(f"❌ CSV PREVIEW DEBUG: JSON decode error: {str(e)}")
             custom_mapping = {}
         
         # Add logging for debugging
@@ -43,8 +58,12 @@ def preview_csv():
         print(f"📋 Custom mapping: {custom_mapping}")
         
         # Read and parse CSV
+        print("🔍 CSV PREVIEW DEBUG: Reading file content")
+        file.seek(0)  # Reset file pointer
         content = file.read().decode('utf-8')
+        print(f"🔍 CSV PREVIEW DEBUG: Content length: {len(content)}")
         lines = content.strip().split('\n')
+        print(f"🔍 CSV PREVIEW DEBUG: Number of lines: {len(lines)}")
         
         # Detect delimiter
         if '\t' in lines[0]:
@@ -275,6 +294,9 @@ def preview_csv():
                     'message': f"Row {row_num}: Skipped - no first_name or last_name provided"
                 })
         
+        
+        print(f"🔍 CSV PREVIEW DEBUG: About to return - preview_data count: {len(preview_data)}, warnings count: {len(all_warnings)}")
+        print(f"🔍 CSV PREVIEW DEBUG: First preview item: {preview_data[0] if preview_data else 'No data'}")
         
         return jsonify({
             'success': True,
