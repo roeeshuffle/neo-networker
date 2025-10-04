@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.25 - FIXED API URLS FOR CUSTOM FIELDS');
+  console.log('🚀 FRONTEND VERSION: 18.26 - ADDED CSV DEBUG LOGGING');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

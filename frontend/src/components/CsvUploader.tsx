@@ -101,12 +101,21 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
   const handleUpload = async () => {
     if (!file) return;
 
+    console.log('🔍 CSV UPLOAD DEBUG: Starting CSV preview');
+    console.log('🔍 CSV UPLOAD DEBUG: File name:', file.name);
+    console.log('🔍 CSV UPLOAD DEBUG: File size:', file.size);
+    console.log('🔍 CSV UPLOAD DEBUG: File type:', file.type);
+
     setLoading(true);
     try {
       // First, preview the CSV to show warnings
       const formData = new FormData();
       formData.append('file', file);
       formData.append('custom_mapping', JSON.stringify({}));
+
+      console.log('🔍 CSV UPLOAD DEBUG: FormData created');
+      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${import.meta.env.VITE_API_URL}/api/csv/preview`);
+      console.log('🔍 CSV UPLOAD DEBUG: Token exists:', !!localStorage.getItem('token'));
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csv/preview`, {
         method: 'POST',
@@ -116,13 +125,23 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
         body: formData
       });
 
+      console.log('🔍 CSV UPLOAD DEBUG: Response status:', response.status);
+      console.log('🔍 CSV UPLOAD DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 CSV UPLOAD DEBUG: Error response body:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('🔍 CSV UPLOAD DEBUG: Response data:', data);
 
       if (data) {
+        console.log('🔍 CSV UPLOAD DEBUG: Preview data rows:', data.preview_data?.length);
+        console.log('🔍 CSV UPLOAD DEBUG: First row data:', data.preview_data?.[0]);
+        console.log('🔍 CSV UPLOAD DEBUG: Warnings count:', data.warnings_count);
+        
         setPreviewData(data.preview_data);
         setAllWarnings(data.all_warnings);
         setShowPreview(true);
@@ -134,7 +153,9 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
         });
       }
     } catch (error: any) {
-      console.error('Error previewing CSV:', error);
+      console.error('🔍 CSV UPLOAD DEBUG: Full error:', error);
+      console.error('🔍 CSV UPLOAD DEBUG: Error message:', error.message);
+      console.error('🔍 CSV UPLOAD DEBUG: Error stack:', error.stack);
       toast({
         title: "Error",
         description: error.message || "Failed to preview CSV",

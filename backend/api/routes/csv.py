@@ -70,7 +70,11 @@ def preview_csv():
             delimiter = '\t'
         else:
             delimiter = ','
+        print(f"🔍 CSV PREVIEW DEBUG: Using delimiter: '{delimiter}'")
+        
         reader = csv.DictReader(lines, delimiter=delimiter)
+        print(f"🔍 CSV PREVIEW DEBUG: CSV fieldnames: {reader.fieldnames}")
+        print(f"🔍 CSV PREVIEW DEBUG: First line: {lines[0] if lines else 'No lines'}")
         
         # Default column mapping for new schema only
         default_mapping = {
