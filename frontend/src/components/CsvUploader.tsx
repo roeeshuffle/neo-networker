@@ -108,28 +108,36 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
       formData.append('file', file);
       formData.append('custom_mapping', JSON.stringify({}));
 
-      const response = await apiClient.post('/csv/preview', formData, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csv/preview`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
+        body: formData
       });
 
-      if (response.data) {
-        setPreviewData(response.data.preview_data);
-        setAllWarnings(response.data.all_warnings);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data) {
+        setPreviewData(data.preview_data);
+        setAllWarnings(data.all_warnings);
         setShowPreview(true);
         setOpen(false);
         
         toast({
           title: "CSV Preview Ready",
-          description: `Found ${response.data.warnings_count} warnings in ${response.data.total_rows} rows`,
+          description: `Found ${data.warnings_count} warnings in ${data.total_rows} rows`,
         });
       }
     } catch (error: any) {
       console.error('Error previewing CSV:', error);
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to preview CSV",
+        description: error.message || "Failed to preview CSV",
         variant: "destructive",
       });
     } finally {

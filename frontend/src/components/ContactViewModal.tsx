@@ -66,6 +66,8 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isEditing, setIsEditing] = useState(false);
   const [customFields, setCustomFields] = useState<any[]>([]);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState('text');
 
   useEffect(() => {
     if (person) {
@@ -109,6 +111,26 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     };
 
     onSave(dataToSave);
+  };
+
+  const handleAddCustomField = () => {
+    if (!newFieldName.trim()) return;
+
+    const newField = {
+      field: newFieldName,
+      display_name: newFieldName,
+      value: '',
+      type: newFieldType,
+      category: 'custom'
+    };
+
+    setCustomFields(prev => [...prev, newField]);
+    setNewFieldName('');
+    setNewFieldType('text');
+  };
+
+  const handleRemoveCustomField = (fieldName: string) => {
+    setCustomFields(prev => prev.filter(field => field.field !== fieldName));
   };
 
   const getFullName = () => {
@@ -225,21 +247,23 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
             <div className="flex gap-2">
               <Input
                 placeholder="Field name"
+                value={newFieldName}
+                onChange={(e) => setNewFieldName(e.target.value)}
                 className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20" />
-              <Select defaultValue="text">
+              <Select value={newFieldType} onValueChange={setNewFieldType}>
                 <SelectTrigger className="w-32 border-gray-400 focus:border-gray-500 focus:ring-gray-500/20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="tel">Phone</SelectItem>
                   <SelectItem value="url">URL</SelectItem>
+                  <SelectItem value="tel">Phone</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="textarea">Textarea</SelectItem>
                 </SelectContent>
               </Select>
-              <Button type="button">
+              <Button type="button" onClick={handleAddCustomField}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add
               </Button>
@@ -302,7 +326,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
             ))}
           </TabsList>
           
-          <div className="flex-1 overflow-y-auto mt-4 px-6 pb-6">
+          <div className="flex-1 overflow-auto mt-4 px-6 pb-6" style={{ maxHeight: '60vh' }}>
             {CATEGORIES.map((category) => (
               <TabsContent key={category.id} value={category.id} className="space-y-6 h-full pt-4">
                 <div className="space-y-2">

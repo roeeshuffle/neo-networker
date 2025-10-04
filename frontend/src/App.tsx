@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.17 - FINAL FIX FOR GREY BORDERS, VIEW MODAL, AND CSV BUILD');
+  console.log('🚀 FRONTEND VERSION: 18.18 - FIXED CUSTOM FIELDS, AUTオ-SCROLLBAR, AND CSV PREVIEW API');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
