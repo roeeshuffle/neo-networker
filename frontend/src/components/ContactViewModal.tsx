@@ -190,7 +190,7 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
         const options = field.options || [];
         return (
           <Select value={value} onValueChange={(val) => handleFieldChange(fieldName, val)}>
-            <SelectTrigger>
+            <SelectTrigger className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20">
               <SelectValue placeholder={`Select ${display_name}`} />
             </SelectTrigger>
             <SelectContent>
@@ -210,6 +210,7 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
             rows={3}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
       
@@ -219,6 +220,7 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
             type="datetime-local"
             value={value}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
       
@@ -238,6 +240,7 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
             value={value}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
     }
@@ -378,7 +381,7 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
                   <div className="space-y-4">
                     <div className="flex gap-2">
                       <Select value={selectedFieldToAdd} onValueChange={setSelectedFieldToAdd}>
-                        <SelectTrigger className="flex-1">
+                        <SelectTrigger className="flex-1 border-orange-400 focus:border-orange-500 focus:ring-orange-500/20">
                           <SelectValue placeholder="Select a field to add" />
                         </SelectTrigger>
                         <SelectContent>
