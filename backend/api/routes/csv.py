@@ -199,27 +199,17 @@ def preview_csv():
                         else:
                             person_data[db_column] = value
                     elif db_column == 'status':
-                        # Validate status against allowed values
+                        # Validate status against allowed values, allow NULL for invalid entries
                         allowed_statuses = ['active', 'inactive', 'prospect', 'client', 'partner']
                         if value.lower() not in allowed_statuses:
-                            if len(value) > 20:
-                                row_warnings.append({
-                                    'type': 'validation',
-                                    'field': db_column,
-                                    'original_value': value,
-                                    'corrected_value': 'active',
-                                    'message': f"status '{value}' not valid (was {len(value)} chars), will be set to 'active'"
-                                })
-                                person_data[db_column] = 'active'
-                            else:
-                                row_warnings.append({
-                                    'type': 'validation',
-                                    'field': db_column,
-                                    'original_value': value,
-                                    'corrected_value': 'active',
-                                    'message': f"status '{value}' not valid, will be set to 'active'"
-                                })
-                                person_data[db_column] = 'active'
+                            row_warnings.append({
+                                'type': 'validation',
+                                'field': db_column,
+                                'original_value': value,
+                                'corrected_value': None,
+                                'message': f"status '{value}' not valid, will be set to null"
+                            })
+                            person_data[db_column] = None
                         else:
                             person_data[db_column] = value.lower()
                     elif db_column == 'gender':
