@@ -138,11 +138,15 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
 
       const data = await response.json();
       console.log('🔍 CSV UPLOAD DEBUG: Response data:', data);
+      console.log('🔍 CSV UPLOAD DEBUG: Response data keys:', Object.keys(data));
+      console.log('🔍 CSV UPLOAD DEBUG: Response data type:', typeof data);
 
       if (data) {
         console.log('🔍 CSV UPLOAD DEBUG: Preview data rows:', data.preview_data?.length);
         console.log('🔍 CSV UPLOAD DEBUG: First row data:', data.preview_data?.[0]);
         console.log('🔍 CSV UPLOAD DEBUG: Warnings count:', data.warnings_count);
+        console.log('🔍 CSV UPLOAD DEBUG: All warnings:', data.all_warnings?.length);
+        console.log('🔍 CSV UPLOAD DEBUG: Total rows:', data.total_rows);
         
         setPreviewData(data.preview_data);
         setAllWarnings(data.all_warnings);
