@@ -322,9 +322,9 @@ export default function ContactViewModal({ person, isOpen, onClose, onSave, isLo
             <TabsTrigger value="system">System</TabsTrigger>
             </TabsList>
             
-            <div className="flex-1 overflow-y-auto mt-4">
+            <div className="flex-1 overflow-y-auto mt-4 px-6 pb-6">
               {Object.entries(CATEGORIES).map(([categoryKey, categoryName]) => (
-                <TabsContent key={categoryKey} value={categoryKey} className="space-y-4 h-full">
+                <TabsContent key={categoryKey} value={categoryKey} className="space-y-6 h-full pt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">{categoryName}</h3>
                 {isEditing && (

@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.11 - FIXED ADD/VIEW CONTACT LAYOUT WITH TABS AND SCROLL');
+  console.log('🚀 FRONTEND VERSION: 18.12 - FIXED PADDING AND SCHEMA ISSUES');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

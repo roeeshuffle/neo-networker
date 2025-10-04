@@ -361,9 +361,9 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             ))}
             </TabsList>
             
-            <div className="flex-1 overflow-y-auto mt-4">
+            <div className="flex-1 overflow-y-auto mt-4 px-6 pb-6">
               {CATEGORIES.map((category) => (
-                <TabsContent key={category.id} value={category.id} className="space-y-4 h-full">
+                <TabsContent key={category.id} value={category.id} className="space-y-6 h-full pt-4">
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">{category.name}</h3>
                 <p className="text-sm text-muted-foreground">{category.description}</p>

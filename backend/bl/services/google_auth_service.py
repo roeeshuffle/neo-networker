@@ -370,8 +370,8 @@ class GoogleAuthService:
             # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
-            # Get ALL contacts from Google (not limited to 1000)
-            contacts = self.get_contacts(access_token, max_results=10000)
+            # Get ALL contacts from Google (limited to 2000 per page due to API limits)
+            contacts = self.get_contacts(access_token, max_results=2000)
             
             # Import here to avoid circular imports
             from dal.models import Person

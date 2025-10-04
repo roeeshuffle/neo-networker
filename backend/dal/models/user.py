@@ -11,7 +11,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=True)
     is_approved = db.Column(db.Boolean, default=False)
     telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
-    whatsapp_phone_number = db.Column(db.String(20), unique=True, nullable=True)
+    # whatsapp_phone_number = db.Column(db.String(20), unique=True, nullable=True)  # Temporarily disabled - column doesn't exist in DB
     telegram_username = db.Column(db.String(255), nullable=True)
     
     # Additional fields from the database
@@ -48,7 +48,7 @@ class User(db.Model):
             'password_hash': self.password_hash,
             'is_approved': self.is_approved,
             'telegram_id': self.telegram_id,
-            'whatsapp_phone_number': self.whatsapp_phone_number,
+            # 'whatsapp_phone_number': self.whatsapp_phone_number,  # Temporarily disabled
             'telegram_username': self.telegram_username,
             'approved_by': self.approved_by,
             'approved_at': self.approved_at.isoformat() if self.approved_at else None,
