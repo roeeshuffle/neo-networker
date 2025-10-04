@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from dal.models import User
 from dal.database import db
 import json
+from datetime import datetime
 
 custom_fields_bp = Blueprint('custom_fields', __name__)
 
@@ -71,7 +72,7 @@ def create_custom_field():
             'key': field_key,
             'type': field_type,
             'options': field_options if field_type == 'select' else [],
-            'created_at': db.func.now().isoformat()
+            'created_at': datetime.utcnow().isoformat()
         }
         
         # Add to custom fields
