@@ -114,10 +114,10 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
       formData.append('custom_mapping', JSON.stringify({}));
 
       console.log('🔍 CSV UPLOAD DEBUG: FormData created');
-      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${import.meta.env.VITE_API_URL}/api/csv/preview`);
+      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${import.meta.env.VITE_API_URL}/api/csv/preview-simple`);
       console.log('🔍 CSV UPLOAD DEBUG: Token exists:', !!localStorage.getItem('token'));
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csv/preview`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/csv/preview-simple`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
