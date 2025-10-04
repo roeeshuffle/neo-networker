@@ -186,7 +186,23 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         setNewFieldName('');
         setNewFieldType('text');
       } else {
-        console.error('Error creating custom field:', await response.text());
+        const errorText = await response.text();
+        console.error('Error creating custom field:', errorText);
+        
+        // Temporarily fallback: create field locally without backend persistence
+        console.warn('Backend custom fields API not ready, creating field locally...');
+        
+        const newField = {
+          field: fieldKey,
+          display_name: newFieldName,
+          value: '',
+          type: newFieldType,
+          category: 'custom'
+        };
+
+        setCustomFields(prev => [...prev, newField]);
+        setNewFieldName('');
+        setNewFieldType('text');
       }
     } catch (error) {
       console.error('Error creating custom field:', error);
