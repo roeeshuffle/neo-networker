@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.28 - FIXED API URL AND TOKEN ISSUES');
+  console.log('🚀 FRONTEND VERSION: 18.29 - TEMPORARY FIX USING EXISTING CSV ENDPOINT');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

@@ -115,11 +115,11 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
 
       console.log('🔍 CSV UPLOAD DEBUG: FormData created');
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${apiUrl}/api/csv/preview-simple`);
+      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${apiUrl}/api/csv/preview`);
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       console.log('🔍 CSV UPLOAD DEBUG: Token exists:', !!token);
 
-      const response = await fetch(`${apiUrl}/api/csv/preview-simple`, {
+      const response = await fetch(`${apiUrl}/api/csv/preview`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
