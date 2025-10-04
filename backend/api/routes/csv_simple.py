@@ -108,10 +108,21 @@ def preview_csv_simple():
         # Preview first 5 rows
         preview_data = []
         for idx, row in df.head(5).iterrows():
+            # Convert NaN to None for JSON serialization
+            row_dict = row.to_dict()
+            for key, value in row_dict.items():
+                if pd.isna(value):
+                    row_dict[key] = None
+            
+            mapped_dict = {mapping.get(k, k): v for k, v in row_dict.items()}
+            for key, value in mapped_dict.items():
+                if pd.isna(value):
+                    mapped_dict[key] = None
+            
             preview_data.append({
                 'row_number': idx + 2,  # +2 because pandas is 0-indexed and we skip header
-                'data': row.to_dict(),
-                'mapped_data': {mapping.get(k, k): v for k, v in row.to_dict().items()}
+                'data': row_dict,
+                'mapped_data': mapped_dict
             })
         
         return jsonify({
