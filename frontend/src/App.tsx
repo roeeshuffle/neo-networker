@@ -13,8 +13,8 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.32 - FIXED PANDAS API RESPONSE FORMAT');
+  // Log frontend version
+  console.log('🚀 FRONTEND VERSION: 18.33 - NUCLEAR CACHE BUST FOR CSV FIX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
