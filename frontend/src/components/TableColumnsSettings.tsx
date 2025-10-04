@@ -54,9 +54,10 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       setIsLoading(true);
       
       // Fetch custom fields
-      const customFieldsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
       
@@ -66,9 +67,9 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       }
 
       // Fetch table columns
-      const columnsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/table-columns`, {
+      const columnsResponse = await fetch(`${apiUrl}/api/table-columns`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
       

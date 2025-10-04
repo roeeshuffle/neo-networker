@@ -58,9 +58,10 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
   const fetchCustomFields = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
       
@@ -157,7 +158,8 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         }
       } else {
         // Create new field
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/custom-fields`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -211,7 +213,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       const response = await fetch(`/api/custom-fields/${fieldId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
 

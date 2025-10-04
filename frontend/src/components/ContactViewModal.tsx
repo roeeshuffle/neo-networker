@@ -101,9 +101,10 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
 
   const loadUserCustomFields = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
       
@@ -147,7 +148,8 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       // Create field definition in user settings
       const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_');
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/custom-fields`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
