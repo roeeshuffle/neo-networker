@@ -111,10 +111,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       }
       
       // Update WhatsApp status
-      if (user?.whatsapp_phone_number) {
-        console.log('✅ WhatsApp phone found:', user.whatsapp_phone_number);
+      const whatsappPhone = user?.state_data?.whatsapp_phone_number;
+      if (whatsappPhone) {
+        console.log('✅ WhatsApp phone found:', whatsappPhone);
         setWhatsappConnected(true);
-        setWhatsappPhone(user.whatsapp_phone_number);
+        setWhatsappPhone(whatsappPhone);
       } else {
         console.log('❌ No WhatsApp phone found');
         setWhatsappConnected(false);

@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.37 - CSV IMPORT BUTTON FIX');
+  console.log('🚀 FRONTEND VERSION: 18.38 - ROLLBACK & WHATSAPP FIX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

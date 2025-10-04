@@ -1,9 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/PeopleTable";
-import SimpleCsvUploader from "@/components/SimpleCsvUploader";
-import { useState } from "react";
-import { Plus, Upload } from "lucide-react";
+import { CsvUploader } from "@/components/CsvUploader";
+import { Plus } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
 interface ContactsPanelProps {
@@ -15,7 +14,6 @@ interface ContactsPanelProps {
 }
 
 export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm }: ContactsPanelProps) => {
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -25,14 +23,7 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
           <p className="text-muted-foreground">Manage your professional network</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setIsCsvModalOpen(true)} 
-            variant="outline"
-            className="shadow-lg"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import CSV
-          </Button>
+          <CsvUploader onDataLoaded={onRefresh} />
           <Button onClick={onShowForm} className="shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Add Person
@@ -58,12 +49,6 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
           />
         </CardContent>
         </Card>
-        
-        <SimpleCsvUploader 
-          isOpen={isCsvModalOpen}
-          onClose={() => setIsCsvModalOpen(false)}
-          onImportComplete={onRefresh}
-        />
       </div>
     );
   };

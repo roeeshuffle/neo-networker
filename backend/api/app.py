@@ -92,7 +92,7 @@ from api.routes.admin import admin_bp
 from api.routes.user_preferences import user_preferences_bp
 from api.routes.custom_fields import custom_fields_bp
 from api.routes.csv_simple import csv_simple_bp
-from api.routes.csv_simple_mapping import csv_simple_mapping_bp
+# from api.routes.csv_simple_mapping import csv_simple_mapping_bp  # Temporarily disabled
 # Removed db_migration import - migration completed
 # Removed temporary fix routes - no longer needed
 
@@ -111,7 +111,7 @@ app.register_blueprint(admin_bp, url_prefix='/api')
 app.register_blueprint(user_preferences_bp, url_prefix='/api')
 app.register_blueprint(custom_fields_bp, url_prefix='/api')
 app.register_blueprint(csv_simple_bp, url_prefix='/api')
-app.register_blueprint(csv_simple_mapping_bp, url_prefix='/api')
+# app.register_blueprint(csv_simple_mapping_bp, url_prefix='/api')  # Temporarily disabled
 # app.register_blueprint(migration_bp, url_prefix='/api')  # Disabled - using direct endpoint instead
 # Removed temporary fix blueprint registrations - no longer needed
 
