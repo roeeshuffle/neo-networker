@@ -54,7 +54,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       setIsLoading(true);
       
       // Fetch custom fields
-      const customFieldsResponse = await fetch('/api/custom-fields', {
+      const customFieldsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -66,7 +66,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       }
 
       // Fetch table columns
-      const columnsResponse = await fetch('/api/table-columns', {
+      const columnsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/table-columns`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

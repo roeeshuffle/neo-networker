@@ -58,7 +58,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
   const fetchCustomFields = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/custom-fields', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -157,7 +157,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         }
       } else {
         // Create new field
-        const response = await fetch('/api/custom-fields', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
