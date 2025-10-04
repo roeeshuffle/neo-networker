@@ -10,7 +10,6 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import DynamicContactForm from "@/components/DynamicContactForm";
 import ContactViewModal from "@/components/ContactViewModal";
-import { CsvUploader } from "@/components/CsvUploader";
 import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TasksTab from "@/components/TasksTab";
