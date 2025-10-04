@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.21 - CUSTOM FIELDS PERSISTENCE + USER_PREFERENCES BACKEND FIX');
+  console.log('🚀 FRONTEND VERSION: 18.22 - FORCE DEPLOY WITH CACHE-BUSTING AND CLOUDFRONT INVALIDATION');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
