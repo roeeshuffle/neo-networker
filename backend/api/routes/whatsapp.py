@@ -23,12 +23,18 @@ def handle_whatsapp_voice_message(message_data, from_phone):
         whatsapp_logger.info(f"🔍 [VOICE] Looking for user with WhatsApp phone: '{from_phone}'")
         
         # Debug: Check all users with WhatsApp phones
-        all_whatsapp_users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
+        all_whatsapp_users = User.query.filter(User.state_data.isnot(None)).all()
         whatsapp_logger.info(f"📱 [VOICE] All users with WhatsApp phones:")
         for u in all_whatsapp_users:
-            whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{u.whatsapp_phone_number}'")
+            whatsapp_phone = u.state_data.get('whatsapp_phone_number') if u.state_data else None
+            whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{whatsapp_phone}'")
         
-        user = User.query.filter_by(whatsapp_phone_number=from_phone).first()
+        # Find user by WhatsApp phone in state_data
+        user = None
+        for u in all_whatsapp_users:
+            if u.state_data and u.state_data.get('whatsapp_phone_number') == from_phone:
+                user = u
+                break
         
         if not user:
             whatsapp_logger.info(f"❌ [VOICE] No user found with WhatsApp phone: {from_phone}")
@@ -212,12 +218,18 @@ def whatsapp_webhook():
             whatsapp_logger.info(f"🔍 Looking for user with WhatsApp phone: '{from_phone}'")
             
             # Debug: Check all users with WhatsApp phones
-            all_whatsapp_users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
+            all_whatsapp_users = User.query.filter(User.state_data.isnot(None)).all()
             whatsapp_logger.info(f"📱 All users with WhatsApp phones:")
             for u in all_whatsapp_users:
-                whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{u.whatsapp_phone_number}'")
+                whatsapp_phone = u.state_data.get('whatsapp_phone_number') if u.state_data else None
+                whatsapp_logger.info(f"  - User {u.email}: whatsapp_phone_number='{whatsapp_phone}'")
             
-            user = User.query.filter_by(whatsapp_phone_number=from_phone).first()
+            # Find user by WhatsApp phone in state_data
+            user = None
+            for u in all_whatsapp_users:
+                if u.state_data and u.state_data.get('whatsapp_phone_number') == from_phone:
+                    user = u
+                    break
             
             if not user:
                 whatsapp_logger.info(f"❌ No user found with WhatsApp phone: {from_phone}")
@@ -281,15 +293,17 @@ def whatsapp_webhook():
 def debug_whatsapp_users():
     """Debug endpoint to see all users with WhatsApp phones"""
     try:
-        users = User.query.filter(User.whatsapp_phone_number.isnot(None)).all()
+        users = User.query.filter(User.state_data.isnot(None)).all()
         result = []
         for user in users:
-            result.append({
-                'email': user.email,
-                'whatsapp_phone_number': user.whatsapp_phone_number,
-                'is_approved': user.is_approved,
-                'preferred_messaging_platform': user.preferred_messaging_platform
-            })
+            whatsapp_phone = user.state_data.get('whatsapp_phone_number') if user.state_data else None
+            if whatsapp_phone:  # Only include users who actually have WhatsApp phone
+                result.append({
+                    'email': user.email,
+                    'whatsapp_phone_number': whatsapp_phone,
+                    'is_approved': user.is_approved,
+                    'preferred_messaging_platform': user.preferred_messaging_platform
+                })
         return jsonify({'users': result})
     except Exception as e:
         whatsapp_logger.error(f"Error in debug endpoint: {e}")
@@ -322,22 +336,25 @@ def connect_whatsapp():
             whatsapp_logger.error(f"❌ [CONNECT] No WhatsApp phone provided")
             return jsonify({'error': 'WhatsApp phone number is required'}), 400
         
-        # Check if phone number is already in use
-        existing_user = User.query.filter_by(whatsapp_phone_number=whatsapp_phone_number).first()
-        if existing_user and existing_user.id != user.id:
-            whatsapp_logger.error(f"❌ [CONNECT] Phone {whatsapp_phone_number} already used by user {existing_user.email}")
-            return jsonify({'error': 'WhatsApp phone number already in use'}), 400
+        # Check if phone number is already in use by checking state_data
+        existing_users = User.query.filter(User.state_data.isnot(None)).all()
+        for existing_user in existing_users:
+            if existing_user.id != user.id and existing_user.state_data and existing_user.state_data.get('whatsapp_phone_number') == whatsapp_phone_number:
+                whatsapp_logger.error(f"❌ [CONNECT] Phone {whatsapp_phone_number} already used by user {existing_user.email}")
+                return jsonify({'error': 'WhatsApp phone number already in use'}), 400
         
-        # Update user
+        # Update user - store WhatsApp phone in state_data since column doesn't exist
         whatsapp_logger.info(f"🔧 [CONNECT] Updating user {user.email} with WhatsApp phone: {whatsapp_phone_number}")
-        user.whatsapp_phone_number = whatsapp_phone_number
+        if not user.state_data:
+            user.state_data = {}
+        user.state_data['whatsapp_phone_number'] = whatsapp_phone_number
         user.preferred_messaging_platform = 'whatsapp'
         db.session.commit()
         
         # Verify the save
         updated_user = User.query.get(current_user_id)
         whatsapp_logger.info(f"✅ [CONNECT] User {user.email} connected WhatsApp phone: {whatsapp_phone_number}")
-        whatsapp_logger.info(f"✅ [CONNECT] Verification - User's whatsapp_phone_number: '{updated_user.whatsapp_phone_number}'")
+        whatsapp_logger.info(f"✅ [CONNECT] Verification - User's whatsapp_phone_number: '{updated_user.state_data.get('whatsapp_phone_number') if updated_user.state_data else 'None'}'")
         
         return jsonify({
             'message': 'WhatsApp connected successfully',
@@ -359,7 +376,8 @@ def disconnect_whatsapp():
         if not user or not user.is_approved:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        user.whatsapp_phone_number = None
+        if user.state_data:
+            user.state_data.pop('whatsapp_phone_number', None)
         user.preferred_messaging_platform = 'telegram'  # Fallback to telegram
         db.session.commit()
         
@@ -383,8 +401,8 @@ def whatsapp_status():
             return jsonify({'error': 'Unauthorized'}), 403
         
         return jsonify({
-            'whatsapp_connected': bool(user.whatsapp_phone_number),
-            'whatsapp_phone_number': user.whatsapp_phone_number,
+            'whatsapp_connected': bool(user.state_data and user.state_data.get('whatsapp_phone_number')),
+            'whatsapp_phone_number': user.state_data.get('whatsapp_phone_number') if user.state_data else None,
             'preferred_platform': user.preferred_messaging_platform
         })
         
