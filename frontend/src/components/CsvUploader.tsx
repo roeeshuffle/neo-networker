@@ -144,18 +144,26 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
       if (data) {
         console.log('🔍 CSV UPLOAD DEBUG: Preview data rows:', data.preview_data?.length);
         console.log('🔍 CSV UPLOAD DEBUG: First row data:', data.preview_data?.[0]);
-        console.log('🔍 CSV UPLOAD DEBUG: Warnings count:', data.warnings_count);
-        console.log('🔍 CSV UPLOAD DEBUG: All warnings:', data.all_warnings?.length);
         console.log('🔍 CSV UPLOAD DEBUG: Total rows:', data.total_rows);
+        console.log('🔍 CSV UPLOAD DEBUG: Columns:', data.columns);
+        console.log('🔍 CSV UPLOAD DEBUG: Mapping:', data.mapping);
         
-        setPreviewData(data.preview_data);
-        setAllWarnings(data.all_warnings);
+        // Convert new API format to expected format
+        const convertedPreviewData = data.preview_data?.map((row: any) => ({
+          row_number: row.row_number,
+          full_name: row.mapped_data?.first_name || row.mapped_data?.last_name || 'Unknown',
+          data: row.mapped_data,
+          warnings: [] // New API doesn't have warnings yet
+        })) || [];
+        
+        setPreviewData(convertedPreviewData);
+        setAllWarnings([]); // New API doesn't have warnings yet
         setShowPreview(true);
         setOpen(false);
         
         toast({
           title: "CSV Preview Ready",
-          description: `Found ${data.warnings_count} warnings in ${data.total_rows} rows`,
+          description: `Found ${convertedPreviewData.length} rows in ${data.total_rows} total rows`,
         });
       }
     } catch (error: any) {
