@@ -68,26 +68,53 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   const [customFields, setCustomFields] = useState<any[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState('text');
+  const [userCustomFieldDefinitions, setUserCustomFieldDefinitions] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Load user custom field definitions
+    loadUserCustomFields();
+  }, []);
 
   useEffect(() => {
     if (person) {
       const personData = { ...person };
       setFormData(personData);
       
-      // Parse custom fields
+      // Parse custom fields from contact with their definitions
       if (person.custom_fields && typeof person.custom_fields === 'object') {
-        setCustomFields(Object.entries(person.custom_fields).map(([key, value]) => ({
-          field: key,
-          display_name: key,
-          value: value,
-          type: 'text',
-          category: 'custom'
-        })));
+        const contactCustomFields = Object.entries(person.custom_fields).map(([key, value]) => {
+          const definition = userCustomFieldDefinitions.find(def => def.key === key);
+          return {
+            field: key,
+            display_name: definition?.name || key,
+            value: value,
+            type: definition?.type || 'text',
+            category: 'custom'
+          };
+        });
+        setCustomFields(contactCustomFields);
       } else {
         setCustomFields([]);
       }
     }
-  }, [person]);
+  }, [person, userCustomFieldDefinitions]);
+
+  const loadUserCustomFields = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserCustomFieldDefinitions(data.custom_fields || []);
+      }
+    } catch (error) {
+      console.error('Error loading custom fields:', error);
+    }
+  };
 
   const handleFieldChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -97,10 +124,10 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   };
 
   const handleSave = () => {
-    // Prepare custom fields object
+    // Prepare custom fields object (only save actual custom fields, not form data)
     const customFieldsData = {};
     customFields.forEach(field => {
-      if (field.value && field.value !== '') {
+      if (field.value && field.value !== '' && field.category === 'custom') {
         customFieldsData[field.field] = field.value;
       }
     });
@@ -113,20 +140,57 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     onSave(dataToSave);
   };
 
-  const handleAddCustomField = () => {
+  const handleAddCustomField = async () => {
     if (!newFieldName.trim()) return;
 
-    const newField = {
-      field: newFieldName,
-      display_name: newFieldName,
-      value: '',
-      type: newFieldType,
-      category: 'custom'
-    };
+    try {
+      // Create field definition in user settings
+      const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_');
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/custom-fields`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: newFieldName,
+          key: fieldKey,
+          type: newFieldType
+        })
+      });
 
-    setCustomFields(prev => [...prev, newField]);
-    setNewFieldName('');
-    setNewFieldType('text');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Add the field to the form data
+        setFormData(prev => ({
+          ...prev,
+          [`custom_${fieldKey}`]: ''
+        }));
+
+        // Add to custom fields list
+        const newField = {
+          field: fieldKey,
+          display_name: newFieldName,
+          value: '',
+          type: newFieldType,
+          category: 'custom'
+        };
+
+        setCustomFields(prev => [...prev, newField]);
+        
+        // Reload custom field definitions
+        await loadUserCustomFields();
+        
+        setNewFieldName('');
+        setNewFieldType('text');
+      } else {
+        console.error('Error creating custom field:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error creating custom field:', error);
+    }
   };
 
   const handleRemoveCustomField = (fieldName: string) => {
@@ -177,7 +241,13 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         { field: 'last_contact_date', display_name: 'Last Contact Date', type: 'date' },
         { field: 'next_follow_up_date', display_name: 'Next Follow-up Date', type: 'date' }
       ],
-      custom: customFields
+      custom: isEditing ? [...customFields, ...userCustomFieldDefinitions.filter(def => !customFields.find(cf => cf.field === def.key)).map(def => ({
+        field: def.key,
+        display_name: def.name,
+        value: '',
+        type: def.type,
+        category: 'custom'
+      }))] : customFields
     };
 
     const fields = categoryFields[categoryId] || [];
