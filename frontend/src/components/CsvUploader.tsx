@@ -219,27 +219,75 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
     }
   };
 
+  const handleUpload = async () => {
+    if (!file) return;
+    
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const csvText = e.target?.result as string;
+        setCsvData(csvText);
+        
+        // Parse headers
+        const headers = parseCSVHeaders(csvText);
+        setCsvHeaders(headers);
+        
+        // Check for unknown columns
+        const unknownColumns = checkForUnknownColumns(headers);
+        
+        if (unknownColumns.length > 0) {
+          // Show mapping dialog
+          setShowMapping(true);
+        } else {
+          // Direct preview
+          await previewCsv(csvText, {});
+        }
+      };
+      reader.readAsText(file);
+    } catch (error: any) {
+      toast({
+        title: "Error reading file",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const previewCsv = async (csvText: string, columnMapping: { [key: string]: string }) => {
+    try {
+      const formData = new FormData();
+      const blob = new Blob([csvText], { type: 'text/csv' });
+      formData.append('file', blob, 'data.csv');
+      formData.append('custom_mapping', JSON.stringify(columnMapping));
+
+      const { data, error } = await apiClient.request('/csv/preview', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (error) throw error;
+
+      setPreviewData(data.preview_data || []);
+      setAllWarnings(data.all_warnings || []);
+      setShowPreview(true);
+    } catch (error: any) {
+      console.error('Error previewing CSV:', error);
+      toast({
+        title: "Error previewing CSV",
+        description: error.message || 'Failed to preview CSV file',
+        variant: "destructive",
+      });
+    }
+  };
+
   const processUpload = async (fileText: string, columnMapping: { [key: string]: string }) => {
-    const { data, error } = await apiClient.request('/csv-processor', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        csvData: fileText,
-        customMapping: columnMapping 
-      })
-    });
-
-    if (error) throw error;
-
-    toast({
-      title: "Success",
-      description: `Imported ${data.imported} records successfully`,
-    });
-
-    setOpen(false);
-    setFile(null);
-    setCsvData("");
-    setCsvHeaders([]);
-    onDataLoaded();
+    await previewCsv(fileText, columnMapping);
   };
 
   return (
