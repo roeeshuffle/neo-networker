@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.12 - FIXED PADDING AND SCHEMA ISSUES');
+  console.log('🚀 FRONTEND VERSION: 18.13 - ORANGE INPUT BORDERS FOR BETTER UX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
