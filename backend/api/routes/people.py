@@ -53,11 +53,11 @@ def create_person():
             return jsonify({'error': 'At least first_name or last_name is required'}), 400
         
         # Helper function to clean empty strings to None for constrained fields
-        def clean_constrained_field(value, allowed_values=None):
+        def clean_constrained_field(value, allowed_values=None, default_value=None):
             if not value or value.strip() == '':
-                return None
+                return default_value
             if allowed_values and value.lower() not in allowed_values:
-                return None
+                return default_value
             return value.lower() if allowed_values else value
 
         # Clean gender field - must be valid or None
@@ -90,7 +90,7 @@ def create_person():
                 last_contact_date=datetime.fromisoformat(data['last_contact_date'].replace('Z', '+00:00')) if data.get('last_contact_date') else None,
                 next_follow_up_date=datetime.fromisoformat(data['next_follow_up_date'].replace('Z', '+00:00')) if data.get('next_follow_up_date') else None,
                 status=clean_constrained_field(data.get('status'), ['active', 'inactive', 'prospect', 'client', 'partner']) or 'active',
-                priority=data.get('priority', 'medium'),
+                priority=clean_constrained_field(data.get('priority'), ['low', 'medium', 'high'], 'medium'),
                 group=data.get('group'),
                 custom_fields=data.get('custom_fields', {}),
                 owner_id=current_user_id

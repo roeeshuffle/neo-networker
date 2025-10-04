@@ -12,7 +12,7 @@ class User(db.Model):
     is_approved = db.Column(db.Boolean, default=False)
     telegram_id = db.Column(db.BigInteger, unique=True, nullable=True)
     # whatsapp_phone_number = db.Column(db.String(20), unique=True, nullable=True)  # Temporarily disabled - column doesn't exist in DB
-    telegram_username = db.Column(db.String(255), nullable=True)
+    # telegram_username = db.Column(db.String(255), nullable=True)  # Temporarily disabled - column doesn't exist in DB
     
     # Additional fields from the database
     approved_by = db.Column(db.String(36), db.ForeignKey('profiles.id'), nullable=True)
@@ -49,7 +49,7 @@ class User(db.Model):
             'is_approved': self.is_approved,
             'telegram_id': self.telegram_id,
             # 'whatsapp_phone_number': self.whatsapp_phone_number,  # Temporarily disabled
-            'telegram_username': self.telegram_username,
+            # 'telegram_username': self.telegram_username,  # Temporarily disabled
             'approved_by': self.approved_by,
             'approved_at': self.approved_at.isoformat() if self.approved_at else None,
             'avatar_url': self.avatar_url,

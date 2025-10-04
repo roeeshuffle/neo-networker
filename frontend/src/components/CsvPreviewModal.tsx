@@ -222,6 +222,7 @@ export default function CsvPreviewModal({
             value={value || ''}
             onChange={(e) => handleFieldChange(field, e.target.value)}
             placeholder={`Enter ${field}`}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
     }

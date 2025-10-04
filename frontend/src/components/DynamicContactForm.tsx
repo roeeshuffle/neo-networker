@@ -229,13 +229,14 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
             rows={3}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
       
       case 'select':
         return (
           <Select value={value || ''} onValueChange={(value) => handleFieldChange(fieldName, value)}>
-            <SelectTrigger>
+            <SelectTrigger className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20">
               <SelectValue placeholder={`Select ${display_name}`} />
             </SelectTrigger>
             <SelectContent>
@@ -255,6 +256,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
 
@@ -265,6 +267,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             value={value || ''}
             onChange={(e) => handleFieldChange(fieldName, e.target.value)}
             placeholder={`Enter ${display_name}`}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
       
@@ -278,6 +281,7 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             disabled={false}
             autoComplete="off"
             style={{ opacity: 1, cursor: 'text' }}
+            className="border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
           />
         );
     }
