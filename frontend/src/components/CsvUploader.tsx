@@ -115,11 +115,11 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
 
       console.log('🔍 CSV UPLOAD DEBUG: FormData created');
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${apiUrl}/api/csv/preview-simple`);
+      console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${apiUrl}/api/csv/preview`);
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       console.log('🔍 CSV UPLOAD DEBUG: Token exists:', !!token);
 
-      const response = await fetch(`${apiUrl}/api/csv/preview-simple`, {
+          const response = await fetch(`${apiUrl}/api/csv/preview`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -136,36 +136,31 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('🔍 CSV UPLOAD DEBUG: Response data:', data);
-      console.log('🔍 CSV UPLOAD DEBUG: Response data keys:', Object.keys(data));
-      console.log('🔍 CSV UPLOAD DEBUG: Response data type:', typeof data);
+          const data = await response.json();
+          console.log('🔍 CSV UPLOAD DEBUG: Response data:', data);
+          console.log('🔍 CSV UPLOAD DEBUG: Response data keys:', Object.keys(data));
+          console.log('🔍 CSV UPLOAD DEBUG: Response data type:', typeof data);
 
-      if (data) {
-        console.log('🔍 CSV UPLOAD DEBUG: Preview data rows:', data.preview_data?.length);
-        console.log('🔍 CSV UPLOAD DEBUG: First row data:', data.preview_data?.[0]);
-        console.log('🔍 CSV UPLOAD DEBUG: Total rows:', data.total_rows);
-        console.log('🔍 CSV UPLOAD DEBUG: Columns:', data.columns);
-        console.log('🔍 CSV UPLOAD DEBUG: Mapping:', data.mapping);
-        
-        // Convert new API format to expected format
-        const convertedPreviewData = data.preview_data?.map((row: any) => ({
-          row_number: row.row_number,
-          full_name: row.mapped_data?.first_name || row.mapped_data?.last_name || 'Unknown',
-          data: row.mapped_data,
-          warnings: [] // New API doesn't have warnings yet
-        })) || [];
-        
-        setPreviewData(convertedPreviewData);
-        setAllWarnings([]); // New API doesn't have warnings yet
-        setShowPreview(true);
-        setOpen(false);
-        
-        toast({
-          title: "CSV Preview Ready",
-          description: `Found ${convertedPreviewData.length} rows in ${data.total_rows} total rows`,
-        });
-      }
+          if (data && data.success) {
+            console.log('🔍 CSV UPLOAD DEBUG: Preview data rows:', data.preview_data?.length);
+            console.log('🔍 CSV UPLOAD DEBUG: First row data:', data.preview_data?.[0]);
+            console.log('🔍 CSV UPLOAD DEBUG: Total rows:', data.total_rows);
+            console.log('🔍 CSV UPLOAD DEBUG: Columns:', data.columns);
+            console.log('🔍 CSV UPLOAD DEBUG: Mapping:', data.mapping);
+            console.log('🔍 CSV UPLOAD DEBUG: Warnings:', data.warnings?.length || 0);
+            
+            setPreviewData(data.preview_data || []);
+            setAllWarnings(data.warnings || []);
+            setShowPreview(true);
+            setOpen(false);
+            
+            toast({
+              title: "CSV Preview Ready",
+              description: `Found ${data.preview_data?.length || 0} rows in ${data.total_rows} total rows`,
+            });
+          } else {
+            throw new Error(data.error || 'Failed to preview CSV');
+          }
     } catch (error: any) {
       console.error('🔍 CSV UPLOAD DEBUG: Full error:', error);
       console.error('🔍 CSV UPLOAD DEBUG: Error message:', error.message);

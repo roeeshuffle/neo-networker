@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/PeopleTable";
-import { CsvUploader } from "@/components/CsvUploader";
+import SimpleCsvUploader from "@/components/SimpleCsvUploader";
 import { Plus } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
@@ -23,7 +23,7 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
           <p className="text-muted-foreground">Manage your professional network</p>
         </div>
         <div className="flex gap-2">
-          <CsvUploader onDataLoaded={onRefresh} />
+          <SimpleCsvUploader onImportComplete={onRefresh} />
           <Button onClick={onShowForm} className="shadow-lg">
             <Plus className="h-4 w-4 mr-2" />
             Add Person
