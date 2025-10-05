@@ -296,7 +296,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setContactsLoading(true);
       setPreviewType('contacts');
       
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-contacts', {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/auth/google/preview-contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -333,7 +334,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setCalendarLoading(true);
       setPreviewType('calendar');
       
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/preview-calendar', {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/auth/google/preview-calendar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -791,7 +793,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const loadUserPreferences = async () => {
     try {
       setPreferencesLoading(true);
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user/preferences', {
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user-preferences', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -826,7 +828,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const saveUserPreferences = async (category: string, settings: any) => {
     try {
       setPreferencesLoading(true);
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user/preferences', {
+      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user-preferences', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
