@@ -63,6 +63,17 @@ def create_custom_field():
         custom_fields.append(new_field)
         user.user_preferences['custom_fields'] = custom_fields
         
+        # Add this custom field to all existing contacts for this user
+        from dal.models import Person
+        existing_contacts = Person.query.filter_by(owner_id=current_user_id).all()
+        
+        for contact in existing_contacts:
+            if not contact.custom_fields:
+                contact.custom_fields = {}
+            # Initialize the new field with empty value for all contacts
+            contact.custom_fields[field_key] = None
+        
+        db.session.commit()
         
         return jsonify({
             'success': True,
