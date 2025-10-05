@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.39 - SIMPLE COLUMN VIEWER');
+  console.log('🚀 FRONTEND VERSION: 18.40 - COLUMN MAPPING DROPDOWNS');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
