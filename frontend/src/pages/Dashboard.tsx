@@ -221,7 +221,7 @@ const Dashboard = () => {
   };
 
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (query: string, field?: string) => {
     setSearchQuery(query);
     
     if (!query.trim()) {
@@ -232,14 +232,36 @@ const Dashboard = () => {
     const searchTerm = query.toLowerCase();
     
     if (activeTab === 'contacts') {
-      const filtered = people.filter(person => 
-        person.full_name.toLowerCase().includes(searchTerm) ||
-        person.company?.toLowerCase().includes(searchTerm) ||
-        person.categories?.toLowerCase().includes(searchTerm) ||
-        person.email?.toLowerCase().includes(searchTerm) ||
-        person.status?.toLowerCase().includes(searchTerm) ||
-        person.more_info?.toLowerCase().includes(searchTerm)
-      );
+      let filtered = people;
+      
+      if (field) {
+        // Search in specific field
+        filtered = people.filter(person => {
+          let fieldValue = '';
+          
+          if (field === 'full_name') {
+            fieldValue = `${person.first_name || ''} ${person.last_name || ''}`.trim();
+          } else if (field.startsWith('custom_')) {
+            // Handle custom fields
+            fieldValue = person.custom_fields?.[field.replace('custom_', '')] || '';
+          } else {
+            fieldValue = person[field as keyof typeof person]?.toString() || '';
+          }
+          
+          return fieldValue.toLowerCase().includes(searchTerm);
+        });
+      } else {
+        // Search in all fields (fallback)
+        filtered = people.filter(person => 
+          person.full_name.toLowerCase().includes(searchTerm) ||
+          person.company?.toLowerCase().includes(searchTerm) ||
+          person.categories?.toLowerCase().includes(searchTerm) ||
+          person.email?.toLowerCase().includes(searchTerm) ||
+          person.status?.toLowerCase().includes(searchTerm) ||
+          person.more_info?.toLowerCase().includes(searchTerm)
+        );
+      }
+      
       setFilteredPeople(filtered);
     } else if (activeTab === 'events') {
       // For events, we'll need to pass the search query to EventsTab
@@ -390,10 +412,11 @@ const Dashboard = () => {
             {/* Right: Search Bar, Refresh Button, Settings, and User */}
             <div className="flex items-center gap-3">
               {/* Search Bar */}
-              <div className="w-64">
+              <div className="w-80">
                 <SearchBar 
                   onSearch={handleSearch} 
                   placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
+                  activeTab={activeTab}
                 />
               </div>
               
