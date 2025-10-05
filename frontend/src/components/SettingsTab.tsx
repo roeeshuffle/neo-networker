@@ -1365,6 +1365,35 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 />
               )}
             </div>
+            
+            {/* Table Columns Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Table Columns
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Choose which columns to display in the contacts table
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleSection('tableColumns')}
+                  className="p-1 h-auto"
+                >
+                  {expandedSections.tableColumns ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </Button>
+              </div>
+              {expandedSections.tableColumns && (
+                <TableColumnsSettings 
+                  isOpen={expandedSections.tableColumns}
+                  onClose={() => setExpandedSections(prev => ({ ...prev, tableColumns: false }))}
+                />
+              )}
+            </div>
           </CardContent>
         )}
       </Card>
@@ -1445,39 +1474,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         )}
       </Card>
 
-      {/* Table Columns Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Table Columns
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Choose which columns to display in the contacts table
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleSection('tableColumns')}
-              className="p-1 h-auto"
-            >
-              {expandedSections.tableColumns ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
-          </div>
-        </CardHeader>
-        {expandedSections.tableColumns && (
-          <CardContent>
-            <TableColumnsSettings 
-              isOpen={expandedSections.tableColumns}
-              onClose={() => setExpandedSections(prev => ({ ...prev, tableColumns: false }))}
-            />
-          </CardContent>
-        )}
-      </Card>
-      
       {/* Preview Dialog */}
       <GoogleSyncPreviewDialog
         isOpen={previewDialogOpen}

@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.52 - ORGANIZATION SEARCH FIX');
+  console.log('🚀 FRONTEND VERSION: 18.53 - TABLE COLUMNS SETTINGS');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

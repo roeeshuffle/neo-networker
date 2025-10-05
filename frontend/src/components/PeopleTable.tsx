@@ -16,8 +16,38 @@ interface PeopleTableProps {
   onView: (person: Person) => void;
 }
 
-type SortField = 'first_name' | 'last_name' | 'organization' | 'job_title' | 'status';
+interface ColumnConfig {
+  key: string;
+  label: string;
+  enabled: boolean;
+  order: number;
+}
+
+type SortField = 'first_name' | 'last_name' | 'organization' | 'job_title' | 'status' | 'email' | 'phone' | 'mobile' | 'priority' | 'group' | 'source' | 'created_at';
 type SortOrder = 'asc' | 'desc';
+
+// Default column configuration
+const defaultColumns: ColumnConfig[] = [
+  { key: 'first_name', label: 'First Name', enabled: true, order: 1 },
+  { key: 'last_name', label: 'Last Name', enabled: true, order: 2 },
+  { key: 'organization', label: 'Organization', enabled: true, order: 3 },
+  { key: 'job_title', label: 'Job Title', enabled: true, order: 4 },
+  { key: 'email', label: 'Email', enabled: true, order: 5 },
+  { key: 'phone', label: 'Phone', enabled: false, order: 6 },
+  { key: 'mobile', label: 'Mobile', enabled: false, order: 7 },
+  { key: 'status', label: 'Status', enabled: false, order: 8 },
+  { key: 'priority', label: 'Priority', enabled: false, order: 9 },
+  { key: 'group', label: 'Group', enabled: false, order: 10 },
+  { key: 'source', label: 'Source', enabled: false, order: 11 },
+  { key: 'linkedin_url', label: 'LinkedIn', enabled: false, order: 12 },
+  { key: 'github_url', label: 'GitHub', enabled: false, order: 13 },
+  { key: 'website_url', label: 'Website', enabled: false, order: 14 },
+  { key: 'address', label: 'Address', enabled: false, order: 15 },
+  { key: 'notes', label: 'Notes', enabled: false, order: 16 },
+  { key: 'last_contact_date', label: 'Last Contact', enabled: false, order: 17 },
+  { key: 'next_follow_up_date', label: 'Next Follow-up', enabled: false, order: 18 },
+  { key: 'created_at', label: 'Created At', enabled: false, order: 19 }
+];
 
 // Generate consistent color from text
 const getColorFromText = (text: string): string => {
@@ -62,7 +92,49 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [profileImages, setProfileImages] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
   const itemsPerPage = 50;
+  
+  // Fetch user preferences for column configuration
+  useEffect(() => {
+    const fetchColumnPreferences = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const response = await fetch(`${apiUrl}/api/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const savedColumns = data.preferences?.contact_columns;
+          
+          if (savedColumns && Array.isArray(savedColumns)) {
+            // Merge saved columns with defaults
+            const mergedColumns = [...defaultColumns];
+            
+            savedColumns.forEach((savedCol: ColumnConfig) => {
+              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+              if (existingIndex !== -1) {
+                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+              } else {
+                mergedColumns.push(savedCol);
+              }
+            });
+            
+            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching column preferences:', error);
+        // Use defaults if fetch fails
+        setColumns(defaultColumns);
+      }
+    };
+
+    fetchColumnPreferences();
+  }, []);
   
   // Fetch profile images for people with LinkedIn URLs
   useEffect(() => {

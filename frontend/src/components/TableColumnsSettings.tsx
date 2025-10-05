@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Save } from "lucide-react";
+import { ArrowUp, ArrowDown, Save, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface CustomField {
@@ -20,27 +20,40 @@ interface TableColumnsSettingsProps {
   onClose: () => void;
 }
 
+interface ColumnConfig {
+  key: string;
+  label: string;
+  enabled: boolean;
+  order: number;
+}
+
 const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onClose }) => {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [tableColumns, setTableColumns] = useState({
-    standard: ['first_name', 'last_name', 'organization', 'job_title', 'status'],
-    custom: []
-  });
+  const [columns, setColumns] = useState<ColumnConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const standardColumns = [
-    { key: 'first_name', label: 'First Name' },
-    { key: 'last_name', label: 'Last Name' },
-    { key: 'organization', label: 'Organization' },
-    { key: 'job_title', label: 'Job Title' },
-    { key: 'status', label: 'Status' },
-    { key: 'email', label: 'Email' },
-    { key: 'phone', label: 'Phone' },
-    { key: 'mobile', label: 'Mobile' },
-    { key: 'group', label: 'Group' },
-    { key: 'priority', label: 'Priority' },
-    { key: 'source', label: 'Source' },
-    { key: 'created_at', label: 'Created At' }
+  // Default column configuration
+  const defaultColumns: ColumnConfig[] = [
+    { key: 'first_name', label: 'First Name', enabled: true, order: 1 },
+    { key: 'last_name', label: 'Last Name', enabled: true, order: 2 },
+    { key: 'organization', label: 'Organization', enabled: true, order: 3 },
+    { key: 'job_title', label: 'Job Title', enabled: true, order: 4 },
+    { key: 'email', label: 'Email', enabled: true, order: 5 },
+    { key: 'phone', label: 'Phone', enabled: false, order: 6 },
+    { key: 'mobile', label: 'Mobile', enabled: false, order: 7 },
+    { key: 'status', label: 'Status', enabled: false, order: 8 },
+    { key: 'priority', label: 'Priority', enabled: false, order: 9 },
+    { key: 'group', label: 'Group', enabled: false, order: 10 },
+    { key: 'source', label: 'Source', enabled: false, order: 11 },
+    { key: 'linkedin_url', label: 'LinkedIn', enabled: false, order: 12 },
+    { key: 'github_url', label: 'GitHub', enabled: false, order: 13 },
+    { key: 'website_url', label: 'Website', enabled: false, order: 14 },
+    { key: 'address', label: 'Address', enabled: false, order: 15 },
+    { key: 'notes', label: 'Notes', enabled: false, order: 16 },
+    { key: 'last_contact_date', label: 'Last Contact', enabled: false, order: 17 },
+    { key: 'next_follow_up_date', label: 'Next Follow-up', enabled: false, order: 18 },
+    { key: 'created_at', label: 'Created At', enabled: false, order: 19 }
   ];
 
   useEffect(() => {
@@ -50,9 +63,8 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
   }, [isOpen]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
       // Fetch custom fields
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
@@ -66,265 +78,214 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
         setCustomFields(customFieldsData.custom_fields || []);
       }
 
-      // Fetch table columns
-      const columnsResponse = await fetch(`${apiUrl}/api/table-columns`, {
+      // Fetch user preferences for table columns
+      const userPrefsResponse = await fetch(`${apiUrl}/api/user-preferences`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
       });
-      
-      if (columnsResponse.ok) {
-        const columnsData = await columnsResponse.json();
-        setTableColumns(columnsData.table_columns || {
-          standard: ['first_name', 'last_name', 'organization', 'job_title', 'status'],
-          custom: []
-        });
+
+      if (userPrefsResponse.ok) {
+        const userPrefs = await userPrefsResponse.json();
+        const savedColumns = userPrefs.preferences?.contact_columns;
+        
+        if (savedColumns && Array.isArray(savedColumns)) {
+          // Merge saved columns with defaults
+          const mergedColumns = [...defaultColumns];
+          
+          savedColumns.forEach((savedCol: ColumnConfig) => {
+            const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+            if (existingIndex !== -1) {
+              mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+            } else {
+              mergedColumns.push(savedCol);
+            }
+          });
+          
+          // Add custom fields
+          customFieldsData.custom_fields?.forEach((field: CustomField) => {
+            const customColKey = `custom_${field.key}`;
+            const existingIndex = mergedColumns.findIndex(col => col.key === customColKey);
+            if (existingIndex === -1) {
+              mergedColumns.push({
+                key: customColKey,
+                label: field.name,
+                enabled: false,
+                order: mergedColumns.length + 1
+              });
+            }
+          });
+          
+          setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+        } else {
+          // Use defaults
+          setColumns([...defaultColumns]);
+        }
+      } else {
+        // Use defaults if can't fetch preferences
+        setColumns([...defaultColumns]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch settings",
-        variant: "destructive",
-      });
+      setColumns([...defaultColumns]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStandardColumnToggle = (columnKey: string) => {
-    setTableColumns(prev => {
-      const isSelected = prev.standard.includes(columnKey);
-      if (isSelected) {
-        return {
-          ...prev,
-          standard: prev.standard.filter(key => key !== columnKey)
-        };
-      } else {
-        return {
-          ...prev,
-          standard: [...prev.standard, columnKey]
-        };
-      }
-    });
+  const handleColumnToggle = (key: string) => {
+    setColumns(prev => prev.map(col => 
+      col.key === key ? { ...col, enabled: !col.enabled } : col
+    ));
   };
 
-  const handleCustomColumnToggle = (fieldKey: string) => {
-    setTableColumns(prev => {
-      const isSelected = prev.custom.includes(fieldKey);
-      if (isSelected) {
-        return {
-          ...prev,
-          custom: prev.custom.filter(key => key !== fieldKey)
-        };
-      } else {
-        return {
-          ...prev,
-          custom: [...prev.custom, fieldKey]
-        };
-      }
-    });
-  };
-
-  const moveColumn = (type: 'standard' | 'custom', fromIndex: number, toIndex: number) => {
-    setTableColumns(prev => {
-      const columns = [...prev[type]];
-      const [movedColumn] = columns.splice(fromIndex, 1);
-      columns.splice(toIndex, 0, movedColumn);
+  const moveColumn = (key: string, direction: 'up' | 'down') => {
+    setColumns(prev => {
+      const newColumns = [...prev];
+      const index = newColumns.findIndex(col => col.key === key);
       
-      return {
-        ...prev,
-        [type]: columns
-      };
+      if (direction === 'up' && index > 0) {
+        [newColumns[index], newColumns[index - 1]] = [newColumns[index - 1], newColumns[index]];
+      } else if (direction === 'down' && index < newColumns.length - 1) {
+        [newColumns[index], newColumns[index + 1]] = [newColumns[index + 1], newColumns[index]];
+      }
+      
+      // Update order numbers
+      return newColumns.map((col, idx) => ({ ...col, order: idx + 1 }));
     });
   };
 
-  const handleSave = async () => {
+  const resetToDefaults = () => {
+    setColumns([...defaultColumns]);
+  };
+
+  const saveSettings = async () => {
+    setIsSaving(true);
     try {
-      setIsLoading(true);
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       
-      const response = await fetch('/api/table-columns', {
+      // Prepare the columns data to save
+      const columnsToSave = columns.map(col => ({
+        key: col.key,
+        label: col.label,
+        enabled: col.enabled,
+        order: col.order
+      }));
+
+      const response = await fetch(`${apiUrl}/api/user-preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         },
-        body: JSON.stringify(tableColumns)
+        body: JSON.stringify({
+          contact_columns: columnsToSave
+        })
       });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Table columns updated successfully",
+          description: "Table column settings saved successfully",
         });
         onClose();
       } else {
-        throw new Error('Failed to update table columns');
+        throw new Error('Failed to save settings');
       }
     } catch (error) {
-      console.error('Error saving table columns:', error);
+      console.error('Error saving settings:', error);
       toast({
         title: "Error",
-        description: "Failed to save table columns",
+        description: "Failed to save table column settings",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Table Columns</h3>
-        <p className="text-sm text-muted-foreground">
-          Choose which columns to display in the contacts table and their order
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Standard Columns */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Standard Columns</CardTitle>
-            <CardDescription>
-              Built-in contact fields
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tableColumns.standard.map((columnKey, index) => {
-              const column = standardColumns.find(c => c.key === columnKey);
-              return column ? (
-                <div key={columnKey} className="flex items-center justify-between p-2 border rounded">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={true}
-                      onCheckedChange={() => handleStandardColumnToggle(columnKey)}
-                    />
-                    <Label className="font-medium">{column.label}</Label>
-                  </div>
-                  <div className="flex gap-1">
-                    {index > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColumn('standard', index, index - 1)}
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {index < tableColumns.standard.length - 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColumn('standard', index, index + 1)}
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ) : null;
-            })}
-            
-            <div className="pt-2 border-t">
-              <p className="text-sm text-muted-foreground mb-2">Available columns:</p>
-              {standardColumns
-                .filter(col => !tableColumns.standard.includes(col.key))
-                .map(column => (
-                  <div key={column.key} className="flex items-center space-x-2 p-2 border rounded">
-                    <Checkbox
-                      checked={false}
-                      onCheckedChange={() => handleStandardColumnToggle(column.key)}
-                    />
-                    <Label className="text-muted-foreground">{column.label}</Label>
-                  </div>
-                ))}
+    <Card>
+      <CardHeader>
+        <CardTitle>Contact Table Columns</CardTitle>
+        <CardDescription>
+          Choose which columns to display and their order in the contacts table
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : (
+          <>
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                {columns.filter(col => col.enabled).length} of {columns.length} columns enabled
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={resetToDefaults}>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset to Defaults
+                </Button>
+                <Button onClick={saveSettings} disabled={isSaving}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save Settings'}
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Custom Columns */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Custom Columns</CardTitle>
-            <CardDescription>
-              Your custom fields
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {customFields.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No custom fields available. Create some custom fields first.
-              </p>
-            ) : (
-              <>
-                {tableColumns.custom.map((fieldKey, index) => {
-                  const field = customFields.find(f => f.key === fieldKey);
-                  return field ? (
-                    <div key={fieldKey} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={true}
-                          onCheckedChange={() => handleCustomColumnToggle(fieldKey)}
-                        />
-                        <Label className="font-medium">{field.name}</Label>
-                        <Badge variant="secondary" className="text-xs">{field.type}</Badge>
-                      </div>
-                      <div className="flex gap-1">
-                        {index > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveColumn('custom', index, index - 1)}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {index < tableColumns.custom.length - 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moveColumn('custom', index, index + 1)}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {columns.map((column, index) => (
+                <div key={column.key} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id={column.key}
+                      checked={column.enabled}
+                      onCheckedChange={() => handleColumnToggle(column.key)}
+                    />
+                    <Label htmlFor={column.key} className="flex items-center space-x-2">
+                      <span>{column.label}</span>
+                      {column.key.startsWith('custom_') && (
+                        <Badge variant="secondary" className="text-xs">Custom</Badge>
+                      )}
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveColumn(column.key, 'up')}
+                      disabled={index === 0}
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveColumn(column.key, 'down')}
+                      disabled={index === columns.length - 1}
+                    >
+                      <ArrowDown className="w-4 h-4" />
+                    </Button>
+                    <div className="text-xs text-muted-foreground ml-2">
+                      #{column.order}
                     </div>
-                  ) : null;
-                })}
-                
-                <div className="pt-2 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Available custom fields:</p>
-                  {customFields
-                    .filter(field => !tableColumns.custom.includes(field.key))
-                    .map(field => (
-                      <div key={field.key} className="flex items-center space-x-2 p-2 border rounded">
-                        <Checkbox
-                          checked={false}
-                          onCheckedChange={() => handleCustomColumnToggle(field.key)}
-                        />
-                        <Label className="text-muted-foreground">{field.name}</Label>
-                        <Badge variant="outline" className="text-xs">{field.type}</Badge>
-                      </div>
-                    ))}
+                  </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </div>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isLoading}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
-        </Button>
-      </div>
-    </div>
+            <div className="text-xs text-muted-foreground">
+              <p>• Drag columns up/down to change their order</p>
+              <p>• Check/uncheck columns to show/hide them</p>
+              <p>• Custom fields will appear automatically when created</p>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
