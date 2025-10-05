@@ -245,17 +245,19 @@ const Dashboard = () => {
             fieldValue = person[field as keyof typeof person]?.toString() || '';
           }
           
+          console.log(`🔍 SEARCH DEBUG: Field: ${field}, FieldValue: "${fieldValue}", SearchTerm: "${searchTerm}", Match: ${fieldValue.toLowerCase().includes(searchTerm)}`);
+          
           return fieldValue.toLowerCase().includes(searchTerm);
         });
       } else {
         // Search in all fields (fallback)
         filtered = people.filter(person => 
           person.full_name.toLowerCase().includes(searchTerm) ||
-          person.company?.toLowerCase().includes(searchTerm) ||
-          person.categories?.toLowerCase().includes(searchTerm) ||
+          person.organization?.toLowerCase().includes(searchTerm) ||
+          person.job_title?.toLowerCase().includes(searchTerm) ||
           person.email?.toLowerCase().includes(searchTerm) ||
           person.status?.toLowerCase().includes(searchTerm) ||
-          person.more_info?.toLowerCase().includes(searchTerm)
+          person.notes?.toLowerCase().includes(searchTerm)
         );
       }
       
