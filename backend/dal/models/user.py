@@ -22,7 +22,7 @@ class User(db.Model):
     preferred_messaging_platform = db.Column(db.String(20), default='telegram')
     state_data = db.Column(db.JSON, nullable=True)
     user_preferences = db.Column(db.JSON, nullable=True)
-    custom_fields = db.Column(db.JSON, nullable=True)  # Store custom field definitions
+    # custom_fields = db.Column(db.JSON, nullable=True)  # Temporarily disabled - column doesn't exist in DB
     google_id = db.Column(db.String(100), unique=True, nullable=True)
     google_refresh_token = db.Column(db.Text, nullable=True)
     google_access_token = db.Column(db.Text, nullable=True)
@@ -58,7 +58,7 @@ class User(db.Model):
             'preferred_messaging_platform': self.preferred_messaging_platform,
             'state_data': self.state_data,
             'user_preferences': self.user_preferences,
-            'custom_fields': self.custom_fields,
+            # 'custom_fields': self.custom_fields,  # Temporarily disabled
             'google_id': self.google_id,
             'google_refresh_token': self.google_refresh_token,
             'google_access_token': self.google_access_token,

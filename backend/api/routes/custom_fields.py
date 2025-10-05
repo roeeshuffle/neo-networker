@@ -20,19 +20,19 @@ def get_custom_fields():
         
         # Get custom fields from user preferences and custom_fields column
         custom_fields_from_preferences = user.user_preferences.get('custom_fields', []) if user.user_preferences else []
-        custom_fields_from_column = user.custom_fields if user.custom_fields else []
+        # custom_fields_from_column = user.custom_fields if user.custom_fields else []  # Temporarily disabled
         
-        # Merge both sources, prioritizing user_preferences
+        # Use only user_preferences for now
         all_custom_fields = custom_fields_from_preferences.copy()
         
         # Add fields from custom_fields column that aren't already in preferences
-        for field in custom_fields_from_column:
-            if not any(f['key'] == field.get('key') for f in all_custom_fields):
-                all_custom_fields.append(field)
+        # for field in custom_fields_from_column:  # Temporarily disabled
+        #     if not any(f['key'] == field.get('key') for f in all_custom_fields):
+        #         all_custom_fields.append(field)
         
         print(f"🔍 CUSTOM FIELDS API: User {user.email}")
         print(f"🔍 CUSTOM FIELDS API: Fields from preferences: {len(custom_fields_from_preferences)}")
-        print(f"🔍 CUSTOM FIELDS API: Fields from column: {len(custom_fields_from_column)}")
+        # print(f"🔍 CUSTOM FIELDS API: Fields from column: {len(custom_fields_from_column)}")  # Temporarily disabled
         print(f"🔍 CUSTOM FIELDS API: Total fields: {len(all_custom_fields)}")
         
         return jsonify({
