@@ -58,6 +58,23 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
   const fetchCustomFields = async () => {
     try {
       setIsLoading(true);
+      
+      // First, try to load from localStorage (most reliable)
+      const localCustomFields = localStorage.getItem('custom_fields');
+      if (localCustomFields) {
+        try {
+          const savedFields = JSON.parse(localCustomFields);
+          if (Array.isArray(savedFields)) {
+            setCustomFields(savedFields);
+            setIsLoading(false);
+            return; // Exit early if localStorage data is available
+          }
+        } catch (e) {
+          console.error('Error parsing localStorage custom fields:', e);
+        }
+      }
+      
+      // If no localStorage data, try backend
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
@@ -67,7 +84,11 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       
       if (response.ok) {
         const data = await response.json();
-        setCustomFields(data.custom_fields || []);
+        const fields = data.custom_fields || [];
+        setCustomFields(fields);
+        
+        // Save to localStorage for future use
+        localStorage.setItem('custom_fields', JSON.stringify(fields));
       }
     } catch (error) {
       console.error('Error fetching custom fields:', error);
@@ -145,10 +166,18 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         });
 
         if (response.ok) {
+          const result = await response.json();
           toast({
             title: "Success",
             description: "Custom field updated successfully",
           });
+          
+          // Update localStorage immediately
+          const updatedFields = customFields.map(field => 
+            field.id === editingField.id ? result.custom_field : field
+          );
+          localStorage.setItem('custom_fields', JSON.stringify(updatedFields));
+          
           fetchCustomFields();
           setEditingField(null);
           setShowAddForm(false);
@@ -169,10 +198,16 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         });
 
         if (response.ok) {
+          const result = await response.json();
           toast({
             title: "Success",
             description: "Custom field created successfully",
           });
+          
+          // Update localStorage immediately
+          const updatedFields = [...customFields, result.custom_field];
+          localStorage.setItem('custom_fields', JSON.stringify(updatedFields));
+          
           fetchCustomFields();
           setShowAddForm(false);
           resetForm();

@@ -182,14 +182,12 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   useEffect(() => {
     const fetchColumnPreferences = async () => {
       try {
-        console.log('🔍 PEOPLE TABLE: Fetching column preferences...');
         
         // First, try to load from localStorage (most reliable)
         const localColumns = localStorage.getItem('contact_columns');
         if (localColumns) {
           try {
             const savedColumns = JSON.parse(localColumns);
-            console.log('📱 PEOPLE TABLE: Found localStorage columns:', savedColumns);
             
             if (Array.isArray(savedColumns)) {
               const mergedColumns = [...defaultColumns];
@@ -204,7 +202,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
               });
               
               setColumns(mergedColumns.sort((a, b) => a.order - b.order));
-              console.log('✅ PEOPLE TABLE: Loaded from localStorage:', mergedColumns);
               return; // Successfully loaded from localStorage
             }
           } catch (error) {
@@ -213,7 +210,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
         }
 
         // If no localStorage data, try backend
-        console.log('📡 PEOPLE TABLE: No localStorage data, trying backend...');
         
         const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
         
@@ -243,16 +239,13 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
               });
               
               setColumns(mergedColumns.sort((a, b) => a.order - b.order));
-              console.log('✅ PEOPLE TABLE: Loaded from backend:', mergedColumns);
               return; // Successfully loaded from backend
             }
           }
         } catch (error) {
-          console.log('⚠️ PEOPLE TABLE: Backend user-preferences not available');
         }
         
         // Use defaults if nothing else works
-        console.log('🔄 PEOPLE TABLE: Using default columns');
         setColumns(defaultColumns);
       } catch (error) {
         console.error('❌ PEOPLE TABLE: Error fetching column preferences:', error);
