@@ -226,3 +226,59 @@ def delete_all_telegram_users():
     except Exception as e:
         admin_logger.error(f"Error deleting telegram users: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/admin/fix-schema', methods=['POST'])
+@jwt_required()
+def fix_database_schema():
+    """Fix database schema issues (admin only)"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        if not check_admin_access(current_user_id):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        admin_logger.info("🔧 Starting database schema fix...")
+        
+        # Add custom_fields column if it doesn't exist
+        try:
+            db.engine.execute("""
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'profiles' 
+                        AND column_name = 'custom_fields'
+                    ) THEN
+                        ALTER TABLE profiles ADD COLUMN custom_fields JSON;
+                        RAISE NOTICE 'Column custom_fields added to profiles table';
+                    ELSE
+                        RAISE NOTICE 'Column custom_fields already exists in profiles table';
+                    END IF;
+                END $$;
+            """)
+            admin_logger.info("✅ custom_fields column check/creation completed")
+        except Exception as e:
+            admin_logger.error(f"❌ Error with custom_fields column: {e}")
+            return jsonify({'error': f'Failed to add custom_fields column: {str(e)}'}), 500
+        
+        # Test User model query
+        try:
+            user = User.query.first()
+            if user:
+                admin_logger.info(f"✅ User model test successful - found user: {user.email}")
+            else:
+                admin_logger.warning("⚠️ No users found in database")
+        except Exception as e:
+            admin_logger.error(f"❌ User model test failed: {e}")
+            return jsonify({'error': f'User model test failed: {str(e)}'}), 500
+        
+        return jsonify({
+            'message': 'Database schema fix completed successfully',
+            'custom_fields_column': 'Added/verified',
+            'user_model_test': 'Passed'
+        }), 200
+        
+    except Exception as e:
+        admin_logger.error(f"Error fixing database schema: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
