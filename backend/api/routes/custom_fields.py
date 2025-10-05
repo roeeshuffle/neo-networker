@@ -19,6 +19,8 @@ def get_custom_fields():
         # Get custom fields from user preferences
         custom_fields = user.user_preferences.get('custom_fields', []) if user.user_preferences else []
         
+        print(f"🔧 CUSTOM FIELD: Retrieved custom fields for user {user.email}: {custom_fields}")
+        
         return jsonify({
             'success': True,
             'custom_fields': custom_fields
@@ -59,9 +61,14 @@ def create_custom_field():
         custom_fields.append(field_name)
         user.user_preferences['custom_fields'] = custom_fields
         
+        print(f"🔧 CUSTOM FIELD: '{field_name}' added to custom fields for user: {user.email}")
+        print(f"🔧 CUSTOM FIELD: Updated user preferences: {user.user_preferences}")
+        
         # Add this custom field to all existing contacts for this user
         from dal.models import Person
         existing_contacts = Person.query.filter_by(owner_id=current_user_id).all()
+        
+        print(f"🔧 CUSTOM FIELD: Found {len(existing_contacts)} existing contacts for user {user.email}")
         
         for contact in existing_contacts:
             if not contact.custom_fields:
@@ -70,6 +77,7 @@ def create_custom_field():
             contact.custom_fields[field_name] = None
         
         db.session.commit()
+        print(f"🔧 CUSTOM FIELD: Database commit successful for field '{field_name}'")
         
         return jsonify({
             'success': True,
