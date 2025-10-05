@@ -65,7 +65,6 @@ const Dashboard = () => {
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
   const [activeTab, setActiveTab] = useState("contacts");
-  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -222,8 +221,6 @@ const Dashboard = () => {
 
 
   const handleSearch = (query: string, field?: string) => {
-    setSearchQuery(query);
-    
     if (!query.trim()) {
       setFilteredPeople(people);
       return;
@@ -263,18 +260,6 @@ const Dashboard = () => {
       }
       
       setFilteredPeople(filtered);
-    } else if (activeTab === 'events') {
-      // For events, we'll need to pass the search query to EventsTab
-      // This will be handled by the EventsTab component itself
-      // For now, just clear the people filter
-      setFilteredPeople(people);
-    } else if (activeTab === 'tasks') {
-      // For tasks, we'll need to pass the search query to TasksTab
-      // This will be handled by the TasksTab component itself
-      // For now, just clear the people filter
-      setFilteredPeople(people);
-    } else {
-      setFilteredPeople(people);
     }
   };
 
@@ -409,18 +394,8 @@ const Dashboard = () => {
               </Tabs>
             </div>
             
-            {/* Right: Search Bar, Refresh Button, Settings, and User */}
+            {/* Right: Refresh Button, Settings, and User */}
             <div className="flex items-center gap-3">
-              {/* Search Bar */}
-              <div className="w-80">
-                <SearchBar 
-                  onSearch={handleSearch} 
-                  placeholder={`Search ${activeTab === "contacts" ? "contacts" : activeTab === "tasks" ? "tasks" : "items"}...`}
-                  activeTab={activeTab}
-                />
-              </div>
-              
-              {/* Refresh Button */}
               <Button 
                 onClick={handleManualRefresh}
                 variant="ghost" 
@@ -475,15 +450,16 @@ const Dashboard = () => {
             onView={handleView}
             onRefresh={fetchPeople}
             onShowForm={() => setShowForm(true)}
+            onSearch={handleSearch}
           />
         )}
         
         {activeTab === "tasks" && (
-          <TasksTab onTasksChange={fetchTasksCount} searchQuery={searchQuery} />
+          <TasksTab onTasksChange={fetchTasksCount} />
         )}
         
         {activeTab === "events" && (
-          <EventsTab onEventsChange={fetchEventsCount} searchQuery={searchQuery} />
+          <EventsTab onEventsChange={fetchEventsCount} />
         )}
         
         {activeTab === "settings" && (

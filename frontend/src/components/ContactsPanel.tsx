@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/PeopleTable";
 import { SimpleColumnViewer } from "@/components/SimpleColumnViewer";
+import { SearchBar } from "@/components/SearchBar";
 import { Plus } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 
@@ -11,9 +12,10 @@ interface ContactsPanelProps {
   onView: (person: Person) => void;
   onRefresh: () => void;
   onShowForm: () => void;
+  onSearch: (query: string, field?: string) => void;
 }
 
-export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm }: ContactsPanelProps) => {
+export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm, onSearch }: ContactsPanelProps) => {
 
   return (
     <div className="space-y-6">
@@ -29,6 +31,15 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
             Add Person
           </Button>
         </div>
+      </div>
+      
+      {/* Search Bar */}
+      <div className="flex justify-center">
+        <SearchBar 
+          onSearch={onSearch} 
+          placeholder="Search contacts..."
+          activeTab="contacts"
+        />
       </div>
       
       <Card className="overflow-hidden">
