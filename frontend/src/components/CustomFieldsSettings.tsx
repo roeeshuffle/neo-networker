@@ -27,7 +27,6 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       console.log('🔍 CUSTOM FIELDS: Starting fetchCustomFields');
       setIsLoading(true);
       
-      // Always try backend first to get the latest data
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
@@ -40,7 +39,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         return;
       }
       
-      console.log('🔍 CUSTOM FIELDS: Fetching from backend...');
+      console.log('🔍 CUSTOM FIELDS: Fetching from new user preferences API...');
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -57,43 +56,14 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         console.log('🔍 CUSTOM FIELDS: Field types:', fields.map(f => typeof f));
         
         setCustomFields(fields);
-        
-        // Save to localStorage for future use
-        localStorage.setItem('custom_fields', JSON.stringify(fields));
-        console.log('🔍 CUSTOM FIELDS: Saved to localStorage');
+        console.log('🔍 CUSTOM FIELDS: Set custom fields from backend');
       } else {
         console.warn('🔍 CUSTOM FIELDS: Backend fetch failed:', response.status);
-        
-        // Fallback to localStorage if backend fails
-        const localCustomFields = localStorage.getItem('custom_fields');
-        if (localCustomFields) {
-          try {
-            const savedFields = JSON.parse(localCustomFields);
-            if (Array.isArray(savedFields)) {
-              console.log('🔍 CUSTOM FIELDS: Fallback to localStorage:', savedFields);
-              setCustomFields(savedFields);
-            }
-          } catch (e) {
-            console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
-          }
-        }
+        setCustomFields([]);
       }
     } catch (error) {
       console.error('🔍 CUSTOM FIELDS: Error fetching custom fields:', error);
-      
-      // Fallback to localStorage if there's an error
-      const localCustomFields = localStorage.getItem('custom_fields');
-      if (localCustomFields) {
-        try {
-          const savedFields = JSON.parse(localCustomFields);
-          if (Array.isArray(savedFields)) {
-            console.log('🔍 CUSTOM FIELDS: Error fallback to localStorage:', savedFields);
-            setCustomFields(savedFields);
-          }
-        } catch (e) {
-          console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
-        }
-      }
+      setCustomFields([]);
       
       toast({
         title: "Error",
@@ -139,6 +109,9 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         return;
       }
       
+      // Add new field to current list
+      const updatedFields = [...customFields, newFieldName.trim()];
+
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         method: 'POST',
         headers: {
@@ -146,21 +119,17 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          name: newFieldName.trim()
+          custom_fields: updatedFields
         })
       });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Custom field created successfully",
+          description: `Custom field "${newFieldName.trim()}" added successfully`,
         });
         
-        // Update localStorage immediately
-        const updatedFields = [...customFields, newFieldName.trim()];
-        localStorage.setItem('custom_fields', JSON.stringify(updatedFields));
-        
-        fetchCustomFields();
+        setCustomFields(updatedFields);
         setNewFieldName('');
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -197,24 +166,27 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         return;
       }
       
-      const response = await fetch(`${apiUrl}/api/custom-fields/${encodeURIComponent(fieldName)}`, {
-        method: 'DELETE',
+      // Remove field from current list
+      const updatedFields = customFields.filter(field => field !== fieldName);
+      
+      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          custom_fields: updatedFields
+        })
       });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Custom field deleted successfully",
+          description: `Custom field "${fieldName}" deleted successfully`,
         });
         
-        // Update localStorage immediately
-        const updatedFields = customFields.filter(field => field !== fieldName);
-        localStorage.setItem('custom_fields', JSON.stringify(updatedFields));
-        
-        fetchCustomFields();
+        setCustomFields(updatedFields);
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to delete custom field');

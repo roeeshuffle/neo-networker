@@ -68,3 +68,34 @@ class User(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+    
+    # DAL Functions for User Preferences
+    @staticmethod
+    def get_user_preferences(user_id):
+        """Get user preferences by user_id"""
+        user = User.query.get(user_id)
+        if not user:
+            return None
+        return user.user_preferences or {}
+    
+    @staticmethod
+    def update_user_preferences(user_id, preferences_json):
+        """Update user preferences by user_id with complete JSON"""
+        user = User.query.get(user_id)
+        if not user:
+            return False
+        
+        user.user_preferences = preferences_json
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+        return True
+    
+    @staticmethod
+    def delete_all_user_preferences():
+        """Delete all user preferences for all users"""
+        users = User.query.all()
+        for user in users:
+            user.user_preferences = None
+            user.updated_at = datetime.utcnow()
+        db.session.commit()
+        return len(users)
