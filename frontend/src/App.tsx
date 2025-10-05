@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.40 - COLUMN MAPPING DROPDOWNS');
+  console.log('🚀 FRONTEND VERSION: 18.41 - FULL CSV IMPORT WITH PROGRESS');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

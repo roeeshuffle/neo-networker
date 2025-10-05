@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Plus, CheckCircle, XCircle } from 'lucide-react';
 
 interface SimpleColumnViewerProps {
   onDataLoaded: () => void;
@@ -14,15 +14,26 @@ interface SimpleColumnViewerProps {
 export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
   const [columns, setColumns] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const [customFields, setCustomFields] = useState<string[]>([]);
+  const [showNewFieldDialog, setShowNewFieldDialog] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResults, setImportResults] = useState<{
+    successful: number;
+    failed: Array<{ row: number; error: string; data: any }>;
+  } | null>(null);
   const { toast } = useToast();
 
   // Available Person table columns
   const personColumns = [
     { key: 'first_name', label: 'First Name', required: true },
     { key: 'last_name', label: 'Last Name', required: false },
+    { key: 'full_name', label: 'Full Name (Special)', required: false }, // Special field
     { key: 'email', label: 'Email', required: false },
     { key: 'phone', label: 'Phone', required: false },
     { key: 'mobile', label: 'Mobile', required: false },
@@ -98,16 +109,51 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
       console.log('📄 Parsed headers:', headers);
       setColumns(headers);
       
+      // Parse all CSV data (not just headers)
+      const allData: string[][] = [];
+      lines.forEach((line, index) => {
+        if (index === 0) return; // Skip header row
+        
+        const row: string[] = [];
+        let currentCell = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(currentCell.trim());
+            currentCell = '';
+          } else {
+            currentCell += char;
+          }
+        }
+        
+        // Add the last cell
+        if (currentCell.trim()) {
+          row.push(currentCell.trim());
+        }
+        
+        allData.push(row);
+      });
+      
+      console.log('📄 CSV data rows:', allData.length);
+      setCsvData(allData);
+      
       // Auto-map common columns
       const autoMapping: Record<string, string> = {};
       headers.forEach(header => {
         const lowerHeader = header.toLowerCase().trim();
         
         // Auto-mapping logic
-        if (lowerHeader.includes('first name') || lowerHeader === 'firstname' || lowerHeader === 'name') {
+        if (lowerHeader.includes('first name') || lowerHeader === 'firstname') {
           autoMapping[header] = 'first_name';
         } else if (lowerHeader.includes('last name') || lowerHeader === 'lastname') {
           autoMapping[header] = 'last_name';
+        } else if (lowerHeader.includes('full name') || lowerHeader === 'fullname' || lowerHeader === 'name') {
+          autoMapping[header] = 'full_name'; // Special field
         } else if (lowerHeader.includes('email')) {
           autoMapping[header] = 'email';
         } else if (lowerHeader.includes('phone') || lowerHeader === 'tel') {
@@ -177,10 +223,136 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
   };
 
   const handleMappingChange = (csvColumn: string, personField: string) => {
+    if (personField === 'add_new_field') {
+      setShowNewFieldDialog(true);
+      return;
+    }
+    
     setColumnMapping(prev => ({
       ...prev,
       [csvColumn]: personField
     }));
+  };
+
+  const handleAddNewField = () => {
+    if (!newFieldName.trim()) return;
+    
+    const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_');
+    setCustomFields(prev => [...prev, fieldKey]);
+    setNewFieldName('');
+    setShowNewFieldDialog(false);
+    
+    toast({
+      title: "New Field Added",
+      description: `Added "${newFieldName}" as a custom field`,
+    });
+  };
+
+  const splitFullName = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return { first_name: parts[0], last_name: '' };
+    } else {
+      const last_name = parts[parts.length - 1];
+      const first_name = parts.slice(0, -1).join(' ');
+      return { first_name, last_name };
+    }
+  };
+
+  const handleImport = async () => {
+    if (csvData.length === 0) return;
+    
+    setImporting(true);
+    setImportProgress(0);
+    setImportResults(null);
+    
+    const results = {
+      successful: 0,
+      failed: [] as Array<{ row: number; error: string; data: any }>
+    };
+    
+    const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    for (let i = 0; i < csvData.length; i++) {
+      const row = csvData[i];
+      const rowNumber = i + 2; // +2 because we skip header and arrays are 0-indexed
+      
+      try {
+        // Build person data from mapping
+        const personData: any = {};
+        const customFieldsData: any = {};
+        
+        columns.forEach((header, colIndex) => {
+          const mappedField = columnMapping[header];
+          const value = row[colIndex]?.trim();
+          
+          if (!value || mappedField === 'skip') return;
+          
+          if (mappedField === 'full_name') {
+            // Special handling for full name
+            const { first_name, last_name } = splitFullName(value);
+            personData.first_name = first_name;
+            personData.last_name = last_name;
+          } else if (customFields.includes(mappedField)) {
+            // Custom field
+            customFieldsData[mappedField] = value;
+          } else {
+            // Standard field
+            personData[mappedField] = value;
+          }
+        });
+        
+        // Add custom fields
+        if (Object.keys(customFieldsData).length > 0) {
+          personData.custom_fields = customFieldsData;
+        }
+        
+        // Ensure at least first_name or last_name
+        if (!personData.first_name && !personData.last_name) {
+          throw new Error('Missing required name field');
+        }
+        
+        // Send to API
+        const response = await fetch(`${apiUrl}/api/people`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(personData)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+        
+        results.successful++;
+        
+      } catch (error: any) {
+        results.failed.push({
+          row: rowNumber,
+          error: error.message || 'Unknown error',
+          data: row
+        });
+      }
+      
+      // Update progress
+      setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
+    }
+    
+    setImportResults(results);
+    setImporting(false);
+    
+    toast({
+      title: "Import Complete",
+      description: `Successfully imported ${results.successful} contacts, ${results.failed.length} failed`,
+    });
+    
+    if (results.successful > 0) {
+      onDataLoaded(); // Refresh the contacts list
+    }
   };
 
   return (
@@ -251,6 +423,17 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
                               {field.label} {field.required && '(Required)'}
                             </SelectItem>
                           ))}
+                          {customFields.map(field => (
+                            <SelectItem key={field} value={field}>
+                              {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} (Custom)
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="add_new_field">
+                            <div className="flex items-center gap-2">
+                              <Plus className="h-3 w-3" />
+                              Add New Field...
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -282,11 +465,97 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
                 >
                   Show Summary
                 </Button>
+                <Button 
+                  onClick={handleImport}
+                  disabled={importing || csvData.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {importing ? `Importing... ${importProgress}%` : `Continue Import (${csvData.length} rows)`}
+                </Button>
               </div>
+              
+              {importing && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Importing contacts...</span>
+                    <span>{importProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${importProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
+              {importResults && (
+                <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Import Results
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-green-100 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{importResults.successful}</div>
+                      <div className="text-sm text-green-700">Successfully Imported</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-100 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">{importResults.failed.length}</div>
+                      <div className="text-sm text-red-700">Failed</div>
+                    </div>
+                  </div>
+                  
+                  {importResults.failed.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-red-700">Failed Rows:</h4>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {importResults.failed.map((failure, index) => (
+                          <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                            <div className="font-medium">Row {failure.row}: {failure.error}</div>
+                            <div className="text-gray-600 mt-1">
+                              Data: {failure.data.join(', ')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
       </DialogContent>
+      
+      {/* New Field Dialog */}
+      <Dialog open={showNewFieldDialog} onOpenChange={setShowNewFieldDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add New Field</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-field-name">Field Name</Label>
+              <Input
+                id="new-field-name"
+                value={newFieldName}
+                onChange={(e) => setNewFieldName(e.target.value)}
+                placeholder="Enter field name (e.g., Department)"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleAddNewField} disabled={!newFieldName.trim()}>
+                Add Field
+              </Button>
+              <Button variant="outline" onClick={() => setShowNewFieldDialog(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
