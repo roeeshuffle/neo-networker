@@ -92,13 +92,17 @@ export const SearchBar = ({ onSearch, placeholder = "Search contacts...", active
       
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 SEARCH BAR: Backend response data:', data);
+        console.log('🔍 SEARCH BAR: Custom fields from backend:', data.custom_fields);
+        console.log('🔍 SEARCH BAR: Field types:', (data.custom_fields || []).map(f => typeof f));
         
-        const customFieldsData: SearchField[] = (data.custom_fields || []).map((cf: any) => ({
-          key: `custom_${cf.key}`, // Prefix with 'custom_' to distinguish from standard fields
-          label: cf.name,
+        const customFieldsData: SearchField[] = (data.custom_fields || []).map((cf: string) => ({
+          key: `custom_${cf}`, // Prefix with 'custom_' to distinguish from standard fields
+          label: cf, // Simple: field name is the label
           type: 'text'
         }));
         
+        console.log('🔍 SEARCH BAR: Mapped custom fields:', customFieldsData);
         setCustomFields(customFieldsData);
       } else {
         console.error('🔍 SEARCH BAR: Failed to fetch custom fields:', response.status, response.statusText);

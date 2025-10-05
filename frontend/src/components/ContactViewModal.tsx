@@ -100,38 +100,67 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
 
   const loadUserCustomFields = async () => {
     try {
+      console.log('🔍 CONTACT MODAL: Starting loadUserCustomFields');
+      
       // First, try to load from localStorage (most reliable)
       const localCustomFields = localStorage.getItem('custom_fields');
+      console.log('🔍 CONTACT MODAL: localStorage data:', localCustomFields);
+      
       if (localCustomFields) {
         try {
           const savedFields = JSON.parse(localCustomFields);
+          console.log('🔍 CONTACT MODAL: Parsed localStorage fields:', savedFields);
+          console.log('🔍 CONTACT MODAL: Is array?', Array.isArray(savedFields));
+          console.log('🔍 CONTACT MODAL: Field types:', savedFields.map(f => typeof f));
+          
           if (Array.isArray(savedFields)) {
             setUserCustomFieldDefinitions(savedFields);
+            console.log('🔍 CONTACT MODAL: Set from localStorage, exiting early');
             return; // Exit early if localStorage data is available
           }
         } catch (e) {
-          console.error('Error parsing localStorage custom fields:', e);
+          console.error('🔍 CONTACT MODAL: Error parsing localStorage custom fields:', e);
         }
       }
       
       // If no localStorage data, try backend
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      console.log('🔍 CONTACT MODAL: API URL:', apiUrl);
+      console.log('🔍 CONTACT MODAL: Token exists?', !!token);
+      
+      if (!token) {
+        console.warn('🔍 CONTACT MODAL: No auth token found, skipping backend fetch');
+        return;
+      }
+      
+      console.log('🔍 CONTACT MODAL: Fetching from backend...');
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('🔍 CONTACT MODAL: Backend response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 CONTACT MODAL: Backend response data:', data);
         const fields = data.custom_fields || [];
+        console.log('🔍 CONTACT MODAL: Extracted fields:', fields);
+        console.log('🔍 CONTACT MODAL: Field types:', fields.map(f => typeof f));
+        
         setUserCustomFieldDefinitions(fields);
         
         // Save to localStorage for future use
         localStorage.setItem('custom_fields', JSON.stringify(fields));
+        console.log('🔍 CONTACT MODAL: Saved to localStorage');
+      } else {
+        console.warn('🔍 CONTACT MODAL: Backend fetch failed:', response.status);
       }
     } catch (error) {
-      console.error('Error loading custom fields:', error);
+      console.error('🔍 CONTACT MODAL: Error loading custom fields:', error);
     }
   };
 

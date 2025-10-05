@@ -24,20 +24,28 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
 
   const fetchCustomFields = async () => {
     try {
+      console.log('🔍 CUSTOM FIELDS: Starting fetchCustomFields');
       setIsLoading(true);
       
       // First, try to load from localStorage (most reliable)
       const localCustomFields = localStorage.getItem('custom_fields');
+      console.log('🔍 CUSTOM FIELDS: localStorage data:', localCustomFields);
+      
       if (localCustomFields) {
         try {
           const savedFields = JSON.parse(localCustomFields);
+          console.log('🔍 CUSTOM FIELDS: Parsed localStorage fields:', savedFields);
+          console.log('🔍 CUSTOM FIELDS: Is array?', Array.isArray(savedFields));
+          console.log('🔍 CUSTOM FIELDS: Field types:', savedFields.map(f => typeof f));
+          
           if (Array.isArray(savedFields)) {
             setCustomFields(savedFields);
             setIsLoading(false);
+            console.log('🔍 CUSTOM FIELDS: Set from localStorage, exiting early');
             return; // Exit early if localStorage data is available
           }
         } catch (e) {
-          console.error('Error parsing localStorage custom fields:', e);
+          console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
         }
       }
       
@@ -45,30 +53,41 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
+      console.log('🔍 CUSTOM FIELDS: API URL:', apiUrl);
+      console.log('🔍 CUSTOM FIELDS: Token exists?', !!token);
+      
       if (!token) {
-        console.warn('No auth token found, skipping backend fetch');
+        console.warn('🔍 CUSTOM FIELDS: No auth token found, skipping backend fetch');
         setIsLoading(false);
         return;
       }
       
+      console.log('🔍 CUSTOM FIELDS: Fetching from backend...');
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('🔍 CUSTOM FIELDS: Backend response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 CUSTOM FIELDS: Backend response data:', data);
         const fields = data.custom_fields || [];
+        console.log('🔍 CUSTOM FIELDS: Extracted fields:', fields);
+        console.log('🔍 CUSTOM FIELDS: Field types:', fields.map(f => typeof f));
+        
         setCustomFields(fields);
         
         // Save to localStorage for future use
         localStorage.setItem('custom_fields', JSON.stringify(fields));
+        console.log('🔍 CUSTOM FIELDS: Saved to localStorage');
       } else {
-        console.warn('Backend fetch failed:', response.status);
+        console.warn('🔍 CUSTOM FIELDS: Backend fetch failed:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching custom fields:', error);
+      console.error('🔍 CUSTOM FIELDS: Error fetching custom fields:', error);
       toast({
         title: "Error",
         description: "Failed to fetch custom fields",
@@ -76,6 +95,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       });
     } finally {
       setIsLoading(false);
+      console.log('🔍 CUSTOM FIELDS: fetchCustomFields completed');
     }
   };
 
