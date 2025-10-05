@@ -48,35 +48,54 @@ def get_custom_fields():
 def create_custom_field():
     """Create a new custom field definition"""
     try:
+        print("🔍 CUSTOM FIELD CREATE: Starting custom field creation")
+        
         current_user_id = get_jwt_identity()
+        print(f"🔍 CUSTOM FIELD CREATE: User ID: {current_user_id}")
+        
+        if not current_user_id:
+            print("🔍 CUSTOM FIELD CREATE: No user ID found")
+            return jsonify({'error': 'No user ID found'}), 401
+            
         user = User.query.get(current_user_id)
+        print(f"🔍 CUSTOM FIELD CREATE: User found: {user.email if user else 'None'}")
         
         if not user or not user.is_approved:
+            print("🔍 CUSTOM FIELD CREATE: User not found or not approved")
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
+        print(f"🔍 CUSTOM FIELD CREATE: Request data: {data}")
+        
         field_name = data.get('name')
         field_key = data.get('key')
         field_type = data.get('type')
         field_options = data.get('options', [])
         
+        print(f"🔍 CUSTOM FIELD CREATE: Field details - name: {field_name}, key: {field_key}, type: {field_type}")
+        
         if not field_name or not field_key or not field_type:
+            print("🔍 CUSTOM FIELD CREATE: Missing required fields")
             return jsonify({'error': 'Name, key, and type are required'}), 400
         
         # Validate field type
         valid_types = ['text', 'email', 'tel', 'url', 'textarea', 'date', 'datetime-local', 'select', 'checkbox', 'number']
         if field_type not in valid_types:
+            print(f"🔍 CUSTOM FIELD CREATE: Invalid field type: {field_type}")
             return jsonify({'error': f'Invalid field type. Must be one of: {", ".join(valid_types)}'}), 400
         
         # Initialize user preferences if not exists
         if not user.user_preferences:
             user.user_preferences = {}
+            print("🔍 CUSTOM FIELD CREATE: Initialized user preferences")
         
         # Get existing custom fields
         custom_fields = user.user_preferences.get('custom_fields', [])
+        print(f"🔍 CUSTOM FIELD CREATE: Existing custom fields count: {len(custom_fields)}")
         
         # Check if field key already exists
         if any(field['key'] == field_key for field in custom_fields):
+            print(f"🔍 CUSTOM FIELD CREATE: Field key already exists: {field_key}")
             return jsonify({'error': 'Field key already exists'}), 400
         
         # Create new field definition
@@ -93,7 +112,22 @@ def create_custom_field():
         custom_fields.append(new_field)
         user.user_preferences['custom_fields'] = custom_fields
         
+        print(f"🔍 CUSTOM FIELD CREATE: Created field: {new_field}")
+        
+        # Add this custom field to all existing contacts for this user
+        from dal.models import Person
+        existing_contacts = Person.query.filter_by(owner_id=current_user_id).all()
+        print(f"🔍 CUSTOM FIELD CREATE: Found {len(existing_contacts)} existing contacts")
+        
+        for contact in existing_contacts:
+            if not contact.custom_fields:
+                contact.custom_fields = {}
+            # Initialize the new field with empty value for all contacts
+            contact.custom_fields[field_key] = None
+            print(f"🔍 CUSTOM FIELD CREATE: Added field '{field_key}' to contact {contact.id}")
+        
         db.session.commit()
+        print("🔍 CUSTOM FIELD CREATE: Successfully committed to database")
         
         return jsonify({
             'success': True,
@@ -102,6 +136,11 @@ def create_custom_field():
         }), 201
         
     except Exception as e:
+        print(f"🔍 CUSTOM FIELD CREATE: Error occurred: {str(e)}")
+        print(f"🔍 CUSTOM FIELD CREATE: Error type: {type(e)}")
+        import traceback
+        print(f"🔍 CUSTOM FIELD CREATE: Traceback: {traceback.format_exc()}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @custom_fields_bp.route('/custom-fields/<int:field_id>', methods=['PUT'])
