@@ -360,7 +360,7 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
       <DialogTrigger asChild>
         <Button variant="outline" className="shadow-lg">
           <Upload className="h-4 w-4 mr-2" />
-          Map CSV Columns
+          Import Contacts
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">

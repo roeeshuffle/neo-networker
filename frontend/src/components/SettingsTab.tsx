@@ -3,7 +3,7 @@ import { apiClient } from '@/integrations/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
@@ -627,6 +627,20 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   // Contact Management Functions
+  const [contactCount, setContactCount] = useState<number>(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const loadContactCount = async () => {
+    try {
+      const { data: people, error } = await apiClient.getPeople();
+      if (error) throw error;
+      setContactCount(people?.length || 0);
+    } catch (error) {
+      console.error('Error loading contact count:', error);
+      setContactCount(0);
+    }
+  };
+
   const handleDeleteAllContacts = async () => {
     try {
       // Get all people first, then delete them one by one
@@ -648,6 +662,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       if (onDeleteAllPeople) {
         await onDeleteAllPeople();
       }
+      
+      // Reset contact count
+      setContactCount(0);
+      setShowDeleteDialog(false);
     } catch (error: any) {
       toast({
         title: "Error deleting contacts",
@@ -664,6 +682,88 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       onDeleteAllPeople();
     }
   };
+
+  const handleDownloadContacts = async () => {
+    try {
+      const { data: people, error } = await apiClient.getPeople();
+      if (error) throw error;
+      
+      if (!people || people.length === 0) {
+        toast({
+          title: "No Contacts",
+          description: "You don't have any contacts to download.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert people data to CSV
+      const headers = [
+        'First Name', 'Last Name', 'Email', 'Phone', 'Mobile', 'Organization', 
+        'Job Title', 'Address', 'LinkedIn URL', 'GitHub URL', 'Facebook URL', 
+        'Twitter URL', 'Website URL', 'Notes', 'Tags', 'Source', 
+        'Last Contact Date', 'Next Follow-up Date', 'Status', 'Priority', 
+        'Group', 'Gender', 'Birthday', 'Job Status'
+      ];
+      
+      const csvContent = [
+        headers.join(','),
+        ...people.map(person => [
+          person.first_name || '',
+          person.last_name || '',
+          person.email || '',
+          person.phone || '',
+          person.mobile || '',
+          person.organization || '',
+          person.job_title || '',
+          person.address || '',
+          person.linkedin_url || '',
+          person.github_url || '',
+          person.facebook_url || '',
+          person.twitter_url || '',
+          person.website_url || '',
+          person.notes || '',
+          Array.isArray(person.tags) ? person.tags.join(';') : (person.tags || ''),
+          person.source || '',
+          person.last_contact_date || '',
+          person.next_follow_up_date || '',
+          person.status || '',
+          person.priority || '',
+          person.group || '',
+          person.gender || '',
+          person.birthday || '',
+          person.job_status || ''
+        ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `contacts_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Download Complete",
+        description: `Downloaded ${people.length} contacts as CSV file.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error downloading contacts",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load contact count when component mounts
+  useEffect(() => {
+    loadContactCount();
+  }, []);
 
   // Load user preferences from backend
   const loadUserPreferences = async () => {
@@ -1152,9 +1252,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <Merge className="w-4 h-4" />
                 Remove Duplicates
               </Button>
-              <AlertDialog>
+              <Button
+                onClick={handleDownloadContacts}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Contacts
+              </Button>
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex items-center gap-2">
+                  <Button 
+                    variant="destructive" 
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      loadContactCount();
+                      setShowDeleteDialog(true);
+                    }}
+                  >
                     <Trash2 className="w-4 h-4" />
                     Delete All Contacts
                   </Button>
@@ -1163,7 +1278,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete all contacts. This action cannot be undone.
+                      This will permanently delete {contactCount} contact{contactCount !== 1 ? 's' : ''}. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -1172,7 +1287,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       onClick={handleDeleteAllContacts}
                       className="bg-destructive hover:bg-destructive/90"
                     >
-                      Delete All
+                      Delete All {contactCount} Contact{contactCount !== 1 ? 's' : ''}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -1180,6 +1295,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
             <div className="text-xs text-muted-foreground">
               <p>• Remove Duplicates: Find and merge duplicate contact records</p>
+              <p>• Download Contacts: Export all contacts as a CSV file</p>
               <p>• Delete All Contacts: Permanently remove all contacts from your account</p>
             </div>
           </CardContent>
