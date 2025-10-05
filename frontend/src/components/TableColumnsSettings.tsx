@@ -65,6 +65,58 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log('🔍 FETCHING COLUMN DATA...');
+      
+      // First, try to load from localStorage (most reliable)
+      const localColumns = localStorage.getItem('contact_columns');
+      if (localColumns) {
+        try {
+          const savedColumns = JSON.parse(localColumns);
+          console.log('📱 Found localStorage columns:', savedColumns);
+          
+          if (Array.isArray(savedColumns)) {
+            const mergedColumns = [...defaultColumns];
+            
+            savedColumns.forEach((savedCol: ColumnConfig) => {
+              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+              if (existingIndex !== -1) {
+                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+              } else {
+                mergedColumns.push(savedCol);
+              }
+            });
+            
+            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+            console.log('✅ Loaded from localStorage:', mergedColumns);
+            
+            // Still try to fetch custom fields from backend
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+              const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+                }
+              });
+              
+              if (customFieldsResponse.ok) {
+                const customFieldsData = await customFieldsResponse.json();
+                setCustomFields(customFieldsData.custom_fields || []);
+                console.log('✅ Loaded custom fields from backend');
+              }
+            } catch (error) {
+              console.log('⚠️ Could not load custom fields from backend');
+            }
+            
+            return; // Successfully loaded from localStorage
+          }
+        } catch (error) {
+          console.error('❌ Error parsing localStorage columns:', error);
+        }
+      }
+
+      // If no localStorage data, try backend
+      console.log('📡 No localStorage data, trying backend...');
+      
       // Fetch custom fields
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
@@ -118,42 +170,19 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
             });
             
             setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+            console.log('✅ Loaded from backend:', mergedColumns);
             return; // Successfully loaded from backend
           }
         }
       } catch (error) {
-        console.log('Backend user-preferences not available, trying localStorage fallback');
-      }
-
-      // Fallback to localStorage if backend is not available
-      const localColumns = localStorage.getItem('contact_columns');
-      if (localColumns) {
-        try {
-          const savedColumns = JSON.parse(localColumns);
-          if (Array.isArray(savedColumns)) {
-            const mergedColumns = [...defaultColumns];
-            
-            savedColumns.forEach((savedCol: ColumnConfig) => {
-              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
-              if (existingIndex !== -1) {
-                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
-              } else {
-                mergedColumns.push(savedCol);
-              }
-            });
-            
-            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing localStorage columns:', error);
-        }
+        console.log('⚠️ Backend user-preferences not available');
       }
       
       // Use defaults if nothing else works
+      console.log('🔄 Using default columns');
       setColumns([...defaultColumns]);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       setColumns([...defaultColumns]);
     } finally {
       setIsLoading(false);
@@ -199,7 +228,13 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
         order: col.order
       }));
 
-      // Try to save to backend first
+      console.log('🔍 SAVING COLUMNS:', columnsToSave);
+
+      // Always save to localStorage first (immediate persistence)
+      localStorage.setItem('contact_columns', JSON.stringify(columnsToSave));
+      console.log('✅ Saved to localStorage:', columnsToSave);
+
+      // Try to save to backend as well
       try {
         const response = await fetch(`${apiUrl}/api/user-preferences`, {
           method: 'POST',
@@ -213,24 +248,26 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
         });
 
         if (response.ok) {
+          console.log('✅ Also saved to backend');
           toast({
             title: "Success",
             description: "Table column settings saved successfully",
           });
-          onClose();
-          return; // Successfully saved to backend
+        } else {
+          console.log('⚠️ Backend save failed, but localStorage saved');
+          toast({
+            title: "Success",
+            description: "Table column settings saved locally",
+          });
         }
       } catch (error) {
-        console.log('Backend save failed, using localStorage fallback');
+        console.log('⚠️ Backend save failed, but localStorage saved:', error);
+        toast({
+          title: "Success",
+          description: "Table column settings saved locally",
+        });
       }
-
-      // Fallback to localStorage if backend is not available
-      localStorage.setItem('contact_columns', JSON.stringify(columnsToSave));
       
-      toast({
-        title: "Success",
-        description: "Table column settings saved locally (backend unavailable)",
-      });
       onClose();
       
     } catch (error) {

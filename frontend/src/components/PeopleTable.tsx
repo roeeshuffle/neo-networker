@@ -202,6 +202,39 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   useEffect(() => {
     const fetchColumnPreferences = async () => {
       try {
+        console.log('🔍 PEOPLE TABLE: Fetching column preferences...');
+        
+        // First, try to load from localStorage (most reliable)
+        const localColumns = localStorage.getItem('contact_columns');
+        if (localColumns) {
+          try {
+            const savedColumns = JSON.parse(localColumns);
+            console.log('📱 PEOPLE TABLE: Found localStorage columns:', savedColumns);
+            
+            if (Array.isArray(savedColumns)) {
+              const mergedColumns = [...defaultColumns];
+              
+              savedColumns.forEach((savedCol: ColumnConfig) => {
+                const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+                if (existingIndex !== -1) {
+                  mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+                } else {
+                  mergedColumns.push(savedCol);
+                }
+              });
+              
+              setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+              console.log('✅ PEOPLE TABLE: Loaded from localStorage:', mergedColumns);
+              return; // Successfully loaded from localStorage
+            }
+          } catch (error) {
+            console.error('❌ PEOPLE TABLE: Error parsing localStorage columns:', error);
+          }
+        }
+
+        // If no localStorage data, try backend
+        console.log('📡 PEOPLE TABLE: No localStorage data, trying backend...');
+        
         const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
         
         // Try to fetch from backend first
@@ -230,42 +263,19 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
               });
               
               setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+              console.log('✅ PEOPLE TABLE: Loaded from backend:', mergedColumns);
               return; // Successfully loaded from backend
             }
           }
         } catch (error) {
-          console.log('Backend user-preferences not available, trying localStorage fallback');
-        }
-
-        // Fallback to localStorage if backend is not available
-        const localColumns = localStorage.getItem('contact_columns');
-        if (localColumns) {
-          try {
-            const savedColumns = JSON.parse(localColumns);
-            if (Array.isArray(savedColumns)) {
-              const mergedColumns = [...defaultColumns];
-              
-              savedColumns.forEach((savedCol: ColumnConfig) => {
-                const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
-                if (existingIndex !== -1) {
-                  mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
-                } else {
-                  mergedColumns.push(savedCol);
-                }
-              });
-              
-              setColumns(mergedColumns.sort((a, b) => a.order - b.order));
-              return;
-            }
-          } catch (error) {
-            console.error('Error parsing localStorage columns:', error);
-          }
+          console.log('⚠️ PEOPLE TABLE: Backend user-preferences not available');
         }
         
         // Use defaults if nothing else works
+        console.log('🔄 PEOPLE TABLE: Using default columns');
         setColumns(defaultColumns);
       } catch (error) {
-        console.error('Error fetching column preferences:', error);
+        console.error('❌ PEOPLE TABLE: Error fetching column preferences:', error);
         // Use defaults if fetch fails
         setColumns(defaultColumns);
       }
