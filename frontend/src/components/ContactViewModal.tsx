@@ -102,28 +102,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     try {
       console.log('🔍 CONTACT MODAL: Starting loadUserCustomFields');
       
-      // First, try to load from localStorage (most reliable)
-      const localCustomFields = localStorage.getItem('custom_fields');
-      console.log('🔍 CONTACT MODAL: localStorage data:', localCustomFields);
-      
-      if (localCustomFields) {
-        try {
-          const savedFields = JSON.parse(localCustomFields);
-          console.log('🔍 CONTACT MODAL: Parsed localStorage fields:', savedFields);
-          console.log('🔍 CONTACT MODAL: Is array?', Array.isArray(savedFields));
-          console.log('🔍 CONTACT MODAL: Field types:', savedFields.map(f => typeof f));
-          
-          if (Array.isArray(savedFields)) {
-            setUserCustomFieldDefinitions(savedFields);
-            console.log('🔍 CONTACT MODAL: Set from localStorage, exiting early');
-            return; // Exit early if localStorage data is available
-          }
-        } catch (e) {
-          console.error('🔍 CONTACT MODAL: Error parsing localStorage custom fields:', e);
-        }
-      }
-      
-      // If no localStorage data, try backend
+      // Always try backend first to get the latest data
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
@@ -158,9 +137,37 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         console.log('🔍 CONTACT MODAL: Saved to localStorage');
       } else {
         console.warn('🔍 CONTACT MODAL: Backend fetch failed:', response.status);
+        
+        // Fallback to localStorage if backend fails
+        const localCustomFields = localStorage.getItem('custom_fields');
+        if (localCustomFields) {
+          try {
+            const savedFields = JSON.parse(localCustomFields);
+            if (Array.isArray(savedFields)) {
+              console.log('🔍 CONTACT MODAL: Fallback to localStorage:', savedFields);
+              setUserCustomFieldDefinitions(savedFields);
+            }
+          } catch (e) {
+            console.error('🔍 CONTACT MODAL: Error parsing localStorage custom fields:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('🔍 CONTACT MODAL: Error loading custom fields:', error);
+      
+      // Fallback to localStorage if there's an error
+      const localCustomFields = localStorage.getItem('custom_fields');
+      if (localCustomFields) {
+        try {
+          const savedFields = JSON.parse(localCustomFields);
+          if (Array.isArray(savedFields)) {
+            console.log('🔍 CONTACT MODAL: Error fallback to localStorage:', savedFields);
+            setUserCustomFieldDefinitions(savedFields);
+          }
+        } catch (e) {
+          console.error('🔍 CONTACT MODAL: Error parsing localStorage custom fields:', e);
+        }
+      }
     }
   };
 
