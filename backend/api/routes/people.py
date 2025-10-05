@@ -4,8 +4,10 @@ from dal.models import Person, User
 from dal.database import db
 from datetime import datetime
 import uuid
+import logging
 
 people_bp = Blueprint('people', __name__)
+people_logger = logging.getLogger('people')
 
 @people_bp.route('/people', methods=['GET'])
 @jwt_required()
@@ -233,3 +235,67 @@ def delete_all_people():
         return jsonify({'error': str(e)}), 500
 
 # Share functionality removed - SharedData model deleted
+
+# User Preferences endpoints (temporary location)
+@people_bp.route('/user-preferences', methods=['GET'])
+@jwt_required()
+def get_user_preferences():
+    """Get user preferences"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        preferences = user.user_preferences or {}
+        
+        people_logger.info(f"🔍 USER PREFS GET: User {user.email}")
+        people_logger.info(f"🔍 USER PREFS GET: Preferences: {preferences}")
+        
+        return jsonify({
+            'success': True,
+            'preferences': preferences
+        })
+        
+    except Exception as e:
+        people_logger.error(f"Error getting user preferences: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@people_bp.route('/user-preferences', methods=['POST'])
+@jwt_required()
+def save_user_preferences():
+    """Save user preferences"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        people_logger.info(f"🔍 USER PREFS SAVE: User {user.email}")
+        people_logger.info(f"🔍 USER PREFS SAVE: Data: {data}")
+        
+        # Initialize user preferences if not exists
+        if not user.user_preferences:
+            user.user_preferences = {}
+        
+        # Update specific preference fields
+        for key, value in data.items():
+            user.user_preferences[key] = value
+        
+        db.session.commit()
+        
+        people_logger.info(f"🔍 USER PREFS SAVE: Updated preferences: {user.user_preferences}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'User preferences saved successfully',
+            'preferences': user.user_preferences
+        })
+        
+    except Exception as e:
+        people_logger.error(f"Error saving user preferences: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
