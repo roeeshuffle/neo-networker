@@ -139,7 +139,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
           },
           body: JSON.stringify(formData)
         });
@@ -159,11 +159,11 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       } else {
         // Create new field
         const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+        const response = await fetch(`${apiUrl}/api/custom-fields`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
           },
           body: JSON.stringify(formData)
         });
