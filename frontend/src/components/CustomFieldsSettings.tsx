@@ -8,7 +8,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface CustomFieldsSettingsProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onClose }) => {
@@ -43,9 +43,17 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       
       // If no localStorage data, try backend
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      if (!token) {
+        console.warn('No auth token found, skipping backend fetch');
+        setIsLoading(false);
+        return;
+      }
+      
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -56,6 +64,8 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         
         // Save to localStorage for future use
         localStorage.setItem('custom_fields', JSON.stringify(fields));
+      } else {
+        console.warn('Backend fetch failed:', response.status);
       }
     } catch (error) {
       console.error('Error fetching custom fields:', error);
@@ -91,11 +101,22 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
     try {
       setIsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Authentication required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           name: newFieldName.trim()
@@ -115,13 +136,14 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         fetchCustomFields();
         setNewFieldName('');
       } else {
-        throw new Error('Failed to create custom field');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create custom field');
       }
     } catch (error) {
       console.error('Error creating custom field:', error);
       toast({
         title: "Error",
-        description: "Failed to create custom field",
+        description: error instanceof Error ? error.message : "Failed to create custom field",
         variant: "destructive",
       });
     } finally {
@@ -137,10 +159,21 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
     try {
       setIsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Authentication required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const response = await fetch(`${apiUrl}/api/custom-fields/${encodeURIComponent(fieldName)}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -156,13 +189,14 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         
         fetchCustomFields();
       } else {
-        throw new Error('Failed to delete custom field');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete custom field');
       }
     } catch (error) {
       console.error('Error deleting custom field:', error);
       toast({
         title: "Error",
-        description: "Failed to delete custom field",
+        description: error instanceof Error ? error.message : "Failed to delete custom field",
         variant: "destructive",
       });
     } finally {
