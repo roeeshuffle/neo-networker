@@ -101,6 +101,21 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
 
   const loadUserCustomFields = async () => {
     try {
+      // First, try to load from localStorage (most reliable)
+      const localCustomFields = localStorage.getItem('custom_fields');
+      if (localCustomFields) {
+        try {
+          const savedFields = JSON.parse(localCustomFields);
+          if (Array.isArray(savedFields)) {
+            setUserCustomFieldDefinitions(savedFields);
+            return; // Exit early if localStorage data is available
+          }
+        } catch (e) {
+          console.error('Error parsing localStorage custom fields:', e);
+        }
+      }
+      
+      // If no localStorage data, try backend
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
@@ -110,7 +125,11 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       
       if (response.ok) {
         const data = await response.json();
-        setUserCustomFieldDefinitions(data.custom_fields || []);
+        const fields = data.custom_fields || [];
+        setUserCustomFieldDefinitions(fields);
+        
+        // Save to localStorage for future use
+        localStorage.setItem('custom_fields', JSON.stringify(fields));
       }
     } catch (error) {
       console.error('Error loading custom fields:', error);
@@ -131,11 +150,9 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       if (field.category === 'custom') {
         // Save the field even if it's empty/null to preserve the field structure
         customFieldsData[field.field] = field.value || null;
-        console.log(`🔍 CUSTOM FIELD SAVE: ${field.field} = ${field.value}`);
       }
     });
 
-    console.log('🔍 CUSTOM FIELDS DATA TO SAVE:', customFieldsData);
 
     const dataToSave = {
       ...formData,
