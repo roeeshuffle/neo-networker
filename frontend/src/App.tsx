@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.61 - CUSTOM FIELD DELETE FIX');
+  console.log('🚀 FRONTEND VERSION: 18.62 - USER PREFERENCES STRUCTURE FIX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
