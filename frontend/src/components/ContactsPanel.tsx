@@ -33,15 +33,6 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
         </div>
       </div>
       
-      {/* Search Bar */}
-      <div className="flex justify-center">
-        <SearchBar 
-          onSearch={onSearch} 
-          placeholder="Search contacts..."
-          activeTab="contacts"
-        />
-      </div>
-      
       <Card className="overflow-hidden">
          <CardHeader>
           <div className="flex items-center justify-between">
@@ -50,6 +41,15 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
                 {filteredPeople.length} entries
               </span>
             </CardTitle>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="flex justify-center mt-4">
+            <SearchBar 
+              onSearch={onSearch} 
+              placeholder="Search contacts..."
+              activeTab="contacts"
+            />
           </div>
         </CardHeader>
         <CardContent className="p-0">

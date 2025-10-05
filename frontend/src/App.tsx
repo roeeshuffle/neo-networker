@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.45 - CONTACTS-SPECIFIC SEARCH');
+  console.log('🚀 FRONTEND VERSION: 18.46 - SEARCH INSIDE CARD');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
