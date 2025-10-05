@@ -629,6 +629,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Contact Management Functions
   const [contactCount, setContactCount] = useState<number>(0);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadContactCount = async () => {
     try {
@@ -643,14 +645,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const handleDeleteAllContacts = async () => {
     try {
+      setIsDeleting(true);
+      setDeleteProgress(0);
+      
       // Get all people first, then delete them one by one
       const { data: people, error: fetchError } = await apiClient.getPeople();
       if (fetchError) throw fetchError;
       
-      // Delete all people
-      for (const person of people || []) {
+      const totalPeople = people?.length || 0;
+      
+      // Delete all people with progress tracking
+      for (let i = 0; i < totalPeople; i++) {
+        const person = people[i];
         const { error } = await apiClient.deletePerson(person.id);
         if (error) throw error;
+        
+        // Update progress
+        setDeleteProgress(Math.round(((i + 1) / totalPeople) * 100));
       }
 
       toast({
@@ -663,15 +674,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         await onDeleteAllPeople();
       }
       
-      // Reset contact count
+      // Reset contact count and close dialog
       setContactCount(0);
       setShowDeleteDialog(false);
+      setIsDeleting(false);
+      setDeleteProgress(0);
     } catch (error: any) {
       toast({
         title: "Error deleting contacts",
         description: error.message,
         variant: "destructive",
       });
+      setIsDeleting(false);
+      setDeleteProgress(0);
     }
   };
 
@@ -706,9 +721,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         'Group', 'Gender', 'Birthday', 'Job Status'
       ];
       
+      // Sort people by full name
+      const sortedPeople = [...people].sort((a, b) => {
+        const fullNameA = `${a.first_name || ''} ${a.last_name || ''}`.trim();
+        const fullNameB = `${b.first_name || ''} ${b.last_name || ''}`.trim();
+        return fullNameA.localeCompare(fullNameB);
+      });
+      
       const csvContent = [
         headers.join(','),
-        ...people.map(person => [
+        ...sortedPeople.map(person => [
           person.first_name || '',
           person.last_name || '',
           person.email || '',
@@ -1282,14 +1304,30 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAllContacts}
+                      disabled={isDeleting}
                       className="bg-destructive hover:bg-destructive/90"
                     >
-                      Delete All {contactCount} Contact{contactCount !== 1 ? 's' : ''}
+                      {isDeleting ? `Deleting... ${deleteProgress}%` : `Delete All ${contactCount} Contact${contactCount !== 1 ? 's' : ''}`}
                     </AlertDialogAction>
                   </AlertDialogFooter>
+                  
+                  {isDeleting && (
+                    <div className="px-6 pb-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Deleting contacts...</span>
+                        <span>{deleteProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${deleteProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
                 </AlertDialogContent>
               </AlertDialog>
             </div>

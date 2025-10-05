@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.42 - DELETE ALL & DOWNLOAD CONTACTS');
+  console.log('🚀 FRONTEND VERSION: 18.43 - PAGINATION & CUSTOM FIELDS');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

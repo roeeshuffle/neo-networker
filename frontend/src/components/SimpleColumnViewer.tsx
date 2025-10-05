@@ -365,7 +365,7 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>File Column Viewer</DialogTitle>
+          <DialogTitle>Contacts Import</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">

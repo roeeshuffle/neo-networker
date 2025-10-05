@@ -57,10 +57,12 @@ const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | 
 };
 
 export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
-  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>('first_name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [profileImages, setProfileImages] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
   
   // Fetch profile images for people with LinkedIn URLs
   useEffect(() => {
@@ -83,6 +85,13 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
 
     fetchImages();
   }, [people]);
+  
+  const getFullName = (person: Person) => {
+    const firstName = person.first_name || '';
+    const lastName = person.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || 'Unknown';
+  };
   
   // Apply sorting
   const sortedPeople = [...people].sort((a, b) => {
@@ -121,6 +130,17 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       return personValue.includes(filterValue.toLowerCase());
     });
   });
+  
+  // Apply pagination
+  const totalPages = Math.ceil(filteredPeople.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPeople = filteredPeople.slice(startIndex, endIndex);
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -136,13 +156,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       ...prev,
       [column]: value
     }));
-  };
-
-  const getFullName = (person: Person) => {
-    const firstName = person.first_name || '';
-    const lastName = person.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim();
-    return fullName || 'Unknown';
   };
 
   const getSortIcon = (field: SortField) => {
@@ -295,7 +308,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
           </tr>
         </thead>
         <tbody>
-           {filteredPeople.map((person, index) => (
+           {paginatedPeople.map((person, index) => (
             <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
               <td className="px-6 py-4">
                 <Avatar className="h-10 w-10">
@@ -359,6 +372,59 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
           ))}
         </tbody>
       </table>
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border-soft">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredPeople.length)} of {filteredPeople.length} contacts
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
     </div>
   );
