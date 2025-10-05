@@ -27,29 +27,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       console.log('🔍 CUSTOM FIELDS: Starting fetchCustomFields');
       setIsLoading(true);
       
-      // First, try to load from localStorage (most reliable)
-      const localCustomFields = localStorage.getItem('custom_fields');
-      console.log('🔍 CUSTOM FIELDS: localStorage data:', localCustomFields);
-      
-      if (localCustomFields) {
-        try {
-          const savedFields = JSON.parse(localCustomFields);
-          console.log('🔍 CUSTOM FIELDS: Parsed localStorage fields:', savedFields);
-          console.log('🔍 CUSTOM FIELDS: Is array?', Array.isArray(savedFields));
-          console.log('🔍 CUSTOM FIELDS: Field types:', savedFields.map(f => typeof f));
-          
-          if (Array.isArray(savedFields)) {
-            setCustomFields(savedFields);
-            setIsLoading(false);
-            console.log('🔍 CUSTOM FIELDS: Set from localStorage, exiting early');
-            return; // Exit early if localStorage data is available
-          }
-        } catch (e) {
-          console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
-        }
-      }
-      
-      // If no localStorage data, try backend
+      // Always try backend first to get the latest data
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
@@ -85,9 +63,38 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         console.log('🔍 CUSTOM FIELDS: Saved to localStorage');
       } else {
         console.warn('🔍 CUSTOM FIELDS: Backend fetch failed:', response.status);
+        
+        // Fallback to localStorage if backend fails
+        const localCustomFields = localStorage.getItem('custom_fields');
+        if (localCustomFields) {
+          try {
+            const savedFields = JSON.parse(localCustomFields);
+            if (Array.isArray(savedFields)) {
+              console.log('🔍 CUSTOM FIELDS: Fallback to localStorage:', savedFields);
+              setCustomFields(savedFields);
+            }
+          } catch (e) {
+            console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('🔍 CUSTOM FIELDS: Error fetching custom fields:', error);
+      
+      // Fallback to localStorage if there's an error
+      const localCustomFields = localStorage.getItem('custom_fields');
+      if (localCustomFields) {
+        try {
+          const savedFields = JSON.parse(localCustomFields);
+          if (Array.isArray(savedFields)) {
+            console.log('🔍 CUSTOM FIELDS: Error fallback to localStorage:', savedFields);
+            setCustomFields(savedFields);
+          }
+        } catch (e) {
+          console.error('🔍 CUSTOM FIELDS: Error parsing localStorage custom fields:', e);
+        }
+      }
+      
       toast({
         title: "Error",
         description: "Failed to fetch custom fields",
