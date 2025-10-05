@@ -203,32 +203,67 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
     const fetchColumnPreferences = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-        const response = await fetch(`${apiUrl}/api/user-preferences`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
-          }
-        });
+        
+        // Try to fetch from backend first
+        try {
+          const response = await fetch(`${apiUrl}/api/user-preferences`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+            }
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const savedColumns = data.preferences?.contact_columns;
-          
-          if (savedColumns && Array.isArray(savedColumns)) {
-            // Merge saved columns with defaults
-            const mergedColumns = [...defaultColumns];
+          if (response.ok) {
+            const data = await response.json();
+            const savedColumns = data.preferences?.contact_columns;
             
-            savedColumns.forEach((savedCol: ColumnConfig) => {
-              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
-              if (existingIndex !== -1) {
-                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
-              } else {
-                mergedColumns.push(savedCol);
-              }
-            });
-            
-            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+            if (savedColumns && Array.isArray(savedColumns)) {
+              // Merge saved columns with defaults
+              const mergedColumns = [...defaultColumns];
+              
+              savedColumns.forEach((savedCol: ColumnConfig) => {
+                const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+                if (existingIndex !== -1) {
+                  mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+                } else {
+                  mergedColumns.push(savedCol);
+                }
+              });
+              
+              setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+              return; // Successfully loaded from backend
+            }
+          }
+        } catch (error) {
+          console.log('Backend user-preferences not available, trying localStorage fallback');
+        }
+
+        // Fallback to localStorage if backend is not available
+        const localColumns = localStorage.getItem('contact_columns');
+        if (localColumns) {
+          try {
+            const savedColumns = JSON.parse(localColumns);
+            if (Array.isArray(savedColumns)) {
+              const mergedColumns = [...defaultColumns];
+              
+              savedColumns.forEach((savedCol: ColumnConfig) => {
+                const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+                if (existingIndex !== -1) {
+                  mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+                } else {
+                  mergedColumns.push(savedCol);
+                }
+              });
+              
+              setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+              return;
+            }
+          } catch (error) {
+            console.error('Error parsing localStorage columns:', error);
           }
         }
+        
+        // Use defaults if nothing else works
+        setColumns(defaultColumns);
       } catch (error) {
         console.error('Error fetching column preferences:', error);
         // Use defaults if fetch fails

@@ -78,53 +78,80 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
         setCustomFields(customFieldsData.custom_fields || []);
       }
 
-      // Fetch user preferences for table columns
-      const userPrefsResponse = await fetch(`${apiUrl}/api/user-preferences`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
-        }
-      });
+      // Try to fetch user preferences from backend
+      try {
+        const userPrefsResponse = await fetch(`${apiUrl}/api/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          }
+        });
 
-      if (userPrefsResponse.ok) {
-        const userPrefs = await userPrefsResponse.json();
-        const savedColumns = userPrefs.preferences?.contact_columns;
-        
-        if (savedColumns && Array.isArray(savedColumns)) {
-          // Merge saved columns with defaults
-          const mergedColumns = [...defaultColumns];
+        if (userPrefsResponse.ok) {
+          const userPrefs = await userPrefsResponse.json();
+          const savedColumns = userPrefs.preferences?.contact_columns;
           
-          savedColumns.forEach((savedCol: ColumnConfig) => {
-            const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
-            if (existingIndex !== -1) {
-              mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
-            } else {
-              mergedColumns.push(savedCol);
-            }
-          });
-          
-          // Add custom fields
-          customFieldsData.custom_fields?.forEach((field: CustomField) => {
-            const customColKey = `custom_${field.key}`;
-            const existingIndex = mergedColumns.findIndex(col => col.key === customColKey);
-            if (existingIndex === -1) {
-              mergedColumns.push({
-                key: customColKey,
-                label: field.name,
-                enabled: false,
-                order: mergedColumns.length + 1
-              });
-            }
-          });
-          
-          setColumns(mergedColumns.sort((a, b) => a.order - b.order));
-        } else {
-          // Use defaults
-          setColumns([...defaultColumns]);
+          if (savedColumns && Array.isArray(savedColumns)) {
+            // Merge saved columns with defaults
+            const mergedColumns = [...defaultColumns];
+            
+            savedColumns.forEach((savedCol: ColumnConfig) => {
+              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+              if (existingIndex !== -1) {
+                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+              } else {
+                mergedColumns.push(savedCol);
+              }
+            });
+            
+            // Add custom fields
+            customFieldsData.custom_fields?.forEach((field: CustomField) => {
+              const customColKey = `custom_${field.key}`;
+              const existingIndex = mergedColumns.findIndex(col => col.key === customColKey);
+              if (existingIndex === -1) {
+                mergedColumns.push({
+                  key: customColKey,
+                  label: field.name,
+                  enabled: false,
+                  order: mergedColumns.length + 1
+                });
+              }
+            });
+            
+            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+            return; // Successfully loaded from backend
+          }
         }
-      } else {
-        // Use defaults if can't fetch preferences
-        setColumns([...defaultColumns]);
+      } catch (error) {
+        console.log('Backend user-preferences not available, trying localStorage fallback');
       }
+
+      // Fallback to localStorage if backend is not available
+      const localColumns = localStorage.getItem('contact_columns');
+      if (localColumns) {
+        try {
+          const savedColumns = JSON.parse(localColumns);
+          if (Array.isArray(savedColumns)) {
+            const mergedColumns = [...defaultColumns];
+            
+            savedColumns.forEach((savedCol: ColumnConfig) => {
+              const existingIndex = mergedColumns.findIndex(col => col.key === savedCol.key);
+              if (existingIndex !== -1) {
+                mergedColumns[existingIndex] = { ...mergedColumns[existingIndex], ...savedCol };
+              } else {
+                mergedColumns.push(savedCol);
+              }
+            });
+            
+            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing localStorage columns:', error);
+        }
+      }
+      
+      // Use defaults if nothing else works
+      setColumns([...defaultColumns]);
     } catch (error) {
       console.error('Error fetching data:', error);
       setColumns([...defaultColumns]);
@@ -172,26 +199,40 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
         order: col.order
       }));
 
-      const response = await fetch(`${apiUrl}/api/user-preferences`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          contact_columns: columnsToSave
-        })
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Table column settings saved successfully",
+      // Try to save to backend first
+      try {
+        const response = await fetch(`${apiUrl}/api/user-preferences`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            contact_columns: columnsToSave
+          })
         });
-        onClose();
-      } else {
-        throw new Error('Failed to save settings');
+
+        if (response.ok) {
+          toast({
+            title: "Success",
+            description: "Table column settings saved successfully",
+          });
+          onClose();
+          return; // Successfully saved to backend
+        }
+      } catch (error) {
+        console.log('Backend save failed, using localStorage fallback');
       }
+
+      // Fallback to localStorage if backend is not available
+      localStorage.setItem('contact_columns', JSON.stringify(columnsToSave));
+      
+      toast({
+        title: "Success",
+        description: "Table column settings saved locally (backend unavailable)",
+      });
+      onClose();
+      
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
