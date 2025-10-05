@@ -66,6 +66,109 @@ const getTextColorFromBg = (bgColor: string): string => {
   return `hsl(${hue}, 70%, 25%)`;
 };
 
+// Helper function to get cell value for a given column and person
+const getCellValue = (person: Person, columnKey: string): string => {
+  if (columnKey === 'full_name') {
+    const firstName = person.first_name || '';
+    const lastName = person.last_name || '';
+    return `${firstName} ${lastName}`.trim() || 'Unknown';
+  } else if (columnKey.startsWith('custom_')) {
+    const customFieldKey = columnKey.replace('custom_', '');
+    return person.custom_fields?.[customFieldKey] || '';
+  } else {
+    const value = person[columnKey as keyof Person];
+    if (value === null || value === undefined) return '';
+    
+    // Format dates
+    if (columnKey.includes('_date') || columnKey === 'created_at') {
+      if (typeof value === 'string') {
+        try {
+          const date = new Date(value);
+          return date.toLocaleDateString();
+        } catch {
+          return value;
+        }
+      }
+    }
+    
+    return String(value);
+  }
+};
+
+// Helper function to format cell content with proper styling
+const formatCellContent = (person: Person, columnKey: string): JSX.Element => {
+  const value = getCellValue(person, columnKey);
+  
+  if (columnKey === 'email' && value) {
+    return (
+      <a 
+        href={`mailto:${value}`} 
+        className="text-blue-600 hover:text-blue-800 underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {value}
+      </a>
+    );
+  }
+  
+  if (columnKey === 'phone' || columnKey === 'mobile') {
+    return (
+      <a 
+        href={`tel:${value}`} 
+        className="text-blue-600 hover:text-blue-800 underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {value}
+      </a>
+    );
+  }
+  
+  if (columnKey === 'linkedin_url' || columnKey === 'github_url' || columnKey === 'website_url') {
+    if (value) {
+      return (
+        <a 
+          href={value} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {columnKey === 'linkedin_url' ? 'LinkedIn' : 
+           columnKey === 'github_url' ? 'GitHub' : 'Website'}
+        </a>
+      );
+    }
+    return <span className="text-muted-foreground">-</span>;
+  }
+  
+  if (columnKey === 'status' && value) {
+    const statusColors: Record<string, string> = {
+      'active': 'bg-green-100 text-green-800',
+      'inactive': 'bg-gray-100 text-gray-800',
+      'pending': 'bg-yellow-100 text-yellow-800',
+      'blocked': 'bg-red-100 text-red-800'
+    };
+    const colorClass = statusColors[value.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return <Badge className={colorClass}>{value}</Badge>;
+  }
+  
+  if (columnKey === 'priority' && value) {
+    const priorityColors: Record<string, string> = {
+      'high': 'bg-red-100 text-red-800',
+      'medium': 'bg-yellow-100 text-yellow-800',
+      'low': 'bg-green-100 text-green-800'
+    };
+    const colorClass = priorityColors[value.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return <Badge className={colorClass}>{value}</Badge>;
+  }
+  
+  if (!value) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+  
+  return <span>{value}</span>;
+};
+
 // Function to fetch LinkedIn profile image
 const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | null> => {
   try {
@@ -79,7 +182,7 @@ const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | 
       return null;
     }
 
-    return data?.profile_image_url || null;
+    return data?.image_url || null;
   } catch (error) {
     console.error('Error calling LinkedIn profile image function:', error);
     return null;
@@ -142,8 +245,8 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       const newImages: Record<string, string> = {};
       
       for (const person of people) {
-        if (person.linkedin_profile && !profileImages[person.id]) {
-          const imageUrl = await fetchLinkedInProfileImage(person.linkedin_profile);
+        if (person.linkedin_url && !profileImages[person.id]) {
+          const imageUrl = await fetchLinkedInProfileImage(person.linkedin_url);
           if (imageUrl) {
             newImages[person.id] = imageUrl;
           }
@@ -194,12 +297,15 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       
       let personValue;
       if (column === 'full_name') {
-        personValue = getFullName(person).toLowerCase();
+        personValue = getFullName(person);
+      } else if (column.startsWith('custom_')) {
+        const customFieldKey = column.replace('custom_', '');
+        personValue = person.custom_fields?.[customFieldKey] || '';
       } else {
-        personValue = person[column as keyof Person]?.toString()?.toLowerCase() || '';
+        personValue = person[column as keyof Person] || '';
       }
       
-      return personValue.includes(filterValue.toLowerCase());
+      return String(personValue).toLowerCase().includes(filterValue.toLowerCase());
     });
   });
   
@@ -213,7 +319,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
-
+  
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -222,27 +328,30 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       setSortOrder('asc');
     }
   };
-
+  
   const handleFilter = (column: string, value: string) => {
     setFilters(prev => ({
       ...prev,
       [column]: value
     }));
   };
-
+  
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3" />;
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3" />;
+    }
     return sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
   };
 
+  // Get enabled columns sorted by order
+  const enabledColumns = columns
+    .filter(col => col.enabled)
+    .sort((a, b) => a.order - b.order);
+
   if (people.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-          <Eye className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <p className="text-muted-foreground font-medium mb-2">No contacts found</p>
-        <p className="text-sm text-muted-foreground">Add some entries to get started with your CRM</p>
+      <div className="text-center py-12">
+        <div className="text-muted-foreground">No contacts found</div>
       </div>
     );
   }
@@ -253,198 +362,193 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
         <table className="w-full min-w-[700px]">
           <thead>
             <tr className="border-b border-border-soft bg-muted/30">
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider w-16">
-              Photo
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-              <div className="flex items-center gap-2">
-                Full Name
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('first_name')}
-                  className="h-6 w-6 p-0"
-                >
-                  {getSortIcon('first_name')}
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-6 w-6 p-0 ${filters.full_name ? 'text-green-600' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by name</label>
-                      <Input
-                        placeholder="Enter name..."
-                        value={filters.full_name || ''}
-                        onChange={(e) => handleFilter('full_name', e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-              <div className="flex items-center gap-2">
-                Organization
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-6 w-6 p-0 ${filters.organization ? 'text-green-600' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by organization</label>
-                      <Input
-                        placeholder="Enter organization..."
-                        value={filters.organization || ''}
-                        onChange={(e) => handleFilter('organization', e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-              <div className="flex items-center gap-2">
-                Role
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-6 w-6 p-0 ${filters.job_title ? 'text-green-600' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by role</label>
-                      <Input
-                        placeholder="Enter role..."
-                        value={filters.job_title || ''}
-                        onChange={(e) => handleFilter('job_title', e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-              <div className="flex items-center gap-2">
-                Status
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('status')}
-                  className="h-6 w-6 p-0"
-                >
-                  {getSortIcon('status')}
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-6 w-6 p-0 ${filters.status ? 'text-green-600' : ''}`}
-                    >
-                      <Filter className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Filter by status</label>
-                      <Input
-                        placeholder="Enter status..."
-                        value={filters.status || ''}
-                        onChange={(e) => handleFilter('status', e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-            <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-           {paginatedPeople.map((person, index) => (
-            <tr key={person.id} className={`border-b border-border-soft transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-white' : 'bg-muted/10'}`}>
-              <td className="px-6 py-4">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage 
-                    src={profileImages[person.id] || ""} 
-                    alt={getFullName(person)}
-                    onError={(e) => {
-                      // If image fails to load, hide it to show fallback
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {(person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </td>
-              <td className="px-6 py-4">
-                <div className="font-semibold text-foreground" title={person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown'}>
-                  {person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : person.first_name || person.last_name || 'Unknown'}
-                </div>
-                {person.email && (
-                  <div className="text-xs text-muted-foreground">
-                    {person.email}
+              {/* Photo column - always shown */}
+              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider w-16">
+                Photo
+              </th>
+              
+              {/* Dynamic columns based on user preferences */}
+              {enabledColumns.map((column) => (
+                <th key={column.key} className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    {column.label}
+                    {column.key === 'first_name' && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSort('first_name')}
+                          className="h-6 w-6 p-0"
+                        >
+                          {getSortIcon('first_name')}
+                        </Button>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-6 w-6 p-0 ${filters.full_name ? 'text-green-600' : ''}`}
+                            >
+                              <Filter className="h-3 w-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Filter by name</label>
+                              <Input
+                                placeholder="Enter name..."
+                                value={filters.full_name || ''}
+                                onChange={(e) => handleFilter('full_name', e.target.value)}
+                              />
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </>
+                    )}
+                    {column.key === 'organization' && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-6 w-6 p-0 ${filters.organization ? 'text-green-600' : ''}`}
+                          >
+                            <Filter className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Filter by organization</label>
+                            <Input
+                              placeholder="Enter organization..."
+                              value={filters.organization || ''}
+                              onChange={(e) => handleFilter('organization', e.target.value)}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    {column.key === 'job_title' && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-6 w-6 p-0 ${filters.job_title ? 'text-green-600' : ''}`}
+                          >
+                            <Filter className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Filter by job title</label>
+                            <Input
+                              placeholder="Enter job title..."
+                              value={filters.job_title || ''}
+                              onChange={(e) => handleFilter('job_title', e.target.value)}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    {column.key === 'status' && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-6 w-6 p-0 ${filters.status ? 'text-green-600' : ''}`}
+                          >
+                            <Filter className="h-3 w-3" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Filter by status</label>
+                            <Input
+                              placeholder="Enter status..."
+                              value={filters.status || ''}
+                              onChange={(e) => handleFilter('status', e.target.value)}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </div>
-                )}
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-sm font-medium text-foreground">{person.organization || "—"}</span>
-              </td>
-               <td className="px-6 py-4">
-                <span className="text-sm font-medium text-foreground">{person.job_title || "—"}</span>
-               </td>
-               <td className="px-6 py-4">
-                 <span className="text-sm font-medium text-foreground">{person.status || "—"}</span>
-               </td>
-                <td className="px-6 py-4">
-                 <div className="flex gap-2">
-                   <Button
-                     size="sm"
-                     variant="outline"
-                     onClick={() => onView(person)}
-                     title="View Details"
-                   >
-                     <Eye className="h-4 w-4" />
-                   </Button>
-                   <ShareDataDialog 
-                     tableName="people" 
-                     recordId={person.id}
-                   />
-                   <Button
-                     size="sm"
-                     variant="outline"
-                     onClick={() => onDelete(person.id)}
-                     title="Delete"
-                   >
-                     <Trash2 className="h-4 w-4" />
-                   </Button>
-                 </div>
-              </td>
+                </th>
+              ))}
+              
+              {/* Actions column - always shown */}
+              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      
+          </thead>
+          <tbody>
+            {paginatedPeople.map((person) => (
+              <tr 
+                key={person.id} 
+                className="border-b border-border-soft hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => onView(person)}
+              >
+                {/* Photo column - always shown */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage 
+                        src={profileImages[person.id] || person.avatar_url || undefined} 
+                        alt={getFullName(person)}
+                      />
+                      <AvatarFallback 
+                        style={{ 
+                          backgroundColor: getColorFromText(getFullName(person)),
+                          color: getTextColorFromBg(getColorFromText(getFullName(person)))
+                        }}
+                      >
+                        {getFullName(person).split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                </td>
+                
+                {/* Dynamic columns based on user preferences */}
+                {enabledColumns.map((column) => (
+                  <td key={column.key} className="px-6 py-4">
+                    {formatCellContent(person, column.key)}
+                  </td>
+                ))}
+                
+                {/* Actions column - always shown */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onView(person);
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(person.id);
+                      }}
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-border-soft">
@@ -460,32 +564,33 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
             >
               Previous
             </Button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
+            
+            {/* Page numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="w-8 h-8 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            
             <Button
               variant="outline"
               size="sm"
@@ -497,7 +602,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 };

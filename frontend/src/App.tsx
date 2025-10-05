@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.53 - TABLE COLUMNS SETTINGS');
+  console.log('🚀 FRONTEND VERSION: 18.54 - DYNAMIC TABLE COLUMNS');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
