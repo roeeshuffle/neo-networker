@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: neo_networker_postgres_local
+    environment:
+      POSTGRES_DB: neo_networker_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_local_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - neo_networker_local
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
+    container_name: neo_networker_backend_local
+    environment:
+      - DATABASE_URL=postgresql://postgres:localpassword@postgres:5432/neo_networker_local
+      - SECRET_KEY=local-development-secret-key
+      - JWT_SECRET_KEY=local-jwt-secret-key-for-development
+      - FLASK_DEBUG=True
+      - PORT=5002
+      - FRONTEND_URL=http://localhost:3000
+      - ADMIN_EMAIL=admin@localhost
+      - ENVIRONMENT=development
+      - TESTING=false
+    ports:
+      - "5002:5002"
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Exclude venv from volume mount
+    networks:
+      - neo_networker_local
+    command: python main.py
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.local
+    container_name: neo_networker_frontend_local
+    environment:
+      - VITE_API_URL=http://localhost:5002
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Exclude node_modules from volume mount
+    networks:
+      - neo_networker_local
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  neo_networker_local:
+    driver: bridge
