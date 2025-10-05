@@ -82,28 +82,45 @@ export const SearchBar = ({ onSearch, placeholder = "Search contacts...", active
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       
+      console.log('🔍 SEARCH BAR: Fetching custom fields from:', `${apiUrl}/api/custom-fields`);
+      console.log('🔍 SEARCH BAR: Token exists:', !!token);
+      
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('🔍 SEARCH BAR: Custom fields response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 SEARCH BAR: Custom fields response data:', data);
+        
         const customFieldsData: SearchField[] = (data.custom_fields || []).map((cf: any) => ({
-          key: cf.key,
+          key: `custom_${cf.key}`, // Prefix with 'custom_' to distinguish from standard fields
           label: cf.name,
           type: 'text'
         }));
+        
+        console.log('🔍 SEARCH BAR: Processed custom fields:', customFieldsData);
         setCustomFields(customFieldsData);
+      } else {
+        console.error('🔍 SEARCH BAR: Failed to fetch custom fields:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('🔍 SEARCH BAR: Error response:', errorText);
       }
     } catch (error) {
-      console.error('Error fetching custom fields:', error);
+      console.error('🔍 SEARCH BAR: Error fetching custom fields:', error);
     }
   };
 
   const getAllSearchFields = (): SearchField[] => {
-    return [...standardFields, ...customFields];
+    const allFields = [...standardFields, ...customFields];
+    console.log('🔍 SEARCH BAR: All search fields:', allFields);
+    console.log('🔍 SEARCH BAR: Standard fields count:', standardFields.length);
+    console.log('🔍 SEARCH BAR: Custom fields count:', customFields.length);
+    return allFields;
   };
 
   const generateSuggestions = (searchTerm: string): SuggestionItem[] => {
