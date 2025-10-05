@@ -174,6 +174,10 @@ def update_person(person_id):
         person.custom_fields = data.get('custom_fields', person.custom_fields)
         person.updated_at = datetime.utcnow()
         
+        print(f"🔍 PEOPLE UPDATE: Person {person.id} custom_fields updated")
+        print(f"🔍 PEOPLE UPDATE: New custom_fields: {person.custom_fields}")
+        print(f"🔍 PEOPLE UPDATE: Data custom_fields: {data.get('custom_fields')}")
+        
         db.session.commit()
         
         return jsonify(person.to_dict())

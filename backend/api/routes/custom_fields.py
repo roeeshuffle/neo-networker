@@ -34,6 +34,8 @@ def get_custom_fields():
         print(f"🔍 CUSTOM FIELDS API: Fields from preferences: {len(custom_fields_from_preferences)}")
         # print(f"🔍 CUSTOM FIELDS API: Fields from column: {len(custom_fields_from_column)}")  # Temporarily disabled
         print(f"🔍 CUSTOM FIELDS API: Total fields: {len(all_custom_fields)}")
+        print(f"🔍 CUSTOM FIELDS API: User preferences: {user.user_preferences}")
+        print(f"🔍 CUSTOM FIELDS API: All custom fields: {all_custom_fields}")
         
         return jsonify({
             'success': True,
@@ -92,6 +94,7 @@ def create_custom_field():
         # Get existing custom fields
         custom_fields = user.user_preferences.get('custom_fields', [])
         print(f"🔍 CUSTOM FIELD CREATE: Existing custom fields count: {len(custom_fields)}")
+        print(f"🔍 CUSTOM FIELD CREATE: Current user_preferences: {user.user_preferences}")
         
         # Check if field key already exists
         if any(field['key'] == field_key for field in custom_fields):

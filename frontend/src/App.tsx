@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.50 - CUSTOM FIELDS IN CONTACT MANAGEMENT');
+  console.log('🚀 FRONTEND VERSION: 18.51 - CUSTOM FIELDS FIX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

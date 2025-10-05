@@ -125,11 +125,12 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   };
 
   const handleSave = () => {
-    // Prepare custom fields object (only save actual custom fields, not form data)
+    // Prepare custom fields object (save all custom fields, even empty ones)
     const customFieldsData = {};
     customFields.forEach(field => {
-      if (field.value && field.value !== '' && field.category === 'custom') {
-        customFieldsData[field.field] = field.value;
+      if (field.category === 'custom') {
+        // Save the field even if it's empty/null to preserve the field structure
+        customFieldsData[field.field] = field.value || null;
       }
     });
 
