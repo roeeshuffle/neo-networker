@@ -155,6 +155,14 @@ def delete_custom_field(field_id):
         
         removed_field = custom_fields.pop(field_index)
         
+        # Remove this custom field from all existing contacts for this user
+        from dal.models import Person
+        existing_contacts = Person.query.filter_by(owner_id=current_user_id).all()
+        
+        for contact in existing_contacts:
+            if contact.custom_fields and removed_field['key'] in contact.custom_fields:
+                del contact.custom_fields[removed_field['key']]
+        
         user.user_preferences['custom_fields'] = custom_fields
         db.session.commit()
         

@@ -245,7 +245,8 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/custom-fields/${fieldId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/api/custom-fields/${fieldId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
@@ -257,6 +258,11 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
           title: "Success",
           description: "Custom field deleted successfully",
         });
+        
+        // Update localStorage immediately
+        const updatedFields = customFields.filter(field => field.id !== fieldId);
+        localStorage.setItem('custom_fields', JSON.stringify(updatedFields));
+        
         fetchCustomFields();
       } else {
         throw new Error('Failed to delete custom field');
