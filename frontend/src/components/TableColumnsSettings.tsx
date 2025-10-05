@@ -101,7 +101,25 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
               if (customFieldsResponse.ok) {
                 const customFieldsData = await customFieldsResponse.json();
                 setCustomFields(customFieldsData.custom_fields || []);
-                console.log('✅ Loaded custom fields from backend');
+                console.log('✅ Loaded custom fields from backend:', customFieldsData.custom_fields);
+                
+                // Add custom fields to columns if they're not already there
+                const updatedColumns = [...mergedColumns];
+                customFieldsData.custom_fields?.forEach((field: CustomField) => {
+                  const customColKey = `custom_${field.key}`;
+                  const existingIndex = updatedColumns.findIndex(col => col.key === customColKey);
+                  if (existingIndex === -1) {
+                    updatedColumns.push({
+                      key: customColKey,
+                      label: field.name,
+                      enabled: false,
+                      order: updatedColumns.length + 1
+                    });
+                    console.log('➕ Added custom field to columns:', field.name);
+                  }
+                });
+                
+                setColumns(updatedColumns.sort((a, b) => a.order - b.order));
               }
             } catch (error) {
               console.log('⚠️ Could not load custom fields from backend');

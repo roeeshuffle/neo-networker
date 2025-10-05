@@ -131,14 +131,18 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       if (field.category === 'custom') {
         // Save the field even if it's empty/null to preserve the field structure
         customFieldsData[field.field] = field.value || null;
+        console.log(`🔍 CUSTOM FIELD SAVE: ${field.field} = ${field.value}`);
       }
     });
+
+    console.log('🔍 CUSTOM FIELDS DATA TO SAVE:', customFieldsData);
 
     const dataToSave = {
       ...formData,
       custom_fields: customFieldsData
     };
 
+    console.log('🔍 FULL DATA TO SAVE:', dataToSave);
     onSave(dataToSave);
   };
 
@@ -153,7 +157,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

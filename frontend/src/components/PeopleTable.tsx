@@ -169,26 +169,6 @@ const formatCellContent = (person: Person, columnKey: string): JSX.Element => {
   return <span>{value}</span>;
 };
 
-// Function to fetch LinkedIn profile image
-const fetchLinkedInProfileImage = async (linkedinUrl: string): Promise<string | null> => {
-  try {
-    const { data, error } = await apiClient.request('/linkedin-profile-image', {
-      method: 'POST',
-      body: JSON.stringify({ linkedin_url: linkedinUrl })
-    });
-
-    if (error) {
-      console.error('Error fetching LinkedIn profile image:', error);
-      return null;
-    }
-
-    return data?.image_url || null;
-  } catch (error) {
-    console.error('Error calling LinkedIn profile image function:', error);
-    return null;
-  }
-};
-
 export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
   const [sortField, setSortField] = useState<SortField | null>('first_name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -283,28 +263,6 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
 
     fetchColumnPreferences();
   }, []);
-  
-  // Fetch profile images for people with LinkedIn URLs
-  useEffect(() => {
-    const fetchImages = async () => {
-      const newImages: Record<string, string> = {};
-      
-      for (const person of people) {
-        if (person.linkedin_url && !profileImages[person.id]) {
-          const imageUrl = await fetchLinkedInProfileImage(person.linkedin_url);
-          if (imageUrl) {
-            newImages[person.id] = imageUrl;
-          }
-        }
-      }
-      
-      if (Object.keys(newImages).length > 0) {
-        setProfileImages(prev => ({ ...prev, ...newImages }));
-      }
-    };
-
-    fetchImages();
-  }, [people]);
   
   const getFullName = (person: Person) => {
     const firstName = person.first_name || '';
