@@ -1336,6 +1336,35 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <p>• Download Contacts: Export all contacts as a CSV file</p>
               <p>• Delete All Contacts: Permanently remove all contacts from your account</p>
             </div>
+            
+            {/* Custom Fields Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Custom Fields
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Create custom fields to store additional information about your contacts
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleSection('customFields')}
+                  className="p-1 h-auto"
+                >
+                  {expandedSections.customFields ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </Button>
+              </div>
+              {expandedSections.customFields && (
+                <CustomFieldsSettings 
+                  isOpen={expandedSections.customFields}
+                  onClose={() => setExpandedSections(prev => ({ ...prev, customFields: false }))}
+                />
+              )}
+            </div>
           </CardContent>
         )}
       </Card>
@@ -1412,39 +1441,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <p>• Default View: Choose how the calendar displays by default</p>
               <p>• Start Weekday: Choose which day the week starts on</p>
             </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Custom Fields Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Custom Fields
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Create custom fields to store additional information about your contacts
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleSection('customFields')}
-              className="p-1 h-auto"
-            >
-              {expandedSections.customFields ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
-          </div>
-        </CardHeader>
-        {expandedSections.customFields && (
-          <CardContent>
-            <CustomFieldsSettings 
-              isOpen={expandedSections.customFields}
-              onClose={() => setExpandedSections(prev => ({ ...prev, customFields: false }))}
-            />
           </CardContent>
         )}
       </Card>

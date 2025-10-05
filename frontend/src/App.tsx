@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.49 - JWT TOKEN FIX');
+  console.log('🚀 FRONTEND VERSION: 18.50 - CUSTOM FIELDS IN CONTACT MANAGEMENT');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
