@@ -68,7 +68,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   const [customFields, setCustomFields] = useState<any[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState('text');
-  const [userCustomFieldDefinitions, setUserCustomFieldDefinitions] = useState<any[]>([]);
+  const [userCustomFieldDefinitions, setUserCustomFieldDefinitions] = useState<string[]>([]);
 
   useEffect(() => {
     // Load user custom field definitions
@@ -83,12 +83,11 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       // Parse custom fields from contact with their definitions
       if (person.custom_fields && typeof person.custom_fields === 'object') {
         const contactCustomFields = Object.entries(person.custom_fields).map(([key, value]) => {
-          const definition = userCustomFieldDefinitions.find(def => def.key === key);
           return {
             field: key,
-            display_name: definition?.name || key,
+            display_name: key, // Simple: field name is the display name
             value: value,
-            type: definition?.type || 'text',
+            type: 'text', // All fields are text type now
             category: 'custom'
           };
         });
@@ -168,7 +167,6 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
 
     try {
       // Create field definition in user settings
-      const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_');
       
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
       const response = await fetch(`${apiUrl}/api/custom-fields`, {
@@ -178,9 +176,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: newFieldName,
-          key: fieldKey,
-          type: newFieldType
+          name: newFieldName
         })
       });
 
@@ -190,15 +186,15 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         // Add the field to the form data
         setFormData(prev => ({
           ...prev,
-          [`custom_${fieldKey}`]: ''
+          [`custom_${newFieldName}`]: ''
         }));
 
         // Add to custom fields list
         const newField = {
-          field: fieldKey,
+          field: newFieldName,
           display_name: newFieldName,
           value: '',
-          type: newFieldType,
+          type: 'text',
           category: 'custom'
         };
 
@@ -217,10 +213,10 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         console.warn('Backend custom fields API not ready, creating field locally...');
         
         const newField = {
-          field: fieldKey,
+          field: newFieldName,
           display_name: newFieldName,
           value: '',
-          type: newFieldType,
+          type: 'text',
           category: 'custom'
         };
 

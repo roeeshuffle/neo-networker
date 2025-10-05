@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
   // Log frontend version
-  console.log('🚀 FRONTEND VERSION: 18.65 - ERROR HANDLING FIX');
+  console.log('🚀 FRONTEND VERSION: 18.66 - CONTACT MODAL FIX');
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
