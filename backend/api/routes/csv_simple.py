@@ -107,7 +107,7 @@ def preview_csv_simple():
         
         # Preview first 5 rows
         preview_data = []
-        for idx, row in df.head(5).iterrows():
+        for i, (idx, row) in enumerate(df.head(5).iterrows()):
             # Convert NaN to None for JSON serialization
             row_dict = row.to_dict()
             for key, value in row_dict.items():
@@ -120,7 +120,7 @@ def preview_csv_simple():
                     mapped_dict[key] = None
             
             preview_data.append({
-                'row_number': idx + 2,  # +2 because pandas is 0-indexed and we skip header
+                'row_number': i + 2,  # +2 because pandas is 0-indexed and we skip header
                 'data': row_dict,
                 'mapped_data': mapped_dict
             })

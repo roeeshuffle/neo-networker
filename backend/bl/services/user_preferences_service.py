@@ -82,7 +82,7 @@ class UserPreferencesService:
                 logger.warning(f"Preference {preference_name} not found for user {user_id}")
                 return True  # Already doesn't exist
                 
-        except Exception ase:
+        except Exception as e:
             logger.error(f"Error deleting preference {preference_name} for user {user_id}: {e}")
             return False
     

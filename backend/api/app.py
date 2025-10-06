@@ -67,7 +67,16 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
-CORS(app)
+
+# Configure CORS to allow localhost for development
+CORS(app, origins=[
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://d2fq8k5py78ii.cloudfront.net',  # Production frontend
+    'https://dkdrn34xpx.us-east-1.awsapprunner.com'  # Production backend
+], supports_credentials=True, 
+    allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 # Test database connection
 try:
@@ -92,7 +101,8 @@ from api.routes.admin import admin_bp
 from api.routes.user_preferences import user_preferences_bp
 from api.routes.custom_fields import custom_fields_bp
 from api.routes.csv_simple import csv_simple_bp
-# from api.routes.csv_simple_mapping import csv_simple_mapping_bp  # Temporarily disabled
+from api.routes.csv_simple_mapping import csv_simple_mapping_bp
+from api.routes.user_group import user_group_bp
 # Removed db_migration import - migration completed
 # Removed temporary fix routes - no longer needed
 
@@ -111,7 +121,8 @@ app.register_blueprint(admin_bp, url_prefix='/api')
 app.register_blueprint(user_preferences_bp, url_prefix='/api')
 app.register_blueprint(custom_fields_bp, url_prefix='/api')
 app.register_blueprint(csv_simple_bp, url_prefix='/api')
-# app.register_blueprint(csv_simple_mapping_bp, url_prefix='/api')  # Temporarily disabled
+app.register_blueprint(csv_simple_mapping_bp, url_prefix='/api')
+app.register_blueprint(user_group_bp, url_prefix='/api')
 # app.register_blueprint(migration_bp, url_prefix='/api')  # Disabled - using direct endpoint instead
 # Removed temporary fix blueprint registrations - no longer needed
 

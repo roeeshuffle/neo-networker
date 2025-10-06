@@ -58,6 +58,7 @@ class Person(db.Model):
             'id': self.id,
             'first_name': self.first_name,
             'last_name': self.last_name,
+            'full_name': f"{self.first_name or ''} {self.last_name or ''}".strip(),
             'gender': self.gender,
             'birthday': self.birthday.isoformat() if self.birthday else None,
             

@@ -29,6 +29,7 @@ class User(db.Model):
     google_token_expires_at = db.Column(db.DateTime, nullable=True)
     google_contacts_synced_at = db.Column(db.DateTime, nullable=True)
     google_calendar_synced_at = db.Column(db.DateTime, nullable=True)
+    # group = db.Column(db.JSON, nullable=True)  # Temporarily disabled - column doesn't exist in DB
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -36,6 +37,7 @@ class User(db.Model):
     # Relationships
     people = db.relationship('Person', foreign_keys='Person.owner_id', backref='owner', lazy='dynamic')
     tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
+    group_members = db.relationship('UserGroup', foreign_keys='UserGroup.owner_id', backref='owner', lazy='dynamic')
     # events relationship temporarily removed due to SQLAlchemy conflict
     
     def __repr__(self):
@@ -65,6 +67,7 @@ class User(db.Model):
             'google_token_expires_at': self.google_token_expires_at.isoformat() if self.google_token_expires_at else None,
             'google_contacts_synced_at': self.google_contacts_synced_at.isoformat() if self.google_contacts_synced_at else None,
             'google_calendar_synced_at': self.google_calendar_synced_at.isoformat() if self.google_calendar_synced_at else None,
+            # 'group': self.group,  # Temporarily disabled
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

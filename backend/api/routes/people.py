@@ -49,9 +49,11 @@ def create_person():
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
+        print(f"🔍 PEOPLE CREATE - Request data: {data}")
         
         # Validate required fields
         if not data.get('first_name') and not data.get('last_name'):
+            print("❌ PEOPLE CREATE - Missing required name fields")
             return jsonify({'error': 'At least first_name or last_name is required'}), 400
         
         # Helper function to clean empty strings to None for constrained fields
@@ -283,11 +285,29 @@ def save_user_preferences():
         
         # Update specific preference fields
         for key, value in data.items():
+            people_logger.info(f"🔍 USER PREFS SAVE: Setting {key} = {value}")
             user.user_preferences[key] = value
         
-        db.session.commit()
+        # Mark the user_preferences field as dirty so SQLAlchemy detects the change
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(user, 'user_preferences')
         
-        people_logger.info(f"🔍 USER PREFS SAVE: Updated preferences: {user.user_preferences}")
+        people_logger.info(f"🔍 USER PREFS SAVE: Before commit - preferences: {user.user_preferences}")
+        
+        try:
+            db.session.commit()
+            people_logger.info(f"🔍 USER PREFS SAVE: After commit - preferences: {user.user_preferences}")
+        except Exception as e:
+            people_logger.error(f"🔍 USER PREFS SAVE: Database commit error: {e}")
+            db.session.rollback()
+            return jsonify({'error': f'Database error: {str(e)}'}), 500
+        
+        # Refresh the user object to get the latest data
+        try:
+            db.session.refresh(user)
+            people_logger.info(f"🔍 USER PREFS SAVE: After refresh - preferences: {user.user_preferences}")
+        except Exception as e:
+            people_logger.error(f"🔍 USER PREFS SAVE: Database refresh error: {e}")
         
         return jsonify({
             'success': True,
