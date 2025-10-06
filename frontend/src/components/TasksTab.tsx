@@ -733,7 +733,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
       {/* Projects */}
       {Object.keys(filteredProjects).length === 0 ? (
-        <Card className="border-2 border-gray-300 dark:border-gray-600">
+        <Card className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
           <CardContent className="p-8 text-center">
             <div className="text-lg text-muted-foreground">No tasks yet</div>
             <div className="text-sm text-muted-foreground mt-2">
@@ -749,7 +749,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             const totalTasks = tasks.length;
             
             return (
-              <Card key={projectName} className="border-2 border-gray-300 dark:border-gray-600">
+              <Card key={projectName} className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
