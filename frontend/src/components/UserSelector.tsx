@@ -21,6 +21,7 @@ interface UserSelectorProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  filterUsers?: (users: GroupUser[]) => GroupUser[]; // New prop to filter users
 }
 
 export const UserSelector: React.FC<UserSelectorProps> = ({
@@ -28,7 +29,8 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   onUsersChange,
   placeholder = "Select users...",
   className,
-  disabled = false
+  disabled = false,
+  filterUsers
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,12 +46,23 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   const loadGroupUsers = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await apiClient.getUserGroup();
-      if (error) throw error;
-      
-      // Ensure data is an array
-      const users = Array.isArray(data) ? data : (data?.data || []);
-      setGroupUsers(users);
+      // Try the new assignable users API first (for tasks), fallback to group users
+      try {
+        const { data, error } = await apiClient.getAssignableUsers();
+        if (error) throw error;
+        
+        // Ensure data is an array
+        const users = Array.isArray(data) ? data : (data?.users || []);
+        setGroupUsers(users);
+      } catch (assignableError) {
+        // Fallback to group users API
+        const { data, error } = await apiClient.getUserGroup();
+        if (error) throw error;
+        
+        // Ensure data is an array
+        const users = Array.isArray(data) ? data : (data?.data || []);
+        setGroupUsers(users);
+      }
     } catch (error) {
       console.error('Error loading group users:', error);
       setGroupUsers([]); // Ensure it's always an array
@@ -81,6 +94,9 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
       (user.full_name && user.full_name.toLowerCase().includes(query))
     );
   });
+
+  // Apply additional filter if provided
+  const finalFilteredUsers = filterUsers ? filterUsers(filteredUsers) : filteredUsers;
 
   const displayName = (user: GroupUser) => {
     return user.full_name || user.email;
@@ -143,13 +159,13 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
             <CommandList>
               {isLoading ? (
                 <CommandEmpty>Loading users...</CommandEmpty>
-              ) : filteredUsers.length === 0 ? (
+              ) : finalFilteredUsers.length === 0 ? (
                 <CommandEmpty>
                   {searchQuery ? 'No users found' : 'No group members available'}
                 </CommandEmpty>
               ) : (
                 <CommandGroup>
-                  {filteredUsers.map((user) => {
+                  {finalFilteredUsers.map((user) => {
                     const isSelected = selectedUsers.some(selected => selected.id === user.id);
                     return (
                       <CommandItem

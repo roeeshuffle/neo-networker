@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, Users } from 'lucide-react';
 import { apiClient } from '@/integrations/api/client';
+import { Person } from '@/pages/Dashboard';
 
 interface GroupUser {
   id: string;
@@ -19,12 +20,16 @@ interface ShareContactsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onShareComplete: () => void;
+  singleContact?: Person | null;
+  filteredContacts?: Person[]; // Add filtered contacts prop
 }
 
 const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
   isOpen,
   onClose,
-  onShareComplete
+  onShareComplete,
+  singleContact,
+  filteredContacts
 }) => {
   const [groupUsers, setGroupUsers] = useState<GroupUser[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -43,13 +48,17 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
     try {
       setLoading(true);
       console.log('Loading group users...');
-      const response = await apiClient.getGroupUsers();
-      console.log('Group users response:', response);
+      const { data, error } = await apiClient.getGroupUsers();
+      console.log('Group users response:', { data, error });
       
-      if (response.success) {
-        setGroupUsers(response.data || []);
+      if (error) {
+        throw new Error(error.message || 'Failed to load group users');
+      }
+      
+      if (data && data.success) {
+        setGroupUsers(data.data || []);
       } else {
-        throw new Error(response.message || 'Failed to load group users');
+        throw new Error(data?.message || 'Failed to load group users');
       }
     } catch (error: any) {
       console.error('Error loading group users:', error);
@@ -90,19 +99,41 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
       return;
     }
 
+    // Show confirmation dialog
+    const contactCount = singleContact ? 1 : (filteredContacts?.length || 0);
+    const contactName = singleContact 
+      ? `${singleContact.first_name || ''} ${singleContact.last_name || ''}`.trim() || singleContact.email || 'this contact'
+      : `${contactCount} contact${contactCount !== 1 ? 's' : ''}`;
+    const confirmed = window.confirm(
+      `Are you sure you want to share ${contactName} with ${selectedUsers.length} user(s)? This will copy ${singleContact ? 'this contact' : `${contactCount} contact${contactCount !== 1 ? 's' : ''}`} to their contact lists.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setSharing(true);
-      const response = await apiClient.shareContacts(selectedUsers);
+      // Prepare contact IDs for sharing
+      const contactIds = singleContact 
+        ? undefined 
+        : filteredContacts?.map(contact => contact.id) || [];
       
-      if (response.success) {
+      const { data, error } = await apiClient.shareContacts(selectedUsers, singleContact?.id, contactIds);
+      
+      if (error) {
+        throw new Error(error.message || 'Failed to share contacts');
+      }
+      
+      if (data && data.success) {
         toast({
           title: "Contacts shared successfully",
-          description: `Shared contacts with ${selectedUsers.length} user(s)`,
+          description: `Shared ${data.shared_count || 'all'} contacts with ${selectedUsers.length} user(s)`,
         });
         onShareComplete();
         onClose();
       } else {
-        throw new Error(response.message || 'Failed to share contacts');
+        throw new Error(data?.message || 'Failed to share contacts');
       }
     } catch (error: any) {
       console.error('Error sharing contacts:', error);
@@ -124,15 +155,15 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Share Contacts
-          </DialogTitle>
-          <DialogDescription>
-            Select group members to share all your contacts with. The source field will be updated to show who shared the contact.
-          </DialogDescription>
-        </DialogHeader>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Share2 className="h-5 w-5" />
+                  {singleContact ? 'Share Contact' : 'Share Contacts'}
+                </DialogTitle>
+                <DialogDescription>
+                  Select group members to share {singleContact ? 'this contact' : `${filteredContacts?.length || 0} contact${(filteredContacts?.length || 0) !== 1 ? 's' : ''}`} with. The source field will be updated to show who shared the contact.
+                </DialogDescription>
+              </DialogHeader>
 
         <div className="space-y-4">
 

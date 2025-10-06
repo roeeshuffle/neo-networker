@@ -33,6 +33,7 @@ interface Event {
   created_at: string;
   updated_at: string;
   user_id: string;
+  owner_id: string;
 }
 
 interface EventFormData {
@@ -60,6 +61,20 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
+
+  // Get current user email
+  const getCurrentUserEmail = async () => {
+    try {
+      const { data: currentUser } = await apiClient.getCurrentUser() as { data: { email: string } };
+      if (currentUser && currentUser.email) {
+        setCurrentUserEmail(currentUser.email);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
+
   // Calendar settings from user preferences
   const [calendarSettings, setCalendarSettings] = useState({
     defaultView: 'monthly',
@@ -81,6 +96,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
+  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentDay, setCurrentDay] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -379,19 +398,64 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   };
 
   const handleDateClick = (date: Date) => {
-    // Set the form data with the clicked date
+    // Show events for the clicked date
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const eventsForDate = events.filter(event => {
+      const eventDate = format(parseISO(event.start_datetime), 'yyyy-MM-dd');
+      return eventDate === dateStr;
+    });
+    
+    setSelectedDate(date);
+    setSelectedDateEvents(eventsForDate);
+    setIsEventDetailsOpen(true);
+  };
+
+  const handleDateRightClick = (date: Date, event: React.MouseEvent) => {
+    event.preventDefault(); // Prevent context menu
+    
+    // Set the form data with the clicked date and default values
     const startDate = new Date(date);
     startDate.setHours(9, 0, 0, 0); // Default to 9:00 AM
     const endDate = new Date(date);
     endDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
     
     setFormData({
-      ...formData,
+      title: '',
+      description: '',
       start_datetime: startDate.toISOString().slice(0, 16), // Format for datetime-local input
       end_datetime: endDate.toISOString().slice(0, 16),
+      location: '',
+      event_type: 'event',
+      participants: [],
+      alert_minutes: 15,
+      repeat_pattern: 'none',
+      repeat_interval: 1,
+      repeat_days: [],
+      repeat_end_date: null,
+      notes: ''
     });
     
     setIsAddDialogOpen(true);
+  };
+
+  const toggleEventExpansion = (eventId: number) => {
+    setExpandedEvents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAllEvents = () => {
+    setExpandedEvents(new Set(selectedDateEvents.map(event => event.id)));
+  };
+
+  const collapseAllEvents = () => {
+    setExpandedEvents(new Set());
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -478,9 +542,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
             <CardContent 
               className="space-y-3 cursor-pointer hover:bg-muted/20 transition-colors"
               onClick={() => handleDateClick(currentDay)}
+              onContextMenu={(e) => handleDateRightClick(currentDay, e)}
             >
               {events.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No events scheduled for this day. Click to add an event.</p>
+                <p className="text-muted-foreground text-center py-8">No events scheduled for this day. Right-click to add an event.</p>
               ) : (
                 events.map((event) => (
                   <div
@@ -489,6 +554,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                     onClick={(e) => {
                       e.stopPropagation();
                       openEditDialog(event);
+                    }}
+                    onContextMenu={(e) => {
+                      e.stopPropagation();
+                      // Right-click on event does nothing - prevents opening add dialog
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -547,6 +616,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 <CardContent 
                   className="space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
                   onClick={() => handleDateClick(date)}
+                  onContextMenu={(e) => handleDateRightClick(date, e)}
                 >
                   {dayEvents.map((event) => (
                     <div
@@ -555,6 +625,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditDialog(event);
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation();
+                        // Right-click on event does nothing - prevents opening add dialog
                       }}
                     >
                       <TooltipProvider>
@@ -621,6 +695,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                         isCurrentMonth ? 'bg-background' : 'bg-muted/30'
                       } ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}
                       onClick={() => handleDateClick(date)}
+                      onContextMenu={(e) => handleDateRightClick(date, e)}
                     >
                       <div className={`text-sm ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'} ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                         {format(date, 'd')}
@@ -633,6 +708,10 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                             onClick={(e) => {
                               e.stopPropagation();
                               openEditDialog(event);
+                            }}
+                            onContextMenu={(e) => {
+                              e.stopPropagation();
+                              // Right-click on event does nothing - prevents opening add dialog
                             }}
                           >
                             <TooltipProvider>
@@ -835,6 +914,253 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 Update Event
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Event Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="add-title">Event Title</Label>
+              <Input
+                id="add-title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter event title"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="add-description">Description</Label>
+              <Textarea
+                id="add-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter event description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="add-start-datetime">Start Date & Time</Label>
+                <Input
+                  id="add-start-datetime"
+                  type="datetime-local"
+                  value={formData.start_datetime}
+                  onChange={(e) => setFormData({ ...formData, start_datetime: e.target.value })}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="add-end-datetime">End Date & Time</Label>
+                <Input
+                  id="add-end-datetime"
+                  type="datetime-local"
+                  value={formData.end_datetime}
+                  onChange={(e) => setFormData({ ...formData, end_datetime: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="add-location">Location</Label>
+              <Input
+                id="add-location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Enter event location"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="add-event-type">Event Type</Label>
+              <Select value={formData.event_type} onValueChange={(value: 'meeting' | 'event') => setFormData({ ...formData, event_type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="event">Event</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="add-participants">Participants</Label>
+              <UserSelector
+                selectedUsers={formData.participants}
+                onUsersChange={(users) => setFormData({ ...formData, participants: users })}
+                placeholder="Select participants..."
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="add-alert-minutes">Alert (minutes before)</Label>
+              <Input
+                id="add-alert-minutes"
+                type="number"
+                value={formData.alert_minutes}
+                onChange={(e) => setFormData({ ...formData, alert_minutes: parseInt(e.target.value) || 0 })}
+                placeholder="15"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateEvent}>
+                Create Event
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Event Details Dialog */}
+      <Dialog open={isEventDetailsOpen} onOpenChange={setIsEventDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Events for {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : ''}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {selectedDateEvents.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">No events scheduled for this date</p>
+                  <p className="text-sm">Right-click on any date to add a new event</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-sm text-muted-foreground">
+                    {selectedDateEvents.length} event{selectedDateEvents.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto space-y-3">
+                  {selectedDateEvents.map((event) => {
+                    const isExpanded = expandedEvents.has(event.id);
+                    const startTime = parseISO(event.start_datetime);
+                    const endTime = parseISO(event.end_datetime);
+                    
+                    return (
+                      <Card key={event.id} className="border-l-4 border-l-primary">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-primary" />
+                              <CardTitle className="text-base">{event.title}</CardTitle>
+                              <Badge variant={event.event_type === 'meeting' ? 'default' : 'secondary'}>
+                                {event.event_type}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
+                              </span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        
+                        <CardContent className="pt-0">
+                            <div className="space-y-3">
+                              {event.description && (
+                                <div>
+                                  <Label className="text-sm font-medium">Description</Label>
+                                  <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                                </div>
+                              )}
+                              
+                              {event.location && (
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                  <div>
+                                    <Label className="text-sm font-medium">Location</Label>
+                                    <p className="text-sm text-muted-foreground">{event.location}</p>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {event.participants && event.participants.length > 0 && (
+                                <div className="flex items-start gap-2">
+                                  <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                  <div>
+                                    <Label className="text-sm font-medium">Participants</Label>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {event.participants.map((participant, index) => (
+                                        <Badge key={index} variant="outline" className="text-xs">
+                                          {participant.name || participant.email}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {event.alert_minutes > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">
+                                    Alert {event.alert_minutes} minutes before
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {event.notes && (
+                                <div>
+                                  <Label className="text-sm font-medium">Notes</Label>
+                                  <p className="text-sm text-muted-foreground mt-1">{event.notes}</p>
+                                </div>
+                              )}
+                              
+                              <div className="flex gap-2 pt-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingEvent(event);
+                                    setIsEditDialogOpen(true);
+                                    setIsEventDetailsOpen(false);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this event?')) {
+                                      handleDeleteEvent(event.id);
+                                      setIsEventDetailsOpen(false);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

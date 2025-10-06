@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
+import { Trash2, Eye, ArrowUpDown, ArrowUp, ArrowDown, Filter, Share2, Check, X, Edit } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 import { apiClient } from "@/integrations/api/client";
 import { useState, useEffect } from "react";
@@ -14,6 +14,8 @@ interface PeopleTableProps {
   people: Person[];
   onDelete: (id: string, name: string) => void;
   onView: (person: Person) => void;
+  onShare: (person: Person, filteredContacts?: Person[]) => void; // Add filtered contacts parameter
+  onRefresh?: () => void; // Add refresh callback
 }
 
 interface ColumnConfig {
@@ -49,11 +51,13 @@ const defaultColumns: ColumnConfig[] = [
   { key: 'created_at', label: 'Created At', enabled: false, order: 19 }
 ];
 
-// Generate consistent color from text
-const getColorFromText = (text: string): string => {
+// Generate consistent color from group text
+const getColorFromGroup = (group: string): string => {
+  if (!group) return 'hsl(0, 0%, 85%)'; // Default gray for empty groups
+  
   let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < group.length; i++) {
+    hash = group.charCodeAt(i) + ((hash << 5) - hash);
   }
   
   const hue = Math.abs(hash) % 360;
@@ -169,13 +173,73 @@ const formatCellContent = (person: Person, columnKey: string): JSX.Element => {
   return <span>{value}</span>;
 };
 
-export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
+// Render editable cell content
+const renderEditableCell = (person: Person, columnKey: string, editingPerson: string | null, editingData: Person | null, onFieldChange: (field: string, value: string) => void): JSX.Element => {
+  const isEditing = editingPerson === person.id;
+  
+  if (isEditing && editingData) {
+    const currentValue = getCellValue(editingData, columnKey);
+    
+    return (
+      <Input
+        value={currentValue}
+        onChange={(e) => onFieldChange(columnKey, e.target.value)}
+        className="h-8 text-sm border-orange-400 focus:border-orange-500 focus:ring-orange-500/20"
+        placeholder={`Enter ${columnKey.replace('_', ' ')}`}
+      />
+    );
+  }
+  
+  return formatCellContent(person, columnKey);
+};
+
+// Dynamic filter component for any column
+const ColumnFilter = ({ 
+  column, 
+  filters, 
+  onFilter 
+}: { 
+  column: ColumnConfig; 
+  filters: Record<string, string>; 
+  onFilter: (column: string, value: string) => void;
+}) => {
+  const filterValue = filters[column.key] || '';
+  
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-6 w-6 p-0 ${filterValue ? 'text-green-600' : ''}`}
+        >
+          <Filter className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Filter by {column.label.toLowerCase()}</label>
+          <Input
+            placeholder={`Enter ${column.label.toLowerCase()}...`}
+            value={filterValue}
+            onChange={(e) => onFilter(column.key, e.target.value)}
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+export const PeopleTable = ({ people, onDelete, onView, onShare, onRefresh }: PeopleTableProps) => {
   const [sortField, setSortField] = useState<SortField | null>('first_name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [profileImages, setProfileImages] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [editingData, setEditingData] = useState<Person | null>(null);
+  const [saving, setSaving] = useState(false);
   const itemsPerPage = 50;
   
   // Fetch user preferences for column configuration
@@ -298,7 +362,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
         const customFieldKey = column.replace('custom_', '');
         personValue = person.custom_fields?.[customFieldKey] || '';
       } else {
-        personValue = person[column as keyof Person] || '';
+        personValue = getCellValue(person, column);
       }
       
       return String(personValue).toLowerCase().includes(filterValue.toLowerCase());
@@ -331,6 +395,98 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
       [column]: value
     }));
   };
+
+  const handleEditPerson = (person: Person) => {
+    setEditingPerson(person.id);
+    setEditingData({ ...person });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPerson || !editingData) return;
+    
+    setSaving(true);
+    try {
+      // Prepare update data
+      const updateData: any = {};
+      
+      // Update all fields that have changed
+      const originalPerson = people.find(p => p.id === editingPerson);
+      if (!originalPerson) return;
+
+      // Check each field for changes
+      Object.keys(editingData).forEach(key => {
+        if (key !== 'id' && key !== 'created_at' && key !== 'updated_at') {
+          const originalValue = originalPerson[key as keyof Person];
+          const newValue = editingData[key as keyof Person];
+          
+          if (originalValue !== newValue) {
+            if (key === 'custom_fields') {
+              updateData[key] = newValue;
+            } else {
+              updateData[key] = newValue || null;
+            }
+          }
+        }
+      });
+
+      // Update the contact
+      await apiClient.updatePerson(editingPerson, updateData);
+      
+      // Close editing mode
+      setEditingPerson(null);
+      setEditingData(null);
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        window.location.reload();
+      }
+      
+    } catch (error) {
+      console.error('Error saving contact:', error);
+      // Show error message to user
+      alert('Failed to save contact. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPerson(null);
+    setEditingData(null);
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    if (!editingData) return;
+    
+    if (field === 'first_name' || field === 'last_name') {
+      // Handle name fields
+      setEditingData({
+        ...editingData,
+        [field]: value
+      });
+    } else if (field.startsWith('custom_')) {
+      // Handle custom fields
+      const customFieldKey = field.replace('custom_', '');
+      const customFields = { ...editingData.custom_fields };
+      if (value.trim()) {
+        customFields[customFieldKey] = value.trim();
+      } else {
+        delete customFields[customFieldKey];
+      }
+      setEditingData({
+        ...editingData,
+        custom_fields: customFields
+      });
+    } else {
+      // Handle regular fields
+      setEditingData({
+        ...editingData,
+        [field]: value
+      });
+    }
+  };
   
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -359,131 +515,45 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
           <thead>
             <tr className="border-b border-border-soft bg-muted/30">
               {/* Photo column - always shown */}
-              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider w-16">
+              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground tracking-wider w-16">
                 Photo
               </th>
               
               {/* Dynamic columns based on user preferences */}
               {enabledColumns.map((column) => (
-                <th key={column.key} className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                <th key={column.key} className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground tracking-wider">
                   <div className="flex items-center gap-2">
                     {column.label}
+                    {/* Sort button for first_name column */}
                     {column.key === 'first_name' && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSort('first_name')}
-                          className="h-6 w-6 p-0"
-                        >
-                          {getSortIcon('first_name')}
-                        </Button>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`h-6 w-6 p-0 ${filters.full_name ? 'text-green-600' : ''}`}
-                            >
-                              <Filter className="h-3 w-3" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Filter by name</label>
-                              <Input
-                                placeholder="Enter name..."
-                                value={filters.full_name || ''}
-                                onChange={(e) => handleFilter('full_name', e.target.value)}
-                              />
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('first_name')}
+                        className="h-6 w-6 p-0"
+                      >
+                        {getSortIcon('first_name')}
+                      </Button>
                     )}
-                    {column.key === 'organization' && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 w-6 p-0 ${filters.organization ? 'text-green-600' : ''}`}
-                          >
-                            <Filter className="h-3 w-3" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Filter by organization</label>
-                            <Input
-                              placeholder="Enter organization..."
-                              value={filters.organization || ''}
-                              onChange={(e) => handleFilter('organization', e.target.value)}
-                            />
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                    {column.key === 'job_title' && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 w-6 p-0 ${filters.job_title ? 'text-green-600' : ''}`}
-                          >
-                            <Filter className="h-3 w-3" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Filter by job title</label>
-                            <Input
-                              placeholder="Enter job title..."
-                              value={filters.job_title || ''}
-                              onChange={(e) => handleFilter('job_title', e.target.value)}
-                            />
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                    {column.key === 'status' && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 w-6 p-0 ${filters.status ? 'text-green-600' : ''}`}
-                          >
-                            <Filter className="h-3 w-3" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Filter by status</label>
-                            <Input
-                              placeholder="Enter status..."
-                              value={filters.status || ''}
-                              onChange={(e) => handleFilter('status', e.target.value)}
-                            />
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                    {/* Filter button for all columns */}
+                    <ColumnFilter 
+                      column={column} 
+                      filters={filters} 
+                      onFilter={handleFilter} 
+                    />
                   </div>
                 </th>
               ))}
               
               {/* Actions column - always shown */}
-              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Actions</th>
+              <th className="text-left px-6 py-4 font-semibold text-sm text-muted-foreground tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
             {paginatedPeople.map((person) => (
               <tr 
                 key={person.id} 
-                className="border-b border-border-soft hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={() => onView(person)}
+                className="border-b border-border-soft hover:bg-muted/50 transition-colors"
               >
                 {/* Photo column - always shown */}
                 <td className="px-6 py-4">
@@ -495,8 +565,8 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                       />
                       <AvatarFallback 
                         style={{ 
-                          backgroundColor: getColorFromText(getFullName(person)),
-                          color: getTextColorFromBg(getColorFromText(getFullName(person)))
+                          backgroundColor: getColorFromGroup(person.group || ''),
+                          color: getTextColorFromBg(getColorFromGroup(person.group || ''))
                         }}
                       >
                         {getFullName(person).split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -508,36 +578,101 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                 {/* Dynamic columns based on user preferences */}
                 {enabledColumns.map((column) => (
                   <td key={column.key} className="px-6 py-4">
-                    {formatCellContent(person, column.key)}
+                    {renderEditableCell(
+                      person, 
+                      column.key, 
+                      editingPerson, 
+                      editingData, 
+                      handleFieldChange
+                    )}
                   </td>
                 ))}
                 
                 {/* Actions column - always shown */}
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onView(person);
-                      }}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim() || 'Unknown';
-                        onDelete(person.id, fullName);
-                      }}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {editingPerson === person.id ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveEdit();
+                          }}
+                          disabled={saving}
+                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                          title="Save changes"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelEdit();
+                          }}
+                          disabled={saving}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          title="Cancel editing"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditPerson(person);
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="Edit contact"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onView(person);
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="View contact"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onShare(person, filteredPeople);
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="Share contact"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim() || 'Unknown';
+                            onDelete(person.id, fullName);
+                          }}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title="Delete contact"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

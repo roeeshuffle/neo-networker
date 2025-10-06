@@ -7,6 +7,39 @@ import uuid
 
 tasks_bp = Blueprint('tasks', __name__)
 
+@tasks_bp.route('/tasks/assignable-users', methods=['GET'])
+@jwt_required()
+def get_assignable_users():
+    """Get list of users that can be assigned tasks (group members)"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Get group members from user preferences
+        user_preferences = current_user.user_preferences or {}
+        group_members = user_preferences.get('group_members', [])
+        
+        # Extract user emails and names
+        assignable_users = []
+        for member in group_members:
+            if member.get('status') == 'approved':
+                assignable_users.append({
+                    'email': member.get('email'),
+                    'name': member.get('full_name', member.get('email')),
+                    'id': member.get('id')
+                })
+        
+        return jsonify({
+            'success': True,
+            'users': assignable_users
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @tasks_bp.route('/projects', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_projects():
@@ -80,9 +113,16 @@ def get_tasks():
         
         print(f"🚀 APP VERSION: 8.0 - BACKEND STATUS FILTER FIX")
         print(f"📋 GET /tasks - project: {project}, status: {status}, include_scheduled: {include_scheduled}")
+        print(f"🔍 USER DEBUG: Current user ID: {current_user_id}, Email: {current_user.email}")
         
-        # Build query
-        query = Task.query.filter(Task.owner_id == current_user_id)
+        # Build query - include tasks owned by user OR where user is a participant
+        from sqlalchemy import or_, text
+        query = Task.query.filter(
+            or_(
+                Task.owner_id == current_user_id,
+                text("participants @> :email").params(email=f'["{current_user.email}"]')
+            )
+        )
         
         # Handle missing columns gracefully
         if project:
@@ -179,6 +219,22 @@ def create_task():
         is_scheduled = scheduled_date is not None
         is_active = not is_scheduled or (scheduled_date and scheduled_date <= datetime.utcnow())
 
+        # Get assign_to email
+        assign_to_email = data.get('assign_to')
+        
+        print(f"🔍 TASK ASSIGNMENT DEBUG: assign_to_email = {assign_to_email}")
+        
+        # Validate assign_to is from user's group
+        if assign_to_email:
+            # Get user's group members
+            user_preferences = current_user.user_preferences or {}
+            group_members = user_preferences.get('group_members', [])
+            group_emails = [member.get('email') for member in group_members if member.get('status') == 'approved']
+            
+            if assign_to_email not in group_emails:
+                return jsonify({'error': f'User {assign_to_email} must be in your group to be assigned tasks.'}), 400
+        
+        # Create the main task (owned by creator)
         task = Task(
             id=str(uuid.uuid4()),
             title=data['title'],
@@ -192,11 +248,15 @@ def create_task():
             is_active=is_active,
             owner_id=current_user_id,
             created_by=current_user_id,
+            assign_to=assign_to_email,
+            participants=[],  # Empty participants - managed at project level
             text=data['title']  # Set text field to avoid NOT NULL constraint violation
         )
         
         db.session.add(task)
         db.session.commit()
+        
+        print(f"✅ TASK CREATED: Task created with ID {task.id}, assign_to: {assign_to_email}")
         
         return jsonify({
             'message': 'Task created successfully',
@@ -222,8 +282,14 @@ def update_task(task_id):
         if not task:
             return jsonify({'error': 'Task not found'}), 404
         
-        # Check if user owns this task
-        if task.owner_id != current_user_id:
+        # Check if user owns this task OR is a participant in the project
+        from sqlalchemy import or_, text
+        user_can_edit = (
+            task.owner_id == current_user_id or
+            text("participants @> :email").params(email=f'["{current_user.email}"]').evaluate(task.participants)
+        )
+        
+        if not user_can_edit:
             return jsonify({'error': 'Unauthorized'}), 403
         
         data = request.get_json()
@@ -239,6 +305,18 @@ def update_task(task_id):
             task.status = data['status']
         if 'priority' in data:
             task.priority = data['priority']
+        if 'assign_to' in data:
+            # Validate assign_to is from user's group
+            assign_to_email = data['assign_to']
+            if assign_to_email:
+                user_preferences = current_user.user_preferences or {}
+                group_members = user_preferences.get('group_members', [])
+                group_emails = [member.get('email') for member in group_members if member.get('status') == 'approved']
+                
+                if assign_to_email not in group_emails:
+                    return jsonify({'error': f'User {assign_to_email} must be in your group to be assigned tasks.'}), 400
+            
+            task.assign_to = assign_to_email
         if 'due_date' in data and data['due_date']:
             try:
                 date_str = data['due_date'].replace('Z', '') if data['due_date'].endswith('Z') else data['due_date']
@@ -293,6 +371,85 @@ def delete_task(task_id):
         return jsonify({'message': 'Task deleted successfully'})
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@tasks_bp.route('/projects/<project_name>/participants', methods=['GET'])
+@jwt_required()
+def get_project_participants(project_name):
+    """Get participants for a specific project"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Get all tasks for this project owned by current user
+        project_tasks = Task.query.filter(
+            Task.project == project_name,
+            Task.owner_id == current_user_id
+        ).all()
+        
+        # Get unique participants from all tasks in this project
+        all_participants = set()
+        for task in project_tasks:
+            if task.participants:
+                all_participants.update(task.participants)
+        
+        return jsonify({
+            'success': True,
+            'participants': list(all_participants)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@tasks_bp.route('/projects/<project_name>/participants', methods=['POST'])
+@jwt_required()
+def update_project_participants(project_name):
+    """Update participants for all tasks in a project"""
+    try:
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        participants = data.get('participants', [])
+        
+        # Validate participants are from user's group
+        if participants:
+            user_preferences = current_user.user_preferences or {}
+            group_members = user_preferences.get('group_members', [])
+            group_emails = [member.get('email') for member in group_members if member.get('status') == 'approved']
+            
+            invalid_participants = [p for p in participants if p not in group_emails]
+            if invalid_participants:
+                return jsonify({'error': f'Invalid participants: {invalid_participants}. Only group members can be added to projects.'}), 400
+        
+        # Update all tasks in this project owned by current user
+        project_tasks = Task.query.filter(
+            Task.project == project_name,
+            Task.owner_id == current_user_id
+        ).all()
+        
+        updated_count = 0
+        for task in project_tasks:
+            task.participants = participants
+            updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated participants for {updated_count} tasks in project "{project_name}"',
+            'participants': participants
+        })
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # Share functionality removed - SharedData model deleted

@@ -24,8 +24,15 @@ def get_events():
         end_date = request.args.get('end_date')
         project = request.args.get('project')
         
-        # Build query
-        query = Event.query.filter(Event.user_id == current_user_id, Event.is_active == True)
+        # Build query - show events where user is owner OR participant
+        from sqlalchemy import text
+        query = Event.query.filter(
+            or_(
+                Event.owner_id == current_user_id,
+                text("participants @> :email").params(email=f'[{{"email": "{current_user.email}"}}]')
+            ),
+            Event.is_active == True
+        )
         
         if start_date:
             start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
@@ -82,7 +89,8 @@ def create_event():
             repeat_days=data.get('repeat_days', []),
             repeat_end_date=datetime.fromisoformat(data['repeat_end_date'].replace('Z', '+00:00')) if data.get('repeat_end_date') else None,
             notes=data.get('notes', ''),
-            user_id=current_user_id
+            user_id=current_user_id,
+            owner_id=current_user_id
         )
         
         db.session.add(event)

@@ -15,6 +15,7 @@ class Event(db.Model):
     location = db.Column(db.String(255))
     event_type = db.Column(db.String(50), default='event')  # 'meeting' or 'event'
     participants = db.Column(db.JSON)  # List of participant objects with name, email, etc.
+    owner_id = db.Column(db.String(255), nullable=False)  # User who created the event
     alert_minutes = db.Column(db.Integer, default=15)  # Minutes before event to alert
     repeat_pattern = db.Column(db.String(50))  # 'daily', 'weekly', 'monthly', 'yearly', 'none'
     repeat_interval = db.Column(db.Integer, default=1)  # Every X days/weeks/months/years
@@ -47,5 +48,6 @@ class Event(db.Model):
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'user_id': self.user_id
+            'user_id': self.user_id,
+            'owner_id': self.owner_id
         }

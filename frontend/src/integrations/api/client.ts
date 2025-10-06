@@ -164,6 +164,21 @@ class ApiClient {
     });
   }
 
+  async getAssignableUsers() {
+    return this.request('/tasks/assignable-users');
+  }
+
+  async getProjectParticipants(projectName: string) {
+    return this.request(`/projects/${encodeURIComponent(projectName)}/participants`);
+  }
+
+  async updateProjectParticipants(projectName: string, data: { participants: string[] }) {
+    return this.request(`/projects/${encodeURIComponent(projectName)}/participants`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
   // Events methods
   async getEvents(startDate?: string, endDate?: string) {
     const params = new URLSearchParams();
@@ -322,10 +337,16 @@ class ApiClient {
   }
 
   // Share contacts with group members
-  async shareContacts(userIds: string[]) {
+  async shareContacts(userIds: string[], contactId?: string, contactIds?: string[]) {
+    const body: any = { user_ids: userIds };
+    if (contactId) {
+      body.contact_id = contactId;
+    } else if (contactIds && contactIds.length > 0) {
+      body.contact_ids = contactIds;
+    }
     return this.request('/people/share', {
       method: 'POST',
-      body: JSON.stringify({ user_ids: userIds }),
+      body: JSON.stringify(body),
     });
   }
 

@@ -24,6 +24,9 @@ class Task(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Project participants (list of user emails who can see this project's tasks)
+    participants = db.Column(db.JSON, nullable=True, default=list)  # Note: Database uses jsonb, but SQLAlchemy uses JSON
+    
     # Legacy columns (for backward compatibility)
     text = db.Column(db.Text, nullable=False, default='')  # Old title field with default
     assign_to = db.Column(db.String(255), nullable=True)
@@ -60,6 +63,8 @@ class Task(db.Model):
             'is_active': is_active,
             'owner_id': self.owner_id,
             'created_by': self.created_by,
+            'assign_to': self.assign_to,
+            'participants': self.participants or [],
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

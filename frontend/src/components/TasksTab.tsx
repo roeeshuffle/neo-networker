@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight, Minus } from 'lucide-react';
+import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight, Minus, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { UserSelector } from './UserSelector';
@@ -24,6 +24,9 @@ interface Task {
   due_date?: string;
   is_scheduled: boolean;
   is_active: boolean;
+  participants: string[];
+  owner_id: string;
+  assign_to?: string;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +39,7 @@ interface TaskFormData {
   priority: string;
   scheduled_date: string;
   due_date: string;
-  assigned_to: string[];
+  assign_to: string;
 }
 
 interface TasksTabProps {
@@ -50,12 +53,18 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const [availableProjects, setAvailableProjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
+  const [showMyTasks, setShowMyTasks] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
   const [collapsedProjects, setCollapsedProjects] = useState<Record<string, boolean>>({});
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isCreatingNewProject, setIsCreatingNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [isManagingParticipants, setIsManagingParticipants] = useState(false);
+  const [currentProjectParticipants, setCurrentProjectParticipants] = useState<string[]>([]);
+  const [managingProject, setManagingProject] = useState<string>('');
+  const [currentProjectAssignableUsers, setCurrentProjectAssignableUsers] = useState<string[]>([]);
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
     description: '',
@@ -64,8 +73,20 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     priority: 'medium',
     scheduled_date: '',
     due_date: '',
-    assigned_to: []
+    assign_to: ''
   });
+
+  // Get current user email
+  const getCurrentUserEmail = async () => {
+    try {
+      const { data: currentUser } = await apiClient.getCurrentUser() as { data: { email: string } };
+      if (currentUser && currentUser.email) {
+        setCurrentUserEmail(currentUser.email);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
 
   // Fetch available projects from tasks data (workaround for /projects endpoint issue)
   const fetchProjects = async () => {
@@ -74,7 +95,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       console.log('Extracting projects from tasks data instead of calling /projects endpoint...');
       
       // Get tasks data to extract projects
-      const { data: tasksData, error } = await apiClient.getTasks(undefined, undefined, true);
+      const { data: tasksData, error } = await apiClient.getTasks(undefined, undefined, true) as { data: { projects: Record<string, Task[]> }, error: any };
       
       if (error) {
         console.error('❌ Error fetching tasks for projects:', error);
@@ -155,6 +176,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   useEffect(() => {
     fetchTasks();
     fetchProjects(); // Fetch available projects
+    getCurrentUserEmail(); // Get current user email for filtering
   }, []); // Only fetch once on mount
 
   useEffect(() => {
@@ -176,6 +198,15 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           );
         }
         // If showDone is true, show all tasks (no filter)
+        
+        // Apply "My Tasks" filter
+        if (showMyTasks && currentUserEmail) {
+          filteredTasks = filteredTasks.filter(task => 
+            task.owner_id === currentUserEmail || 
+            task.assign_to === currentUserEmail ||
+            (task.owner_id === currentUserEmail && !task.assign_to)
+          );
+        }
         
         // Always include project if it has tasks OR if showDone is true (to show empty projects for deletion)
         if (filteredTasks.length > 0 || showDone) {
@@ -204,6 +235,15 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           );
         }
         
+        // Apply "My Tasks" filter
+        if (showMyTasks && currentUserEmail) {
+          filteredTasks = filteredTasks.filter(task => 
+            task.owner_id === currentUserEmail || 
+            task.assign_to === currentUserEmail ||
+            (task.owner_id === currentUserEmail && !task.assign_to)
+          );
+        }
+        
         // Always include project if it has tasks OR if showDone is true (to show empty projects for deletion)
         if (filteredTasks.length > 0 || showDone) {
           filtered[project] = filteredTasks;
@@ -213,7 +253,16 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       console.log('Search + status filtered projects:', filtered);
       setFilteredProjects(filtered);
     }
-  }, [projects, searchQuery, showDone]);
+  }, [projects, searchQuery, showDone, showMyTasks, currentUserEmail]);
+
+  // Load project participants when project changes
+  useEffect(() => {
+    if (formData.project) {
+      loadProjectParticipants(formData.project);
+    } else {
+      setCurrentProjectAssignableUsers([]);
+    }
+  }, [formData.project]);
 
   const fetchTasks = async () => {
     try {
@@ -222,7 +271,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       console.log('🚀 FRONTEND VERSION: 9.0 - CLIENT-SIDE FILTER & TASK UPDATE FIX');
       console.log('Fetching ALL tasks (no backend filter)');
       
-      const { data, error } = await apiClient.getTasks(undefined, undefined, true);
+      const { data, error } = await apiClient.getTasks(undefined, undefined, true) as { data: { projects: Record<string, Task[]> }, error: any };
       
       if (error) {
         console.error('API Error:', error);
@@ -267,7 +316,13 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
   const handleCreateTask = async () => {
     try {
-      const { data, error } = await apiClient.createTask(formData);
+      // Prepare task data for backend
+      const taskData = {
+        ...formData,
+        assign_to: formData.assign_to || null
+      };
+      
+      const { data, error } = await apiClient.createTask(taskData) as { data: any, error: any };
       
       if (error) throw error;
       
@@ -300,8 +355,14 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     if (!editingTask) return;
     
     try {
-      console.log('Updating task:', editingTask.id, 'with data:', formData);
-      const { data, error } = await apiClient.updateTask(editingTask.id, formData);
+      // Prepare task data for backend
+      const taskData = {
+        ...formData,
+        assign_to: formData.assign_to || null
+      };
+      
+      console.log('Updating task:', editingTask.id, 'with data:', taskData);
+      const { data, error } = await apiClient.updateTask(editingTask.id, taskData) as { data: any, error: any };
       
       if (error) {
         console.error('Update error:', error);
@@ -348,7 +409,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       // Toggle between 'completed' and 'todo'
       const newStatus = currentTask.status === 'completed' ? 'todo' : 'completed';
       
-      const { error } = await apiClient.updateTask(taskId, { status: newStatus });
+      const { error } = await apiClient.updateTask(taskId, { status: newStatus }) as { error: any };
       
       if (error) throw error;
       
@@ -378,9 +439,26 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     }
   };
 
+  // Load project participants for assign to field
+  const loadProjectParticipants = async (projectName: string) => {
+    if (!projectName) {
+      setCurrentProjectAssignableUsers([]);
+      return;
+    }
+    
+    try {
+      const { data, error } = await apiClient.getProjectParticipants(projectName) as { data: { participants: string[] }, error: any };
+      if (error) throw error;
+      setCurrentProjectAssignableUsers(data.participants || []);
+    } catch (error) {
+      console.error('Error loading project participants:', error);
+      setCurrentProjectAssignableUsers([]);
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const { error } = await apiClient.deleteTask(taskId);
+      const { error } = await apiClient.deleteTask(taskId) as { error: any };
       
       if (error) throw error;
       
@@ -416,8 +494,53 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       status: 'todo',
       priority: 'medium',
       scheduled_date: '',
-      due_date: ''
+      due_date: '',
+      assign_to: ''
     });
+  };
+
+  const openParticipantsDialog = async (projectName: string) => {
+    setManagingProject(projectName);
+    try {
+      // Get current participants for this project
+      const { data, error } = await apiClient.getProjectParticipants(projectName) as { data: { participants: string[] }, error: any };
+      if (error) throw error;
+      setCurrentProjectParticipants(data.participants || []);
+      setIsManagingParticipants(true);
+    } catch (error) {
+      console.error('Error loading project participants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load project participants",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const saveProjectParticipants = async () => {
+    try {
+      const { data, error } = await apiClient.updateProjectParticipants(managingProject, {
+        participants: currentProjectParticipants
+      }) as { data: { message: string }, error: any };
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: data.message,
+      });
+      
+      // Refresh tasks to show updated participants
+      await fetchTasks();
+      setIsManagingParticipants(false);
+      setManagingProject('');
+    } catch (error) {
+      console.error('Error saving project participants:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save project participants",
+        variant: "destructive",
+      });
+    }
   };
 
   const openEditDialog = (task: Task) => {
@@ -429,7 +552,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       status: task.status,
       priority: task.priority,
       scheduled_date: task.scheduled_date || '',
-      due_date: task.due_date || ''
+      due_date: task.due_date || '',
+      assign_to: task.assign_to || ''
     });
     setIsEditDialogOpen(true);
   };
@@ -529,43 +653,55 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   }
 
   return (
-    <div className="space-y-6 px-[5%]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Empty space for consistency with contacts layout */}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Button
-            variant={showDone ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowDone(!showDone)}
-            className="flex items-center gap-2"
-          >
-            Show Done
-          </Button>
-          
-          {Object.keys(filteredProjects).length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleAllProjectsCollapse}
-              className="flex items-center gap-2"
-            >
-              {getCollapseButtonText()}
-            </Button>
-          )}
-          
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 space-y-6">
+            {/* Page Header */}
+            <div className="enterprise-header mb-16">
+              <div className="flex items-center justify-between">
+                <div>
+                  {/* Removed titles as requested */}
+                </div>
+            
+            <div className="flex items-center gap-4">
+              <Button
+                variant={showMyTasks ? "default" : "outline"}
                 size="sm"
-                className="w-9 h-9 p-0"
-                title="Add new task"
+                onClick={() => setShowMyTasks(!showMyTasks)}
+                className="h-9 px-4"
               >
-                <Plus className="w-4 h-4" />
+                {showMyTasks ? "All Tasks" : "My Tasks"}
               </Button>
-            </DialogTrigger>
+              
+              <Button
+                variant={showDone ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowDone(!showDone)}
+                className="h-9 px-4"
+              >
+                {showDone ? "Show Active" : "Show Done"}
+              </Button>
+              
+              {Object.keys(filteredProjects).length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleAllProjectsCollapse}
+                  className="h-9 px-4"
+                >
+                  {getCollapseButtonText()}
+                </Button>
+              )}
+              
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    title="Add new task"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Task</DialogTitle>
@@ -687,13 +823,17 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="assigned_to">Assign To (optional)</Label>
+                  <Label htmlFor="assign_to">Assign To (optional)</Label>
                   <UserSelector
-                    selectedUsers={(formData.assigned_to || []).map(email => ({ id: email, email, full_name: email }))}
-                    onUsersChange={(users) => setFormData({ ...formData, assigned_to: users.map(u => u.email) })}
-                    placeholder="Select users to assign this task to..."
+                    selectedUsers={formData.assign_to ? [{ id: formData.assign_to, email: formData.assign_to, full_name: formData.assign_to, added_at: new Date().toISOString() }] : []}
+                    onUsersChange={(users) => setFormData({ ...formData, assign_to: users.length > 0 ? users[0].email : '' })}
+                    placeholder="Select user to assign this task to..."
                     className="mt-1"
+                    filterUsers={(users) => users.filter(user => currentProjectAssignableUsers.includes(user.email))}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Assign this specific task to a user. They must be a project participant.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -731,154 +871,190 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         </div>
       </div>
 
-      {/* Projects */}
-      {Object.keys(filteredProjects).length === 0 ? (
-        <Card className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-          <CardContent className="p-8 text-center">
-            <div className="text-lg text-muted-foreground">No tasks yet</div>
-            <div className="text-sm text-muted-foreground mt-2">
-              Create your first task to get started
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(filteredProjects).map(([projectName, tasks]) => {
-            const isCollapsed = collapsedProjects[projectName];
-            const statusCounts = getProjectStatusCounts(tasks);
-            const totalTasks = tasks.length;
-            
-            return (
-              <Card key={projectName} className="border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleProjectCollapse(projectName)}
-                        className="p-1 h-6 w-6"
-                      >
-                        {isCollapsed ? (
-                          <ChevronRight className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
+            {/* Projects */}
+            {Object.keys(filteredProjects).length === 0 ? (
+              <div className="enterprise-card">
+                <div className="p-8 text-center">
+                  <div className="text-lg text-muted-foreground">No tasks yet</div>
+                  <div className="text-sm text-muted-foreground mt-2">
+                    Create your first task to get started
+                  </div>
+                </div>
+              </div>
+            ) : (
+          <div className="space-y-8 mt-6">
+            {Object.entries(filteredProjects).map(([projectName, tasks]) => {
+              const isCollapsed = collapsedProjects[projectName];
+              const statusCounts = getProjectStatusCounts(tasks);
+              const totalTasks = tasks.length;
+              
+              return (
+                <div key={projectName} className="enterprise-table">
+                  {/* Project Header */}
+                  <div className="enterprise-table-header px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleProjectCollapse(projectName)}
+                          className="h-8 w-8 p-0 hover:bg-muted/50"
+                        >
+                          {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                        <h3 className="text-lg font-semibold text-foreground">{projectName}</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openParticipantsDialog(projectName)}
+                          className="h-8 px-2 text-xs"
+                        >
+                          <Users className="w-3 h-3 mr-1" />
+                          Manage Participants
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground"></div>
+                          <span className="text-sm font-medium text-muted-foreground">{totalTasks} tasks</span>
+                        </div>
+                        {statusCounts.todo > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
+                            <span className="text-sm font-medium text-muted-foreground">{statusCounts.todo} open</span>
+                          </div>
                         )}
-                      </Button>
-                      <span>{projectName}</span>
+                        {statusCounts.in_progress > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full bg-warning"></div>
+                            <span className="text-sm font-medium text-muted-foreground">{statusCounts.in_progress} in process</span>
+                          </div>
+                        )}
+                        {statusCounts.completed > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
+                            <span className="text-sm font-medium text-muted-foreground">{statusCounts.completed} done</span>
+                          </div>
+                        )}
+                        {statusCounts.cancelled > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full bg-destructive"></div>
+                            <span className="text-sm font-medium text-muted-foreground">{statusCounts.cancelled} cancelled</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{totalTasks} tasks</Badge>
-                      {statusCounts.todo > 0 && (
-                        <Badge variant="outline" className="text-blue-600">
-                          {statusCounts.todo} open
-                        </Badge>
-                      )}
-                      {statusCounts.in_progress > 0 && (
-                        <Badge variant="outline" className="text-orange-600">
-                          {statusCounts.in_progress} in process
-                        </Badge>
-                      )}
-                      {statusCounts.completed > 0 && (
-                        <Badge variant="outline" className="text-green-600">
-                          {statusCounts.completed} done
-                        </Badge>
-                      )}
-                      {statusCounts.cancelled > 0 && (
-                        <Badge variant="outline" className="text-red-600">
-                          {statusCounts.cancelled} cancelled
-                        </Badge>
-                      )}
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                {!isCollapsed && (
-                  <CardContent>
-                    <div className="space-y-3">
-                      {tasks.map((task) => {
-                        const StatusIcon = getStatusIcon(task.status);
-                        const isDisabled = isTaskDisabled(task);
-                        const isFutureScheduled = isTaskFutureScheduled(task);
-                        
-                        return (
-                          <div
-                            key={task.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                              isFutureScheduled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 flex-1">
-                              <StatusIcon className="w-4 h-4 text-muted-foreground" />
-                              <div className="flex-1">
-                                <div className={`font-medium ${isFutureScheduled ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
-                                  {task.title}
-                                </div>
-                                {task.description && (
-                                  <div className={`text-sm text-muted-foreground ${isFutureScheduled ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                                    {task.description}
+                  </div>
+                  
+                      {/* Tasks Table */}
+                      {!isCollapsed && (
+                        <div className="divide-y divide-border">
+                          {tasks.map((task, index) => {
+                            const StatusIcon = getStatusIcon(task.status);
+                            const isDisabled = isTaskDisabled(task);
+                            const isFutureScheduled = isTaskFutureScheduled(task);
+                            
+                            return (
+                              <div
+                                key={task.id}
+                                className={`enterprise-table-row px-6 ${
+                                  isFutureScheduled ? 'bg-primary-soft/50' : ''
+                                }`}
+                                style={{
+                                  animation: `fade-in 0.3s ease-out ${index * 0.05}s both`
+                                }}
+                              >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4 flex-1 pr-4">
+                                <StatusIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-medium text-foreground mb-1 ${
+                                    isFutureScheduled ? 'text-primary' : ''
+                                  }`}>
+                                    {task.title}
                                   </div>
-                                )}
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge className={getPriorityColor(task.priority)}>
-                                    {getPriorityLabel(task.priority)}
-                                  </Badge>
-                                  <Badge variant="outline">
-                                    {getStatusLabel(task.status)}
-                                  </Badge>
-                                  {task.scheduled_date && (
-                                    <Badge variant="outline" className={`text-xs ${isFutureScheduled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700' : ''}`}>
-                                      <Calendar className="w-3 h-3 mr-1" />
-                                      {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
-                                    </Badge>
+                                  {task.description && (
+                                    <div className={`text-sm text-muted-foreground ${
+                                      isFutureScheduled ? 'text-primary/70' : ''
+                                    }`}>
+                                      {task.description}
+                                    </div>
                                   )}
-                                  {task.due_date && (
-                                    <Badge variant="outline" className="text-xs">
-                                      <Clock className="w-3 h-3 mr-1" />
-                                      {format(parseISO(task.due_date), 'MMM d, yyyy')}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Badge className={`status-badge ${getPriorityColor(task.priority)}`}>
+                                      {getPriorityLabel(task.priority)}
                                     </Badge>
-                                  )}
+                                    <Badge variant="outline" className="status-badge">
+                                      {getStatusLabel(task.status)}
+                                    </Badge>
+                                    {task.scheduled_date && (
+                                      <Badge variant="outline" className={`text-xs ${
+                                        isFutureScheduled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700' : ''
+                                      }`}>
+                                        <Calendar className="w-3 h-3 mr-1" />
+                                        {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
+                                      </Badge>
+                                    )}
+                                    {task.due_date && (
+                                      <Badge variant="outline" className="text-xs">
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        {format(parseISO(task.due_date), 'MMM d, yyyy')}
+                                      </Badge>
+                                    )}
+                                    {task.assign_to && (
+                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+                                        <Users className="w-3 h-3 mr-1" />
+                                        Assign to: {task.assign_to}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {task.status !== 'completed' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleQuickDone(task.id)}
-                                  className={`text-green-600 hover:text-green-700 ${isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}`}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEditDialog(task)}
-                                className={isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteTask(task.id)}
-                                className={isFutureScheduled ? 'border-blue-300 hover:bg-blue-50' : ''}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                                  <div className="flex items-center gap-2 pl-4">
+                                    {task.status !== 'completed' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleQuickDone(task.id)}
+                                        className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openEditDialog(task)}
+                                      className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteTask(task.id)}
+                                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
 
       {/* Edit Task Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1003,13 +1179,17 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             </div>
 
             <div>
-              <Label htmlFor="edit-assigned_to">Assign To (optional)</Label>
+              <Label htmlFor="edit-assign_to">Assign To (optional)</Label>
               <UserSelector
-                selectedUsers={(formData.assigned_to || []).map(email => ({ id: email, email, full_name: email }))}
-                onUsersChange={(users) => setFormData({ ...formData, assigned_to: users.map(u => u.email) })}
-                placeholder="Select users to assign this task to..."
+                selectedUsers={formData.assign_to ? [{ id: formData.assign_to, email: formData.assign_to, full_name: formData.assign_to, added_at: new Date().toISOString() }] : []}
+                onUsersChange={(users) => setFormData({ ...formData, assign_to: users.length > 0 ? users[0].email : '' })}
+                placeholder="Select user to assign this task to..."
                 className="mt-1"
+                filterUsers={(users) => users.filter(user => currentProjectAssignableUsers.includes(user.email))}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Assign this specific task to a user. They must be a project participant.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1042,6 +1222,37 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
               </Button>
               <Button onClick={handleUpdateTask}>
                 Update Task
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Participants Management Dialog */}
+      <Dialog open={isManagingParticipants} onOpenChange={setIsManagingParticipants}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Project Participants</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Project: {managingProject}</Label>
+            </div>
+            <div>
+              <Label htmlFor="project-participants">Participants</Label>
+              <UserSelector
+                selectedUsers={currentProjectParticipants.map(email => ({ id: email, email, full_name: email, added_at: new Date().toISOString() }))}
+                onUsersChange={(users) => setCurrentProjectParticipants(users.map(u => u.email))}
+                placeholder="Select users to add to this project..."
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsManagingParticipants(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveProjectParticipants}>
+                Save Participants
               </Button>
             </div>
           </div>

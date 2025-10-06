@@ -339,8 +339,35 @@ def share_contacts():
         if not isinstance(user_ids, list) or len(user_ids) == 0:
             return jsonify({'error': 'user_ids must be a non-empty list'}), 400
         
-        # Get current user's contacts
-        contacts = Person.query.filter(Person.owner_id == current_user_id).all()
+        # Check if sharing a single contact, filtered contacts, or all contacts
+        contact_id = data.get('contact_id')
+        contact_ids = data.get('contact_ids')  # New: list of contact IDs to share
+        
+        if contact_id:
+            # Share single contact
+            contact = Person.query.filter(
+                Person.id == contact_id,
+                Person.owner_id == current_user_id
+            ).first()
+            if not contact:
+                return jsonify({'error': 'Contact not found'}), 404
+            contacts = [contact]
+        elif 'contact_ids' in data:
+            # Share filtered contacts (specific contact IDs) - even if empty list
+            if isinstance(contact_ids, list):
+                if len(contact_ids) > 0:
+                    contacts = Person.query.filter(
+                        Person.id.in_(contact_ids),
+                        Person.owner_id == current_user_id
+                    ).all()
+                else:
+                    # Empty contact_ids list - share nothing
+                    contacts = []
+            else:
+                return jsonify({'error': 'contact_ids must be a list'}), 400
+        else:
+            # Get all current user's contacts (fallback when no contact_ids provided)
+            contacts = Person.query.filter(Person.owner_id == current_user_id).all()
         
         if not contacts:
             return jsonify({
@@ -374,29 +401,42 @@ def share_contacts():
                 people_logger.warning(f"User {user_id} not found, skipping")
                 continue
             
+            people_logger.info(f"Sharing {len(contacts)} contacts with user {target_user.email}")
+            
             # Copy each contact to the target user
             for contact in contacts:
-                # Check if contact already exists for target user (by email)
-                existing_contact = Person.query.filter(
-                    Person.owner_id == target_user.id,
-                    Person.email == contact.email
-                ).first()
+                # Check if contact already exists for target user
+                # Use email if available, otherwise use first_name + last_name combination
+                if contact.email and contact.email.strip():
+                    existing_contact = Person.query.filter(
+                        Person.owner_id == target_user.id,
+                        Person.email == contact.email
+                    ).first()
+                else:
+                    # For contacts without email, use first_name + last_name as unique identifier
+                    existing_contact = Person.query.filter(
+                        Person.owner_id == target_user.id,
+                        Person.first_name == contact.first_name,
+                        Person.last_name == contact.last_name,
+                        Person.email == contact.email  # Also check email is empty
+                    ).first()
                 
                 if existing_contact:
                     # Update existing contact's source
                     existing_contact.source = f"{sharer_name} Sharing"
                     existing_contact.updated_at = datetime.utcnow()
+                    shared_count += 1
+                    people_logger.info(f"Updated existing contact: {contact.first_name} {contact.last_name}")
                 else:
                     # Create new contact for target user
                     new_contact = Person(
-                        id=str(uuid.uuid4()),
                         owner_id=target_user.id,
                         first_name=contact.first_name,
                         last_name=contact.last_name,
                         email=contact.email,
                         phone=contact.phone,
                         organization=contact.organization,
-                        role=contact.role,
+                        job_title=contact.job_title,
                         status=contact.status,
                         priority=contact.priority,
                         notes=contact.notes,
@@ -406,10 +446,16 @@ def share_contacts():
                         updated_at=datetime.utcnow()
                     )
                     db.session.add(new_contact)
-                
-                shared_count += 1
+                    shared_count += 1
+                    people_logger.info(f"Created new contact: {contact.first_name} {contact.last_name}")
         
-        db.session.commit()
+        try:
+            db.session.commit()
+            people_logger.info(f"Successfully committed {shared_count} contact operations")
+        except Exception as e:
+            db.session.rollback()
+            people_logger.error(f"Failed to commit contact sharing: {e}")
+            return jsonify({'error': f'Failed to save shared contacts: {str(e)}'}), 500
         
         people_logger.info(f"Shared {shared_count} contacts with {len(user_ids)} users")
         

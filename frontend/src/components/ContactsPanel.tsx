@@ -30,6 +30,7 @@ interface ContactsPanelProps {
 export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm, onSearch }: ContactsPanelProps) => {
   const [showCsvUploader, setShowCsvUploader] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareSingleContact, setShareSingleContact] = useState<Person | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; personId: string | null; personName: string }>({
     isOpen: false,
     personId: null,
@@ -42,6 +43,11 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
       personId,
       personName
     });
+  };
+
+  const handleShareSingleContact = (person: Person) => {
+    setShareSingleContact(person);
+    setShowShareModal(true);
   };
 
   const handleDeleteConfirm = () => {
@@ -113,6 +119,8 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
             people={filteredPeople}
             onDelete={handleDeleteClick}
             onView={onView}
+            onShare={handleShareSingleContact}
+            onRefresh={onRefresh}
           />
         </div>
       </div>
@@ -128,14 +136,20 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
         />
 
         {/* Share Contacts Dialog */}
-        <ShareContactsModal 
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          onShareComplete={() => {
-            setShowShareModal(false);
-            onRefresh();
-          }}
-        />
+      <ShareContactsModal 
+        isOpen={showShareModal} 
+        onClose={() => {
+          setShowShareModal(false);
+          setShareSingleContact(null);
+        }}
+        onShareComplete={() => {
+          setShowShareModal(false);
+          setShareSingleContact(null);
+          onRefresh();
+        }}
+        singleContact={shareSingleContact}
+        filteredContacts={filteredPeople}
+      />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteConfirm.isOpen} onOpenChange={handleDeleteCancel}>
