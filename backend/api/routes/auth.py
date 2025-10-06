@@ -39,11 +39,11 @@ def register():
             is_approved=False  # Always start as not approved
         )
         
-        # Auto-approve admin users and test users
+        # Auto-approve only specific admin users
         print(f"DEBUG: User email: {user.email}")
-        print(f"DEBUG: Email ends with @wershuffle.com: {user.email.endswith('@wershuffle.com')}")
-        if user.email in ['guy@wershuffle.com', 'roee2912@gmail.com'] or user.email.endswith('@wershuffle.com'):
-            print("DEBUG: Auto-approving user")
+        admin_emails = ['guy@wershuffle.com', 'roee2912@gmail.com']
+        if user.email in admin_emails:
+            print("DEBUG: Auto-approving admin user")
             user.is_approved = True
             user.approved_at = datetime.utcnow()
             user.approved_by = user.id

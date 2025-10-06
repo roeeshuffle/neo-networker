@@ -37,7 +37,7 @@ class User(db.Model):
     # Relationships
     people = db.relationship('Person', foreign_keys='Person.owner_id', backref='owner', lazy='dynamic')
     tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
-    group_members = db.relationship('UserGroup', foreign_keys='UserGroup.owner_id', backref='owner', lazy='dynamic')
+    # group_members = db.relationship('UserGroup', foreign_keys='UserGroup.owner_id', backref='owner', lazy='dynamic')  # Temporarily disabled - table doesn't exist
     # events relationship temporarily removed due to SQLAlchemy conflict
     
     def __repr__(self):

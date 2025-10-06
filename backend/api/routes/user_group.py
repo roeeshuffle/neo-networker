@@ -306,19 +306,19 @@ def approve_invitation():
                 'message': 'Invitation not found'
             }), 404
         
-        # Add the inviter to current user's group
+        # Add the inviter to current user's group (using display name entered by current user)
         group_members = user_preferences.get('group_members', [])
         new_member = {
             'id': f"{current_user_id}_{invitation['email']}_{len(group_members)}",
             'email': invitation['email'],
-            'full_name': invitation['name'],
+            'full_name': display_name or invitation['name'],  # Use display name entered by current user
             'added_at': datetime.utcnow().isoformat(),
             'status': 'approved'
         }
         group_members.append(new_member)
         user_preferences['group_members'] = group_members
         
-        # Add current user to inviter's group
+        # Add current user to inviter's group (using original name from invitation)
         inviter = User.query.filter_by(email=invitation['email']).first()
         if inviter:
             inviter_preferences = inviter.user_preferences or {}
@@ -326,7 +326,7 @@ def approve_invitation():
             inviter_new_member = {
                 'id': f"{inviter.id}_{current_user.email}_{len(inviter_group_members)}",
                 'email': current_user.email,
-                'full_name': display_name or current_user.full_name or current_user.email,
+                'full_name': current_user.full_name or current_user.email,  # Use actual user's name
                 'added_at': datetime.utcnow().isoformat(),
                 'status': 'approved'
             }

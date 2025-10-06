@@ -51,9 +51,9 @@ services:
       dockerfile: Dockerfile.local
     container_name: neo_networker_frontend_local
     environment:
-      - VITE_API_URL=http://localhost:5002
+      - VITE_API_URL=http://localhost:5002/api
     ports:
-      - "3000:3000"
+      - "3000:8080"
     volumes:
       - ./frontend:/app
       - /app/node_modules  # Exclude node_modules from volume mount

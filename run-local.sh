@@ -2,6 +2,7 @@
 
 # Local Development Script for Neo Networker
 # This script helps you run the application locally with Docker
+# IMPORTANT: This script should only be used on the 'test' branch
 
 set -e
 
@@ -27,6 +28,19 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to check current Git branch
+check_branch() {
+    current_branch=$(git branch --show-current)
+    if [ "$current_branch" != "test" ]; then
+        print_warning "You are on branch '$current_branch'. This script is designed for the 'test' branch."
+        print_status "Switching to test branch..."
+        git checkout test
+        print_success "Switched to test branch"
+    else
+        print_success "Working on test branch (correct for development)"
+    fi
 }
 
 # Function to check if Docker is running
@@ -130,6 +144,7 @@ show_help() {
 # Main script logic
 case "${1:-start}" in
     start)
+        check_branch
         check_docker
         setup_env
         start_app

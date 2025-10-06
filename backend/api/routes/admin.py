@@ -65,6 +65,11 @@ def get_all_users():
         user_data = []
         for user in users:
             # Telegram info is now directly in User model
+            # Get WhatsApp phone number from state_data if available
+            whatsapp_phone = None
+            if user.state_data and isinstance(user.state_data, dict):
+                whatsapp_phone = user.state_data.get('whatsapp_phone_number')
+            
             user_data.append({
                 'id': user.id,
                 'email': user.email,
@@ -74,7 +79,7 @@ def get_all_users():
                 'approved_at': user.approved_at.isoformat() if user.approved_at else None,
                 'approved_by': user.approved_by,
                 'telegram_id': user.telegram_id,
-                'whatsapp_phone_number': user.whatsapp_phone_number,
+                'whatsapp_phone_number': whatsapp_phone,
                 'telegram_connected': bool(user.telegram_id)
             })
         
