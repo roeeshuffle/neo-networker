@@ -356,7 +356,20 @@ def share_contacts():
         
         # Share contacts with each selected user
         for user_id in user_ids:
+            # user_id might be a custom ID from group members, try to find user by ID first
             target_user = User.query.get(user_id)
+            
+            # If not found by ID, try to find by email (in case it's a custom group member ID)
+            if not target_user:
+                # Extract email from custom ID format or treat as email directly
+                if '_' in user_id:
+                    # Custom ID format: "user_id_email_index"
+                    email = user_id.split('_')[1] if len(user_id.split('_')) > 1 else user_id
+                else:
+                    email = user_id
+                
+                target_user = User.query.filter_by(email=email).first()
+            
             if not target_user:
                 people_logger.warning(f"User {user_id} not found, skipping")
                 continue
@@ -365,7 +378,7 @@ def share_contacts():
             for contact in contacts:
                 # Check if contact already exists for target user (by email)
                 existing_contact = Person.query.filter(
-                    Person.owner_id == user_id,
+                    Person.owner_id == target_user.id,
                     Person.email == contact.email
                 ).first()
                 
@@ -377,7 +390,7 @@ def share_contacts():
                     # Create new contact for target user
                     new_contact = Person(
                         id=str(uuid.uuid4()),
-                        owner_id=user_id,
+                        owner_id=target_user.id,
                         first_name=contact.first_name,
                         last_name=contact.last_name,
                         email=contact.email,
