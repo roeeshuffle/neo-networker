@@ -84,6 +84,7 @@ class ApiClient {
   }
 
   async createPerson(personData: any) {
+    console.log('🔍 API CLIENT DEBUG - Creating person with data:', personData);
     return this.request('/people', {
       method: 'POST',
       body: JSON.stringify(personData),
@@ -276,6 +277,46 @@ class ApiClient {
   }
 
   // Check if user is authenticated
+  // User Group methods
+  async getUserGroup() {
+    return this.request('/user-group');
+  }
+
+  async addUserToGroup(email: string, name: string) {
+    return this.request('/user-group', {
+      method: 'POST',
+      body: JSON.stringify({ email, name }),
+    });
+  }
+
+  async removeUserFromGroup(id: string) {
+    return this.request(`/user-group/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Group invitation methods
+  async getPendingInvitations() {
+    return this.request('/user-group/pending-invitations');
+  }
+
+  async approveInvitation(invitationId: string, displayName?: string) {
+    return this.request('/user-group/approve-invitation', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        invitation_id: invitationId,
+        display_name: displayName || ''
+      }),
+    });
+  }
+
+  async declineInvitation(invitationId: string) {
+    return this.request('/user-group/decline-invitation', {
+      method: 'POST',
+      body: JSON.stringify({ invitation_id: invitationId }),
+    });
+  }
+
   isAuthenticated() {
     return !!this.token;
   }

@@ -1,10 +1,21 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/PeopleTable";
-import { SimpleColumnViewer } from "@/components/SimpleColumnViewer";
+import SimpleCsvUploader from "@/components/SimpleCsvUploader";
 import { SearchBar } from "@/components/SearchBar";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ContactsPanelProps {
   filteredPeople: Person[];
@@ -16,50 +27,112 @@ interface ContactsPanelProps {
 }
 
 export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm, onSearch }: ContactsPanelProps) => {
+  const [showCsvUploader, setShowCsvUploader] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; personId: string | null; personName: string }>({
+    isOpen: false,
+    personId: null,
+    personName: ""
+  });
+
+  const handleDeleteClick = (personId: string, personName: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      personId,
+      personName
+    });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.personId) {
+      onDelete(deleteConfirm.personId);
+      setDeleteConfirm({
+        isOpen: false,
+        personId: null,
+        personName: ""
+      });
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({
+      isOpen: false,
+      personId: null,
+      personName: ""
+    });
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-[5%]">
+      {/* Professional Action Bar */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Contact Directory</h2>
-          <p className="text-muted-foreground">Manage your professional network</p>
+        <div className="flex items-center gap-3">
+          <div className="w-[48rem]">
+            <SearchBar 
+              onSearch={onSearch} 
+              placeholder="Search contacts..."
+              activeTab="contacts"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <SimpleColumnViewer onDataLoaded={onRefresh} />
-          <Button onClick={onShowForm} className="shadow-lg">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Person
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setShowCsvUploader(true)} 
+            variant="outline"
+            size="sm"
+            className="w-9 h-9 p-0"
+            title="Import contacts"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          <Button 
+            onClick={onShowForm} 
+            size="sm"
+            className="w-9 h-9 p-0"
+            title="Add new contact"
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>
       
-      <Card className="overflow-hidden">
-         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3">
-              <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                {filteredPeople.length} entries
-              </span>
-            </CardTitle>
-            
-            {/* Search Bar */}
-            <div className="flex justify-center">
-              <SearchBar 
-                onSearch={onSearch} 
-                placeholder="Search contacts..."
-                activeTab="contacts"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
+      <div className="enterprise-card">
+        <div className="p-0">
           <PeopleTable 
             people={filteredPeople}
-            onDelete={onDelete}
+            onDelete={handleDeleteClick}
             onView={onView}
           />
-        </CardContent>
-        </Card>
+        </div>
+      </div>
+        
+        {/* CSV Uploader Dialog */}
+        <SimpleCsvUploader 
+          isOpen={showCsvUploader}
+          onClose={() => setShowCsvUploader(false)}
+          onImportComplete={() => {
+            setShowCsvUploader(false);
+            onRefresh();
+          }}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteConfirm.isOpen} onOpenChange={handleDeleteCancel}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{deleteConfirm.personName}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDeleteCancel}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Yes, Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   };

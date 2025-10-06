@@ -11,7 +11,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, CalendarDays } from 'lucide-react';
 import { apiClient } from '@/integrations/api/client';
 import { toast } from '@/hooks/use-toast';
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfMonth } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfMonth, isToday } from 'date-fns';
+import { UserSelector } from './UserSelector';
 
 interface Event {
   id: number;
@@ -59,11 +60,23 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>('weekly');
+  // Calendar settings from user preferences
+  const [calendarSettings, setCalendarSettings] = useState({
+    defaultView: 'monthly',
+    startWeekday: 'sunday'
+  });
+  
+  const [viewMode, setViewMode] = useState<'weekly' | 'daily' | 'monthly'>(calendarSettings.defaultView as 'weekly' | 'daily' | 'monthly');
 
   const handleViewModeChange = (value: 'weekly' | 'daily' | 'monthly') => {
     console.log('Changing view mode to:', value);
     setViewMode(value);
+    
+    // Reset to current day/week/month when switching views
+    const now = new Date();
+    setCurrentDay(now);
+    setCurrentWeek(now);
+    setCurrentMonth(now);
   };
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -87,9 +100,62 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     notes: ''
   });
 
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+  // Load user calendar preferences
+  useEffect(() => {
+    const loadCalendarSettings = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        
+        if (!token) return;
+
+        const response = await fetch(`${apiUrl}/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const preferences = data.preferences || {};
+          const calendarPrefs = preferences.calendar_settings || {};
+          
+          // Handle both field name formats (defaultView/default_view, startWeekday/start_weekday)
+          const newSettings = {
+            defaultView: calendarPrefs.defaultView || calendarPrefs.default_view || 'monthly',
+            startWeekday: calendarPrefs.startWeekday || calendarPrefs.start_weekday || 'sunday'
+          };
+          
+          setCalendarSettings(newSettings);
+          
+          // Set view mode based on user preference
+          setViewMode(newSettings.defaultView as 'weekly' | 'daily' | 'monthly');
+          
+          console.log('🔍 EVENTS TAB: Loaded calendar settings:', calendarPrefs);
+          console.log('🔍 EVENTS TAB: Set view mode to:', newSettings.defaultView);
+        }
+      } catch (error) {
+        console.error('Error loading calendar settings:', error);
+      }
+    };
+
+    loadCalendarSettings();
+  }, []);
+
+  // Update view mode when calendar settings change
+  useEffect(() => {
+    setViewMode(calendarSettings.defaultView as 'weekly' | 'daily' | 'monthly');
+    console.log('🔍 EVENTS TAB: View mode updated to:', calendarSettings.defaultView);
+  }, [calendarSettings.defaultView]);
+
+  // Dynamic week days based on user preference
+  const weekDays = calendarSettings.startWeekday === 'sunday' 
+    ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  const weekStartsOn = calendarSettings.startWeekday === 'sunday' ? 0 : 1;
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn });
+  const weekEnd = endOfWeek(currentWeek, { weekStartsOn });
   const weekDates = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   useEffect(() => {
@@ -365,13 +431,9 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-[5%]">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Events Management</h2>
-          <p className="text-muted-foreground">Manage your scheduled events and meetings</p>
-        </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <Select value={viewMode} onValueChange={handleViewModeChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -382,11 +444,17 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
               <SelectItem value="monthly">Monthly</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        
+        <div className="flex items-center gap-3">
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Event
+              <Button 
+                size="sm"
+                className="w-9 h-9 p-0"
+                title="Add new event"
+              >
+                <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -460,32 +528,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
 
                 <div>
                   <Label>Participants</Label>
-                  {formData.participants.map((participant, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <Input
-                        placeholder="Name"
-                        value={participant.name}
-                        onChange={(e) => updateParticipant(index, 'name', e.target.value)}
-                      />
-                      <Input
-                        placeholder="Email"
-                        value={participant.email}
-                        onChange={(e) => updateParticipant(index, 'email', e.target.value)}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeParticipant(index)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addParticipant}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Participant
-                  </Button>
+                  <UserSelector
+                    selectedUsers={formData.participants.map(p => ({ 
+                      id: p.email, 
+                      email: p.email, 
+                      full_name: p.name || p.email 
+                    }))}
+                    onUsersChange={(users) => setFormData({ 
+                      ...formData, 
+                      participants: users.map(u => ({ name: u.full_name || u.email, email: u.email }))
+                    })}
+                    placeholder="Select participants for this event..."
+                    className="mt-1"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -577,7 +632,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           else if (viewMode === 'weekly') navigateWeek('prev');
           else if (viewMode === 'monthly') navigateMonth('prev');
         }}>
-          Previous {viewMode === 'daily' ? 'Day' : viewMode === 'weekly' ? 'Week' : 'Month'}
+          &lt;
         </Button>
         <h3 className="text-lg font-semibold">
           {viewMode === 'daily' && format(currentDay, 'EEEE, MMM d, yyyy')}
@@ -589,7 +644,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           else if (viewMode === 'weekly') navigateWeek('next');
           else if (viewMode === 'monthly') navigateMonth('next');
         }}>
-          Next {viewMode === 'daily' ? 'Day' : viewMode === 'weekly' ? 'Week' : 'Month'}
+          &gt;
         </Button>
       </div>
 
@@ -597,9 +652,9 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
         <div className="space-y-4">
-          <Card>
+          <Card className={`border-2 border-gray-300 dark:border-gray-600 ${isToday(currentDay) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
             <CardHeader>
-              <CardTitle className="text-lg">
+              <CardTitle className={`text-lg ${isToday(currentDay) ? 'text-primary font-bold' : ''}`}>
                 {format(currentDay, 'EEEE, MMMM d, yyyy')}
               </CardTitle>
             </CardHeader>
@@ -613,7 +668,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 events.map((event) => (
                   <div
                     key={event.id}
-                    className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50"
+                    className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-muted/50"
                     onClick={(e) => {
                       e.stopPropagation();
                       openEditDialog(event);
@@ -663,12 +718,12 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           {weekDates.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             return (
-              <Card key={index} className="min-h-[200px]">
+              <Card key={index} className={`min-h-[200px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
+                  <CardTitle className={`text-sm ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                     {weekDays[index]}
                   </CardTitle>
-                  <div className="text-xs text-muted-foreground">
+                  <div className={`text-xs ${isToday(date) ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
                     {format(date, 'MMM d')}
                   </div>
                 </CardHeader>
@@ -721,11 +776,6 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       {viewMode === 'monthly' && (
         <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {format(currentMonth, 'MMMM yyyy')}
-              </CardTitle>
-            </CardHeader>
             <CardContent>
               <div className="grid grid-cols-7 gap-2 mb-4">
                 {weekDays.map((day) => (
@@ -750,12 +800,12 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                   return (
                     <div
                       key={i}
-                      className={`min-h-[80px] p-2 border rounded cursor-pointer hover:bg-muted/20 transition-colors ${
+                      className={`min-h-[80px] p-2 border-2 border-gray-300 dark:border-gray-600 rounded cursor-pointer hover:bg-muted/20 transition-colors ${
                         isCurrentMonth ? 'bg-background' : 'bg-muted/30'
-                      }`}
+                      } ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}
                       onClick={() => handleDateClick(date)}
                     >
-                      <div className={`text-sm ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      <div className={`text-sm ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'} ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                         {format(date, 'd')}
                       </div>
                       <div className="space-y-1 mt-1">
@@ -860,32 +910,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
 
             <div>
               <Label>Participants</Label>
-              {formData.participants.map((participant, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <Input
-                    placeholder="Name"
-                    value={participant.name}
-                    onChange={(e) => updateParticipant(index, 'name', e.target.value)}
-                  />
-                  <Input
-                    placeholder="Email"
-                    value={participant.email}
-                    onChange={(e) => updateParticipant(index, 'email', e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeParticipant(index)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" variant="outline" onClick={addParticipant}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Participant
-              </Button>
+              <UserSelector
+                selectedUsers={formData.participants.map(p => ({ 
+                  id: p.email, 
+                  email: p.email, 
+                  full_name: p.name || p.email 
+                }))}
+                onUsersChange={(users) => setFormData({ 
+                  ...formData, 
+                  participants: users.map(u => ({ name: u.full_name || u.email, email: u.email }))
+                })}
+                placeholder="Select participants for this event..."
+                className="mt-1"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

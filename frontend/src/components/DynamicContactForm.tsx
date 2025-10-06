@@ -74,9 +74,38 @@ const CATEGORIES = [
 export default function DynamicContactForm({ isOpen, onClose, contact, onSave, isLoading = false, customFields = [] }: DynamicContactFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [availableFields, setAvailableFields] = useState<ContactField[]>([]);
-  const [showAddField, setShowAddField] = useState(false);
-  const [selectedFieldToAdd, setSelectedFieldToAdd] = useState('');
-  const [newCustomField, setNewCustomField] = useState({ name: '', type: 'text' });
+  const [userCustomFieldDefinitions, setUserCustomFieldDefinitions] = useState<string[]>([]);
+
+  // Load user custom field definitions from settings
+  useEffect(() => {
+    const loadUserCustomFields = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        
+        if (!token) return;
+
+        const response = await fetch(`${apiUrl}/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const customFieldsList = data.preferences?.custom_fields || data.custom_fields || [];
+          setUserCustomFieldDefinitions(customFieldsList);
+          console.log('🔍 DYNAMIC FORM: Loaded custom fields from settings:', customFieldsList);
+        }
+      } catch (error) {
+        console.error('Error loading custom fields:', error);
+      }
+    };
+
+    if (isOpen) {
+      loadUserCustomFields();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const contactData: Record<string, any> = {};
@@ -97,17 +126,30 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
       });
     });
     
-    // Add custom fields if editing existing contact
+    // Add user-defined custom fields (from settings) - always show them
+    userCustomFieldDefinitions.forEach(fieldName => {
+      const value = contact?.custom_fields?.[fieldName] || '';
+      contactData[fieldName] = value;
+      fields.push({
+        field: fieldName,
+        display_name: fieldName,
+        value: value,
+        type: 'text',
+        category: 'custom'
+      });
+    });
+    
+    // Add any additional custom fields that exist in contact but not in user definitions
     if (contact && contact.custom_fields) {
       Object.keys(contact.custom_fields).forEach(key => {
-        const customField = customFields.find(cf => cf.key === key);
-        if (customField && contact.custom_fields[key] !== null && contact.custom_fields[key] !== undefined && contact.custom_fields[key] !== '') {
-          contactData[`custom_${key}`] = contact.custom_fields[key];
+        if (!userCustomFieldDefinitions.includes(key)) {
+          const value = contact.custom_fields[key] || '';
+          contactData[key] = value;
           fields.push({
-            field: `custom_${key}`,
-            display_name: customField.name,
-            value: contact.custom_fields[key],
-            type: customField.type,
+            field: key,
+            display_name: key,
+            value: value,
+            type: 'text',
             category: 'custom'
           });
         }
@@ -116,7 +158,8 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     
     setFormData(contactData);
     setAvailableFields(fields);
-  }, [contact]);
+    console.log('🔍 DYNAMIC FORM: Form data with custom fields:', contactData);
+  }, [contact, userCustomFieldDefinitions]);
 
   const handleFieldChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -167,34 +210,6 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     }
   };
 
-  const handleAddCustomField = () => {
-    if (newCustomField.name.trim()) {
-      const fieldKey = newCustomField.name.toLowerCase().replace(/\s+/g, '_');
-      const newField: ContactField = {
-        field: `custom_${fieldKey}`,
-        display_name: newCustomField.name,
-        value: '',
-        type: newCustomField.type,
-        category: 'custom'
-      };
-      setAvailableFields(prev => [...prev, newField]);
-      setFormData(prev => ({ ...prev, [`custom_${fieldKey}`]: '' }));
-      setNewCustomField({ name: '', type: 'text' });
-    }
-  };
-
-  const handleRemoveField = (fieldToRemove: string) => {
-    if (fieldToRemove === 'first_name' || fieldToRemove === 'last_name') {
-      return; // Can't remove required fields
-    }
-
-    setAvailableFields(prev => prev.filter(f => f.field !== fieldToRemove));
-    setFormData(prev => {
-      const newData = { ...prev };
-      delete newData[fieldToRemove];
-      return newData;
-    });
-  };
 
   const handleSave = () => {
     // Separate standard fields from custom fields
@@ -214,6 +229,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
     if (Object.keys(customFieldsData).length > 0) {
       standardFields.custom_fields = customFieldsData;
     }
+
+    console.log('🔍 CONTACT FORM DEBUG - Form data being sent:', standardFields);
+    console.log('🔍 CONTACT FORM DEBUG - First name:', standardFields.first_name);
+    console.log('🔍 CONTACT FORM DEBUG - Last name:', standardFields.last_name);
 
     onSave(standardFields);
   };
@@ -328,17 +347,6 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
             </Label>
             <div className="relative">
               {renderField(field)}
-              {category === 'custom' && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveField(field.field)}
-                  className="absolute -top-1 -right-1 h-6 w-6 p-0"
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              )}
             </div>
           </div>
         ))}
@@ -375,41 +383,10 @@ export default function DynamicContactForm({ isOpen, onClose, contact, onSave, i
               
               {renderFieldsForCategory(category.id)}
               
-              {category.id === 'custom' && (
-                <div className="border-t pt-4">
-                  <h4 className="text-md font-medium mb-4">Add Custom Field</h4>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Field name"
-                      value={newCustomField.name}
-                      onChange={(e) => setNewCustomField(prev => ({ ...prev, name: e.target.value }))}
-                      className="flex-1"
-                    />
-                    <Select
-                      value={newCustomField.type}
-                      onValueChange={(value) => setNewCustomField(prev => ({ ...prev, type: value }))}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="tel">Phone</SelectItem>
-                        <SelectItem value="url">URL</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="textarea">Textarea</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      onClick={handleAddCustomField}
-                      disabled={!newCustomField.name.trim()}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add
-                    </Button>
-                  </div>
+              {category.id === 'custom' && availableFields.filter(f => f.category === 'custom').length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>No custom fields defined yet.</p>
+                  <p className="text-sm mt-1">Add custom fields in Settings → Contact Management → Custom Fields</p>
                 </div>
               )}
                 </TabsContent>

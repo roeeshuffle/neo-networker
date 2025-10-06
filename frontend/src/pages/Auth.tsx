@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mail, Lock, User, ArrowLeft } from "lucide-react";
 
 const Auth = () => {
@@ -28,7 +29,7 @@ const Auth = () => {
     
     try {
       // Get Google OAuth authorization URL
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/auth/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +137,7 @@ const Auth = () => {
         }
       } else {
         console.log("Attempting registration with:", email);
-        const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/register`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -198,7 +199,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      {/* Theme Toggle in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
       <div className="w-full max-w-md">
 
         <Card>

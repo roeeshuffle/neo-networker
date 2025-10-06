@@ -33,8 +33,47 @@ export const GoogleCalendarEvents: React.FC<GoogleCalendarEventsProps> = ({
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
-  const [weekEnd, setWeekEnd] = useState(endOfWeek(new Date()));
+  const [calendarSettings, setCalendarSettings] = useState({
+    startWeekday: 'sunday'
+  });
+  
+  // Load user calendar preferences
+  useEffect(() => {
+    const loadCalendarSettings = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        
+        if (!token) return;
+
+        const response = await fetch(`${apiUrl}/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const preferences = data.preferences || {};
+          const calendarPrefs = preferences.calendar_settings || {};
+          
+          setCalendarSettings({
+            startWeekday: calendarPrefs.startWeekday || calendarPrefs.start_weekday || 'sunday'
+          });
+          
+          console.log('🔍 GOOGLE CALENDAR: Loaded calendar settings:', calendarPrefs);
+        }
+      } catch (error) {
+        console.error('Error loading calendar settings:', error);
+      }
+    };
+
+    loadCalendarSettings();
+  }, []);
+  
+  const weekStartsOn = calendarSettings.startWeekday === 'sunday' ? 0 : 1;
+  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn }));
+  const [weekEnd, setWeekEnd] = useState(endOfWeek(new Date(), { weekStartsOn }));
 
   useEffect(() => {
     fetchCalendarEvents();
@@ -97,7 +136,7 @@ export const GoogleCalendarEvents: React.FC<GoogleCalendarEventsProps> = ({
     const newWeekStart = new Date(weekStart);
     newWeekStart.setDate(newWeekStart.getDate() + days);
     setWeekStart(newWeekStart);
-    setWeekEnd(endOfWeek(newWeekStart));
+    setWeekEnd(endOfWeek(newWeekStart, { weekStartsOn }));
   };
 
   const getWeekDays = () => {

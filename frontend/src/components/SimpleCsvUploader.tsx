@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +16,7 @@ interface ContactField {
   key: string;
   label: string;
   required: boolean;
+  isCustom?: boolean;
 }
 
 interface CsvColumnMapping {
@@ -30,12 +31,47 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [csvColumns, setCsvColumns] = useState<string[]>([]);
   const [contactFields, setContactFields] = useState<ContactField[]>([]);
+  const [customFields, setCustomFields] = useState<string[]>([]);
   const [mapping, setMapping] = useState<CsvColumnMapping>({});
   const [totalRows, setTotalRows] = useState(0);
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing'>('upload');
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const { toast } = useToast();
+
+  // Fetch custom fields when component mounts
+  useEffect(() => {
+    const fetchCustomFields = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        
+        if (!token) return;
+
+        const response = await fetch(`${apiUrl}/user-preferences`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🔍 CSV UPLOADER - Full API response:', data);
+          const customFieldsList = data.preferences?.custom_fields || data.custom_fields || [];
+          setCustomFields(customFieldsList);
+          console.log('🔍 CSV UPLOADER - Fetched custom fields:', customFieldsList);
+        } else {
+          console.error('🔍 CSV UPLOADER - Failed to fetch custom fields:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Error fetching custom fields:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchCustomFields();
+    }
+  }, [isOpen]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -59,7 +95,7 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
       formData.append('file', file);
 
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/csv/get-columns`, {
+      const response = await fetch(`${apiUrl}/csv/get-columns`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
@@ -133,7 +169,7 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
       formData.append('mapping', JSON.stringify(mapping));
 
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/csv/import-with-mapping`, {
+      const response = await fetch(`${apiUrl}/csv/import-with-mapping`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
@@ -193,16 +229,19 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
           <div className="space-y-4">
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <Label htmlFor="csv-file" className="text-lg font-medium">
-                Select CSV File
-              </Label>
               <input
                 id="csv-file"
                 type="file"
                 accept=".csv"
                 onChange={handleFileSelect}
-                className="mt-2"
+                className="mt-2 hidden"
               />
+              <label 
+                htmlFor="csv-file" 
+                className="cursor-pointer inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Choose CSV File
+              </label>
               {file && (
                 <p className="mt-2 text-sm text-gray-600">
                   Selected: {file.name}
@@ -249,9 +288,15 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="skip">Skip this column</SelectItem>
+                        <SelectItem value="full_name">Full Name (splits to first & last)</SelectItem>
                         {contactFields.map((field) => (
                           <SelectItem key={field.key} value={field.key}>
                             {field.label} {field.required && '*'}
+                          </SelectItem>
+                        ))}
+                        {customFields.map((field) => (
+                          <SelectItem key={`custom_${field}`} value={`custom_${field}`}>
+                            {field} (Custom)
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -300,6 +345,9 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
             
             <div className="bg-green-50 p-4 rounded-lg">
               <p><strong>Imported:</strong> {importResult.imported_count} contacts</p>
+              {importResult.skipped_count > 0 && (
+                <p><strong>Skipped:</strong> {importResult.skipped_count} contacts (duplicates)</p>
+              )}
               <p><strong>Total rows:</strong> {importResult.total_rows}</p>
               {importResult.errors && importResult.errors.length > 0 && (
                 <div className="mt-2">

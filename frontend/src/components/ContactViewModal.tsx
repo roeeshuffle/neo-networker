@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, X, Plus } from 'lucide-react';
+import { Edit, X, Plus, Lock, Unlock } from 'lucide-react';
 
 interface Person {
   id: number;
@@ -53,7 +53,7 @@ const CATEGORIES = [
   { id: 'professional', name: 'Professional Info', description: 'Work and career information' },
   { id: 'social', name: 'Social & Online', description: 'Social media and web presence' },
   { id: 'connection', name: 'Connection', description: 'Relationship management data' },
-  { id: 'custom', name: 'Custom Fields', description: 'User-defined fields' },
+  { id: 'custom', name: 'Custom Fields', description: '' },
 ];
 
 const ContactViewModal: React.FC<ContactViewModalProps> = ({
@@ -75,26 +75,59 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     loadUserCustomFields();
   }, []);
 
+  // Reset to view mode when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsEditing(false);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (person) {
       const personData = { ...person };
+      
+      // Load custom field values into formData
+      if (person.custom_fields && typeof person.custom_fields === 'object') {
+        Object.entries(person.custom_fields).forEach(([key, value]) => {
+          personData[key] = value || '';
+        });
+      }
+      
       setFormData(personData);
       
-      // Parse custom fields from contact with their definitions
-      if (person.custom_fields && typeof person.custom_fields === 'object') {
-        const contactCustomFields = Object.entries(person.custom_fields).map(([key, value]) => {
-          return {
-            field: key,
-            display_name: key, // Simple: field name is the display name
-            value: value,
-            type: 'text', // All fields are text type now
-            category: 'custom'
-          };
+      // Create custom fields from user definitions and contact data
+      const allCustomFields = [];
+      
+      // Add fields from user definitions (from settings)
+      userCustomFieldDefinitions.forEach(fieldName => {
+        const value = person.custom_fields?.[fieldName] || '';
+        allCustomFields.push({
+          field: fieldName,
+          display_name: fieldName,
+          value: value,
+          type: 'text',
+          category: 'custom'
         });
-        setCustomFields(contactCustomFields);
-      } else {
-        setCustomFields([]);
+      });
+      
+      // Add any additional fields that exist in contact but not in user definitions
+      if (person.custom_fields && typeof person.custom_fields === 'object') {
+        Object.entries(person.custom_fields).forEach(([key, value]) => {
+          if (!userCustomFieldDefinitions.includes(key)) {
+            allCustomFields.push({
+              field: key,
+              display_name: key,
+              value: value,
+              type: 'text',
+              category: 'custom'
+            });
+          }
+        });
       }
+      
+      setCustomFields(allCustomFields);
+      console.log('🔍 CONTACT MODAL: Custom fields loaded:', allCustomFields);
+      console.log('🔍 CONTACT MODAL: FormData with custom fields:', personData);
     }
   }, [person, userCustomFieldDefinitions]);
 
@@ -115,7 +148,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       }
       
       console.log('🔍 CONTACT MODAL: Fetching from backend...');
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+      const response = await fetch(`${apiUrl}/user-preferences`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -126,7 +159,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       if (response.ok) {
         const data = await response.json();
         console.log('🔍 CONTACT MODAL: Backend response data:', data);
-        const fields = data.custom_fields || [];
+        const fields = data.preferences?.custom_fields || data.custom_fields || [];
         console.log('🔍 CONTACT MODAL: Extracted fields:', fields);
         console.log('🔍 CONTACT MODAL: Field types:', fields.map(f => typeof f));
         
@@ -179,15 +212,14 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   };
 
   const handleSave = () => {
-    // Prepare custom fields object (save all custom fields, even empty ones)
+    // Prepare custom fields object from formData (where the actual values are stored)
     const customFieldsData = {};
-    customFields.forEach(field => {
-      if (field.category === 'custom') {
-        // Save the field even if it's empty/null to preserve the field structure
-        customFieldsData[field.field] = field.value || null;
-      }
+    
+    // Get custom field values from formData
+    userCustomFieldDefinitions.forEach(fieldName => {
+      const value = formData[fieldName];
+      customFieldsData[fieldName] = value || null;
     });
-
 
     const dataToSave = {
       ...formData,
@@ -195,6 +227,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     };
 
     console.log('🔍 FULL DATA TO SAVE:', dataToSave);
+    console.log('🔍 CUSTOM FIELDS DATA:', customFieldsData);
     onSave(dataToSave);
   };
 
@@ -205,7 +238,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       // Create field definition in user settings
       
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+      const response = await fetch(`${apiUrl}/custom-fields`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`,
@@ -313,13 +346,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
         { field: 'last_contact_date', display_name: 'Last Contact Date', type: 'date' },
         { field: 'next_follow_up_date', display_name: 'Next Follow-up Date', type: 'date' }
       ],
-      custom: isEditing ? [...customFields, ...userCustomFieldDefinitions.filter(def => !customFields.find(cf => cf.field === def.key)).map(def => ({
-        field: def.key,
-        display_name: def.name,
-        value: '',
-        type: def.type,
-        category: 'custom'
-      }))] : customFields
+      custom: [] // Custom fields are handled separately in the custom fields section
     };
 
     const fields = categoryFields[categoryId] || [];
@@ -377,39 +404,136 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
               </>
             ) : (
               <div className="text-sm text-gray-600 min-h-[38px] flex items-center">
-                {formData[field.field] || '—'}
+                {field.type === 'textarea' ? (
+                  <Textarea
+                    value={formData[field.field] || ''}
+                    readOnly
+                    rows={3}
+                    className="border-gray-400 bg-gray-50 text-gray-700"
+                  />
+                ) : field.type === 'select' ? (
+                  <Select value={formData[field.field] || ''} disabled>
+                    <SelectTrigger className="border-gray-400 bg-gray-50 text-gray-700">
+                      <SelectValue placeholder={`No ${field.display_name} set`} />
+                    </SelectTrigger>
+                  </Select>
+                ) : field.type === 'date' ? (
+                  <Input
+                    type="date"
+                    value={formData[field.field] || ''}
+                    readOnly
+                    className="border-gray-400 bg-gray-50 text-gray-700"
+                  />
+                ) : (
+                  <Input
+                    type={field.type === 'phone' || field.type === 'mobile' ? 'tel' : field.type}
+                    value={formData[field.field] || ''}
+                    readOnly
+                    className="border-gray-400 bg-gray-50 text-gray-700"
+                  />
+                )}
               </div>
             )}
           </div>
         ))}
         
-        {categoryId === 'custom' && isEditing && (
-          <div className="border-t pt-4">
-            <h4 className="text-md font-medium mb-4">Add Custom Field</h4>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Field name"
-                value={newFieldName}
-                onChange={(e) => setNewFieldName(e.target.value)}
-                className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20" />
-              <Select value={newFieldType} onValueChange={setNewFieldType}>
-                <SelectTrigger className="w-32 border-gray-400 focus:border-gray-500 focus:ring-gray-500/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="url">URL</SelectItem>
-                  <SelectItem value="tel">Phone</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="textarea">Textarea</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="button" onClick={handleAddCustomField}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add
-              </Button>
-            </div>
+        {categoryId === 'custom' && (
+          <div className="space-y-6">
+            {/* Existing Custom Fields */}
+            {customFields.length > 0 ? (
+              <div>
+                <div className="space-y-4">
+                  {customFields.map((field) => (
+                    <div key={field.field} className="space-y-2">
+                      <Label htmlFor={field.field} className="text-sm font-medium">
+                        {field.display_name || field.field || 'Unknown Field'}
+                      </Label>
+                      {isEditing ? (
+                        <>
+                          {field.type === 'select' ? (
+                            <Select
+                              value={formData[field.field] || ''}
+                              onValueChange={(value) => handleFieldChange(field.field, value)}
+                            >
+                              <SelectTrigger className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20">
+                                <SelectValue placeholder={`Select ${field.display_name || field.field || 'option'}`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {field.options?.map((option) => (
+                                  <SelectItem key={option} value={option.toLowerCase()}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : field.type === 'textarea' ? (
+                            <Textarea
+                              value={formData[field.field] || ''}
+                              onChange={(e) => handleFieldChange(field.field, e.target.value)}
+                              placeholder={`Enter ${field.display_name || field.field || 'value'}`}
+                              rows={3}
+                              className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20"
+                            />
+                          ) : field.type === 'date' ? (
+                            <Input
+                              type="date"
+                              value={formData[field.field] || ''}
+                              onChange={(e) => handleFieldChange(field.field, e.target.value)}
+                              placeholder={`Enter ${field.display_name || field.field || 'value'}`}
+                              className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20"
+                            />
+                          ) : (
+                            <Input
+                              type={field.type === 'phone' || field.type === 'mobile' ? 'tel' : field.type}
+                              value={formData[field.field] || ''}
+                              onChange={(e) => handleFieldChange(field.field, e.target.value)}
+                              placeholder={`Enter ${field.display_name || field.field || 'value'}`}
+                              className="border-gray-400 focus:border-gray-500 focus:ring-gray-500/20"
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-600 min-h-[38px] flex items-center">
+                          {field.type === 'textarea' ? (
+                            <Textarea
+                              value={formData[field.field] || ''}
+                              readOnly
+                              rows={3}
+                              className="border-gray-400 bg-gray-50 text-gray-700"
+                            />
+                          ) : field.type === 'select' ? (
+                            <Select value={formData[field.field] || ''} disabled>
+                              <SelectTrigger className="border-gray-400 bg-gray-50 text-gray-700">
+                                <SelectValue placeholder={`No ${field.display_name || field.field || 'value'} set`} />
+                              </SelectTrigger>
+                            </Select>
+                          ) : field.type === 'date' ? (
+                            <Input
+                              type="date"
+                              value={formData[field.field] || ''}
+                              readOnly
+                              className="border-gray-400 bg-gray-50 text-gray-700"
+                            />
+                          ) : (
+                            <Input
+                              type={field.type === 'phone' || field.type === 'mobile' ? 'tel' : field.type}
+                              value={formData[field.field] || ''}
+                              readOnly
+                              className="border-gray-400 bg-gray-50 text-gray-700"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-left py-8 text-gray-500">
+                <p>No custom fields added yet.</p>
+                <p className="text-sm">Add custom fields in Settings → Contact Management → Custom Fields</p>
+              </div>
+            )}
           </div>
         )}
       </>
@@ -419,9 +543,6 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
-        <DialogDescription>
-          View and edit contact information with custom fields support
-        </DialogDescription>
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -443,14 +564,9 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
             {!isLoading && (
               <div className="flex gap-2">
                 {isEditing ? (
-                  <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isLoading}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSave} disabled={isLoading}>
-                      {isLoading ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </>
+                  <Button onClick={handleSave} disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 ) : (
                   <Button onClick={() => setIsEditing(true)} variant="outline">
                     <Edit className="w-4 h-4 mr-2" />
@@ -486,12 +602,6 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
             ))}
           </div>
         </Tabs>
-        
-        <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

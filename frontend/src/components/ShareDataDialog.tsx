@@ -33,17 +33,34 @@ export const ShareDataDialog = ({ tableName, recordId, currentShares = [] }: Sha
 
   const fetchUsers = async () => {
     try {
-      const { data: profiles } = await apiClient.getUsers();
-      const { data: currentUser } = await apiClient.getCurrentUser();
+      // Fetch group users instead of all users
+      const response = await apiClient.get('/user-group');
+      const groupUsers = response.data || [];
       
-      // Filter out current user and only show approved users
-      const filteredUsers = profiles?.filter(user => 
-        user.id !== currentUser?.id && user.is_approved
-      ) || [];
+      // Convert group users to the expected format
+      const formattedUsers = groupUsers.map((user: any) => ({
+        id: user.email, // Use email as ID for sharing
+        email: user.email,
+        full_name: user.full_name || user.email,
+        avatar_url: ''
+      }));
       
-      setUsers(filteredUsers);
+      setUsers(formattedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching group users:', error);
+      // Fallback to all users if group fetch fails
+      try {
+        const { data: profiles } = await apiClient.getUsers();
+        const { data: currentUser } = await apiClient.getCurrentUser();
+        
+        const filteredUsers = profiles?.filter(user => 
+          user.id !== currentUser?.id && user.is_approved
+        ) || [];
+        
+        setUsers(filteredUsers);
+      } catch (fallbackError) {
+        console.error('Error fetching fallback users:', fallbackError);
+      }
     }
   };
 

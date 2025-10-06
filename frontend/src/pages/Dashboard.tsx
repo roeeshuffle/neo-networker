@@ -10,12 +10,14 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import DynamicContactForm from "@/components/DynamicContactForm";
 import ContactViewModal from "@/components/ContactViewModal";
-import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw, Bell } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TasksTab from "@/components/TasksTab";
 import EventsTab from "@/components/EventsTab";
 import { ContactsPanel } from "@/components/ContactsPanel";
 import { SettingsTab } from "@/components/SettingsTab";
+import { NotificationsTab } from "@/components/NotificationsTab";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import alistLogo from "@/assets/alist-logo-new.svg";
 
@@ -23,6 +25,7 @@ export interface Person {
   id: string;
   first_name?: string;
   last_name?: string;
+  full_name?: string;
   gender?: string;
   birthday?: string;
   organization?: string;
@@ -65,6 +68,8 @@ const Dashboard = () => {
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [viewingPerson, setViewingPerson] = useState<Person | null>(null);
   const [activeTab, setActiveTab] = useState("contacts");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hasNotifications, setHasNotifications] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -358,82 +363,108 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-soft/20 via-background to-secondary-soft/20">
-      {/* Modern header with glass effect */}
-      <header className="border-b border-border-soft bg-card/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
-                <img 
-                  src={alistLogo} 
-                  alt="Alist Logo" 
-                  className="h-8 w-8 object-contain"
-                />
+    <div className="min-h-screen bg-background-soft">
+      {/* Enterprise Header */}
+      <header className="enterprise-header sticky top-0 z-50">
+        <div className="px-12 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Logo and Navigation */}
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                  <img 
+                    src={alistLogo} 
+                    alt="Alist Logo" 
+                    className="h-6 w-6 object-contain filter brightness-0 invert"
+                  />
+                </div>
+                <h1 className="text-xl font-semibold text-foreground">Alist</h1>
               </div>
               
-              {/* Tabs */}
+              {/* Navigation Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-                <TabsList className="grid w-fit grid-cols-4 bg-muted">
-                  <TabsTrigger value="contacts" className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
+                <TabsList className="grid w-fit grid-cols-4 bg-muted/50 p-1">
+                  <TabsTrigger value="contacts" className="nav-item data-[state=active]:active">
+                    <User className="w-4 h-4 mr-2" />
                     Contacts
                   </TabsTrigger>
-                  <TabsTrigger value="tasks" className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4" />
+                  <TabsTrigger value="tasks" className="nav-item data-[state=active]:active">
+                    <CheckSquare className="w-4 h-4 mr-2" />
                     Tasks
                   </TabsTrigger>
-                  <TabsTrigger value="events" className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
+                  <TabsTrigger value="events" className="nav-item data-[state=active]:active">
+                    <Calendar className="w-4 h-4 mr-2" />
                     Events
                   </TabsTrigger>
-                  <TabsTrigger value="settings" className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
+                  <TabsTrigger value="settings" className="nav-item data-[state=active]:active">
+                    <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             
-            {/* Right: Refresh Button, Settings, and User */}
+            {/* Right: Actions and User */}
             <div className="flex items-center gap-3">
-              <Button 
-                onClick={handleManualRefresh}
-                variant="ghost" 
-                size="sm"
-                className="w-10 h-10 p-0"
-                title="Refresh data"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              
-              {/* Settings Button */}
-              {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
                 <Button 
-                  onClick={() => navigate('/admin')}
+                  onClick={handleManualRefresh}
                   variant="ghost" 
                   size="sm"
-                  className="w-10 h-10 p-0"
+                  className="w-9 h-9 p-0"
+                  title="Refresh data"
                 >
-                  <Settings className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                 </Button>
-              )}
+                
+                <ThemeToggle />
+                
+                {/* Notifications Bell */}
+                <Button 
+                  onClick={() => setActiveTab("notifications")}
+                  variant="ghost" 
+                  size="sm"
+                  className="w-9 h-9 p-0 relative"
+                  title="Notifications"
+                >
+                  <Bell className="h-4 w-4" />
+                  {hasNotifications && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                  )}
+                </Button>
+                
+                {user?.email && ['guy@wershuffle.com', 'roee2912@gmail.com'].includes(user.email) && (
+                  <Button 
+                    onClick={() => navigate('/admin')}
+                    variant="ghost" 
+                    size="sm"
+                    className="w-9 h-9 p-0"
+                    title="Admin Panel"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               
-              {/* User Dropdown */}
+              {/* User Profile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User className="h-3 w-3 text-primary" />
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-9">
+                    <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary-foreground" />
                     </div>
-                    <span className="text-sm font-medium">{user?.email?.split('@')[0] || 'User'}</span>
+                    <span className="text-sm font-medium hidden sm:block">{user?.email?.split('@')[0] || 'User'}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2 border-b border-border">
+                    <p className="text-sm font-medium">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground">Signed in</p>
+                  </div>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
-                    Logout
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -442,31 +473,32 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-12 space-y-8">
-
-        {/* Main content based on active tab */}
-        {activeTab === "contacts" && (
-          <ContactsPanel 
-            filteredPeople={filteredPeople}
-            onDelete={handleDelete}
-            onView={handleView}
-            onRefresh={fetchPeople}
-            onShowForm={() => setShowForm(true)}
-            onSearch={handleSearch}
-          />
-        )}
-        
-        {activeTab === "tasks" && (
-          <TasksTab onTasksChange={fetchTasksCount} />
-        )}
-        
-        {activeTab === "events" && (
-          <EventsTab onEventsChange={fetchEventsCount} />
-        )}
-        
-        {activeTab === "settings" && (
-          <SettingsTab currentUser={user} />
-        )}
+      <main className="enterprise-content">
+        <div className="px-12 py-8">
+          {/* Main content based on active tab */}
+          {activeTab === "contacts" && (
+            <ContactsPanel 
+              filteredPeople={filteredPeople}
+              onDelete={handleDelete}
+              onView={handleView}
+              onRefresh={fetchPeople}
+              onShowForm={() => setShowForm(true)}
+              onSearch={handleSearch}
+            />
+          )}
+          
+          {activeTab === "tasks" && (
+            <TasksTab onTasksChange={fetchTasksCount} />
+          )}
+          
+          {activeTab === "events" && (
+            <EventsTab onEventsChange={fetchEventsCount} />
+          )}
+          
+          {activeTab === "settings" && (
+            <SettingsTab currentUser={user} />
+          )}
+        </div>
 
         {showForm && (
           <DynamicContactForm

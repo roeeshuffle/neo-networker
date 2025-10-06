@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, Calendar, Clock, CheckCircle, Circle, AlertCircle, ChevronDown, ChevronRight, Minus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
+import { UserSelector } from './UserSelector';
 
 interface Task {
   id: string;
@@ -35,6 +36,7 @@ interface TaskFormData {
   priority: string;
   scheduled_date: string;
   due_date: string;
+  assigned_to: string[];
 }
 
 interface TasksTabProps {
@@ -61,7 +63,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     status: 'todo',
     priority: 'medium',
     scheduled_date: '',
-    due_date: ''
+    due_date: '',
+    assigned_to: []
   });
 
   // Fetch available projects from tasks data (workaround for /projects endpoint issue)
@@ -110,10 +113,20 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
   const handleCreateNewProject = () => {
     if (newProjectName.trim()) {
-      // Just set the form data - the project will be created when the task is saved
+      const projectName = newProjectName.trim();
+      
+      // Add the new project to available projects list
+      setAvailableProjects(prev => {
+        if (!prev.includes(projectName)) {
+          return [...prev, projectName].sort();
+        }
+        return prev;
+      });
+      
+      // Set the form data with the new project selected
       setFormData(prev => ({
         ...prev,
-        project: newProjectName.trim()
+        project: projectName
       }));
       
       setIsCreatingNewProject(false);
@@ -121,7 +134,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       toast({
         title: "Success",
-        description: `Project "${newProjectName.trim()}" will be created when you save the task`,
+        description: `Project "${projectName}" added and selected`,
       });
     }
   };
@@ -134,9 +147,9 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   ];
 
   const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
-    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'high', label: 'High', color: 'bg-red-100 text-red-800' }
+    { value: 'low', label: 'Low', color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
+    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
+    { value: 'high', label: 'High', color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' }
   ];
 
   useEffect(() => {
@@ -268,7 +281,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       
       setIsAddDialogOpen(false);
       resetForm();
-      onTasksChange?.(); // Trigger count update
+      // onTasksChange?.(); // Removed to prevent infinite loop
       toast({
         title: "Success",
         description: "Task created successfully",
@@ -306,7 +319,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
       setIsEditDialogOpen(false);
       setEditingTask(null);
       resetForm();
-      onTasksChange?.(); // Trigger count update
+      // onTasksChange?.(); // Removed to prevent infinite loop
       toast({
         title: "Success",
         description: "Task updated successfully",
@@ -350,7 +363,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         return newProjects;
       });
       
-      onTasksChange?.(); // Trigger count update
+      // onTasksChange?.(); // Removed to prevent infinite loop
       toast({
         title: "Success",
         description: `Task marked as ${newStatus}`,
@@ -380,7 +393,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
         return newProjects;
       });
       
-      onTasksChange?.(); // Trigger count update
+      // onTasksChange?.(); // Removed to prevent infinite loop
       toast({
         title: "Success",
         description: "Task deleted successfully",
@@ -433,7 +446,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
   const getPriorityColor = (priority: string) => {
     const priorityOption = priorityOptions.find(p => p.value === priority);
-    return priorityOption ? priorityOption.color : 'bg-gray-100 text-gray-800';
+    return priorityOption ? priorityOption.color : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
   };
 
   const getPriorityLabel = (priority: string) => {
@@ -524,20 +537,20 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-[5%]">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Tasks Management</h2>
-          <p className="text-muted-foreground">Manage your project-based tasks</p>
+        <div className="flex items-center gap-3">
+          {/* Empty space for consistency with contacts layout */}
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex items-center gap-3">
           <Button
             variant={showDone ? "default" : "outline"}
             size="sm"
             onClick={() => setShowDone(!showDone)}
             className="flex items-center gap-2"
           >
-            {showDone ? "Show Active" : "Show All"}
+            Show Done
           </Button>
           
           {Object.keys(filteredProjects).length > 0 && (
@@ -553,9 +566,12 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
+              <Button 
+                size="sm"
+                className="w-9 h-9 p-0"
+                title="Add new task"
+              >
+                <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
@@ -678,6 +694,16 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                   </div>
                 </div>
 
+                <div>
+                  <Label htmlFor="assigned_to">Assign To (optional)</Label>
+                  <UserSelector
+                    selectedUsers={(formData.assigned_to || []).map(email => ({ id: email, email, full_name: email }))}
+                    onUsersChange={(users) => setFormData({ ...formData, assigned_to: users.map(u => u.email) })}
+                    placeholder="Select users to assign this task to..."
+                    className="mt-1"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="scheduled_date">Schedule Date (optional)</Label>
@@ -715,19 +741,19 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <Card>
+        <Card className="border-2 border-gray-300 dark:border-gray-600">
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{getTotalTasks()}</div>
             <div className="text-sm text-muted-foreground">Total Tasks</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-2 border-gray-300 dark:border-gray-600">
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{getCompletedTasks()}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-2 border-gray-300 dark:border-gray-600">
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{Object.values(projects).flat().filter(task => task.status !== 'completed' && task.status !== 'cancelled').length}</div>
             <div className="text-sm text-muted-foreground">Open Tasks</div>
@@ -737,7 +763,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
 
       {/* Projects */}
       {Object.keys(filteredProjects).length === 0 ? (
-        <Card>
+        <Card className="border-2 border-gray-300 dark:border-gray-600">
           <CardContent className="p-8 text-center">
             <div className="text-lg text-muted-foreground">No tasks yet</div>
             <div className="text-sm text-muted-foreground mt-2">
@@ -753,7 +779,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             const totalTasks = tasks.length;
             
             return (
-              <Card key={projectName}>
+              <Card key={projectName} className="border-2 border-gray-300 dark:border-gray-600">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -807,18 +833,18 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                         return (
                           <div
                             key={task.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border ${
-                              isFutureScheduled ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                            className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                              isFutureScheduled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
                             }`}
                           >
                             <div className="flex items-center gap-3 flex-1">
                               <StatusIcon className="w-4 h-4 text-muted-foreground" />
                               <div className="flex-1">
-                                <div className={`font-medium ${isFutureScheduled ? 'text-blue-700' : ''}`}>
+                                <div className={`font-medium ${isFutureScheduled ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
                                   {task.title}
                                 </div>
                                 {task.description && (
-                                  <div className={`text-sm text-muted-foreground ${isFutureScheduled ? 'text-blue-600' : ''}`}>
+                                  <div className={`text-sm text-muted-foreground ${isFutureScheduled ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                                     {task.description}
                                   </div>
                                 )}
@@ -830,7 +856,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                                     {getStatusLabel(task.status)}
                                   </Badge>
                                   {task.scheduled_date && (
-                                    <Badge variant="outline" className={`text-xs ${isFutureScheduled ? 'bg-blue-100 text-blue-700 border-blue-300' : ''}`}>
+                                    <Badge variant="outline" className={`text-xs ${isFutureScheduled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700' : ''}`}>
                                       <Calendar className="w-3 h-3 mr-1" />
                                       {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
                                     </Badge>
@@ -1004,6 +1030,16 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-assigned_to">Assign To (optional)</Label>
+              <UserSelector
+                selectedUsers={(formData.assigned_to || []).map(email => ({ id: email, email, full_name: email }))}
+                onUsersChange={(users) => setFormData({ ...formData, assigned_to: users.map(u => u.email) })}
+                placeholder="Select users to assign this task to..."
+                className="mt-1"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

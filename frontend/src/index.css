@@ -2,71 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Copper.com inspired pastel design system 
-Beautiful, calming colors with modern aesthetics
-All colors MUST be HSL.
+/* Enterprise CRM Design System
+Inspired by LinkedIn, Salesforce, and modern business applications
+Professional, sophisticated, and enterprise-grade
 */
 
 @layer base {
   :root {
-    /* Soft background gradients */
-    --background: 18 50% 98%;
-    --background-soft: linear-gradient(135deg, hsl(18 50% 98%) 0%, hsl(200 40% 99%) 100%);
-    --foreground: 222 20% 15%;
+    /* Enterprise backgrounds */
+    --background: 0 0% 100%;
+    --background-soft: hsl(0 0% 98%);
+    --foreground: 215 25% 15%;
 
-    /* Clean card system with soft shadows */
+    /* Enterprise card system with subtle shadows */
     --card: 0 0% 100%;
-    --card-foreground: 222 20% 15%;
-    --card-shadow: 0 4px 20px -8px hsl(220 20% 50% / 0.08);
-    --card-shadow-hover: 0 8px 30px -8px hsl(220 20% 50% / 0.12);
+    --card-foreground: 215 25% 15%;
+    --card-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --card-shadow-hover: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 20% 15%;
+    --popover-foreground: 215 25% 15%;
 
-    /* Pastel primary - soft peach */
-    --primary: 20 70% 75%;
+    /* LinkedIn-inspired primary blue */
+    --primary: 201 96% 32%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 20 70% 88%;
-    --primary-hover: 20 70% 70%;
+    --primary-soft: 201 96% 97%;
+    --primary-hover: 201 96% 28%;
 
-    /* Mint green secondary */
-    --secondary: 140 45% 85%;
-    --secondary-foreground: 140 30% 25%;
-    --secondary-soft: 140 45% 92%;
-    --secondary-hover: 140 45% 80%;
+    /* Professional secondary - neutral gray */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 215 25% 15%;
+    --secondary-soft: 0 0% 98%;
+    --secondary-hover: 0 0% 92%;
 
-    /* Lavender accent */
-    --accent: 260 50% 85%;
-    --accent-foreground: 260 30% 25%;
-    --accent-soft: 260 50% 92%;
-    --accent-hover: 260 50% 80%;
+    /* Enterprise accent - subtle blue */
+    --accent: 201 96% 32%;
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 201 96% 97%;
+    --accent-hover: 201 96% 28%;
 
-    /* Baby blue for info/highlights */
-    --info: 200 70% 85%;
-    --info-foreground: 200 30% 25%;
-    --info-soft: 200 70% 92%;
+    /* Professional info - LinkedIn blue */
+    --info: 201 96% 32%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 201 96% 97%;
 
-    /* Light yellow for warnings */
-    --warning: 45 80% 85%;
-    --warning-foreground: 45 40% 25%;
-    --warning-soft: 45 80% 92%;
+    /* Professional warning - amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 38 92% 95%;
 
-    /* Soft muted colors */
-    --muted: 210 25% 94%;
-    --muted-foreground: 215 15% 45%;
-    --muted-soft: 210 25% 97%;
+    /* Enterprise muted colors */
+    --muted: 0 0% 96%;
+    --muted-foreground: 215 16% 47%;
+    --muted-soft: 0 0% 98%;
 
-    /* Soft destructive */
-    --destructive: 0 65% 78%;
+    /* Professional destructive - red */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 0 65% 90%;
+    --destructive-soft: 0 84% 95%;
 
-    /* Subtle borders and inputs */
-    --border: 220 20% 88%;
-    --border-soft: 220 20% 92%;
-    --input: 220 20% 96%;
-    --input-focus: 220 30% 94%;
-    --ring: 20 70% 75%;
+    /* Enterprise borders and inputs */
+    --border: 0 0% 90%;
+    --border-soft: 0 0% 95%;
+    --input: 0 0% 100%;
+    --input-focus: 201 96% 32%;
+    --ring: 201 96% 32%;
 
     /* Modern radius */
     --radius: 0.75rem;
@@ -91,56 +91,56 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode with softer pastels */
-    --background: 222 30% 8%;
-    --background-soft: linear-gradient(135deg, hsl(222 30% 8%) 0%, hsl(200 30% 10%) 100%);
-    --foreground: 210 30% 92%;
+    /* Enterprise dark mode */
+    --background: 215 25% 8%;
+    --background-soft: hsl(215 25% 10%);
+    --foreground: 0 0% 95%;
 
-    --card: 222 25% 12%;
-    --card-foreground: 210 30% 92%;
-    --card-shadow: 0 4px 20px -8px hsl(0 0% 0% / 0.3);
-    --card-shadow-hover: 0 8px 30px -8px hsl(0 0% 0% / 0.4);
+    --card: 215 25% 8%;
+    --card-foreground: 0 0% 95%;
+    --card-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --card-shadow-hover: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
 
-    --popover: 222 25% 12%;
-    --popover-foreground: 210 30% 92%;
+    --popover: 215 25% 8%;
+    --popover-foreground: 0 0% 95%;
 
-    /* Dark mode pastels */
-    --primary: 20 60% 60%;
+    /* Enterprise dark mode colors */
+    --primary: 201 96% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 20 40% 25%;
-    --primary-hover: 20 60% 65%;
+    --primary-soft: 201 96% 15%;
+    --primary-hover: 201 96% 50%;
 
-    --secondary: 140 35% 35%;
-    --secondary-foreground: 140 60% 90%;
-    --secondary-soft: 140 25% 20%;
-    --secondary-hover: 140 35% 40%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --secondary-soft: 0 0% 12%;
+    --secondary-hover: 0 0% 20%;
 
-    --accent: 260 40% 45%;
-    --accent-foreground: 260 60% 90%;
-    --accent-soft: 260 30% 20%;
-    --accent-hover: 260 40% 50%;
+    --accent: 201 96% 45%;
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 201 96% 15%;
+    --accent-hover: 201 96% 50%;
 
-    --info: 200 50% 45%;
-    --info-foreground: 200 60% 90%;
-    --info-soft: 200 30% 20%;
+    --info: 201 96% 45%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 201 96% 15%;
 
-    --warning: 45 60% 50%;
-    --warning-foreground: 45 80% 90%;
-    --warning-soft: 45 40% 20%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 38 92% 15%;
 
-    --muted: 217 25% 18%;
-    --muted-foreground: 215 15% 65%;
-    --muted-soft: 217 25% 15%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 215 16% 65%;
+    --muted-soft: 0 0% 12%;
 
-    --destructive: 0 55% 55%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 0 40% 20%;
+    --destructive-soft: 0 84% 15%;
 
-    --border: 217 25% 20%;
-    --border-soft: 217 20% 25%;
-    --input: 217 25% 18%;
-    --input-focus: 217 30% 22%;
-    --ring: 20 60% 60%;
+    --border: 0 0% 20%;
+    --border-soft: 0 0% 15%;
+    --input: 0 0% 15%;
+    --input-focus: 201 96% 45%;
+    --ring: 201 96% 45%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -187,41 +187,131 @@ All colors MUST be HSL.
 }
 
 @layer components {
-  /* Copper-inspired glass morphism effect */
-  .glass {
-    @apply backdrop-blur-sm bg-white/80 border border-white/20;
+  /* Enterprise CRM Components */
+  
+  /* Professional header with subtle border */
+  .enterprise-header {
+    @apply border-b border-border bg-card/95 backdrop-blur-sm;
+    box-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
   }
 
-  .glass-dark {
-    @apply backdrop-blur-sm bg-black/10 border border-white/10;
-  }
-
-  /* Floating card effect */
-  .floating-card {
+  /* Enterprise card with professional styling */
+  .enterprise-card {
+    @apply bg-card border border-border rounded-lg;
     box-shadow: var(--card-shadow);
-    @apply transition-all duration-300 ease-out;
+    @apply transition-all duration-200 ease-out;
   }
 
-  .floating-card:hover {
+  .enterprise-card:hover {
     box-shadow: var(--card-shadow-hover);
-    @apply -translate-y-1;
   }
 
-  /* Pastel gradient backgrounds */
-  .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-soft)) 100%);
+  /* Professional data table styling */
+  .enterprise-table {
+    @apply w-full border-collapse;
   }
 
-  .gradient-secondary {
-    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--secondary-soft)) 100%);
+  .enterprise-table th {
+    @apply bg-muted/50 text-left text-sm font-semibold text-muted-foreground px-4 py-3 border-b border-border;
   }
 
-  .gradient-accent {
-    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--accent-soft)) 100%);
+  .enterprise-table td {
+    @apply px-4 py-3 border-b border-border/50 text-sm;
   }
 
-  /* Smooth focus states */
+  .enterprise-table tr:hover {
+    @apply bg-muted/30;
+  }
+
+  /* Professional button variants */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover;
+    @apply px-4 py-2 rounded-md text-sm font-medium;
+    @apply transition-all duration-200 ease-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary-hover;
+    @apply px-4 py-2 rounded-md text-sm font-medium;
+    @apply transition-all duration-200 ease-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:ring-offset-2;
+  }
+
+  .btn-ghost {
+    @apply text-muted-foreground hover:text-foreground hover:bg-muted/50;
+    @apply px-4 py-2 rounded-md text-sm font-medium;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Professional form inputs */
+  .enterprise-input {
+    @apply w-full px-3 py-2 border border-border rounded-md;
+    @apply bg-background text-foreground;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Professional status badges */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-active {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400;
+  }
+
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400;
+  }
+
+  .status-inactive {
+    @apply bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400;
+  }
+
+  /* Professional navigation */
+  .nav-item {
+    @apply flex items-center px-3 py-2 text-sm font-medium rounded-md;
+    @apply text-muted-foreground hover:text-foreground hover:bg-muted/50;
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .nav-item.active {
+    @apply text-primary bg-primary-soft;
+  }
+
+  /* Professional sidebar */
+  .enterprise-sidebar {
+    @apply bg-card border-r border-border;
+    @apply w-64 min-h-screen;
+  }
+
+  /* Professional content area */
+  .enterprise-content {
+    @apply flex-1 bg-background min-h-screen;
+  }
+
+  /* Professional metrics cards */
+  .metric-card {
+    @apply bg-card border border-border rounded-lg p-6;
+    @apply hover:shadow-md transition-all duration-200 ease-out;
+  }
+
+  .metric-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  .metric-label {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  /* Professional loading states */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+
+  /* Professional focus states */
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-ring/20 focus:ring-offset-2 focus:ring-offset-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:ring-offset-background;
   }
 }

@@ -92,7 +92,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
             // Still try to fetch custom fields from backend
             try {
               const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-              const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
+              const customFieldsResponse = await fetch(`${apiUrl}/custom-fields`, {
                 headers: {
                   'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
                 }
@@ -137,7 +137,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       
       // Fetch custom fields
       const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const customFieldsResponse = await fetch(`${apiUrl}/api/custom-fields`, {
+      const customFieldsResponse = await fetch(`${apiUrl}/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
         }
@@ -150,7 +150,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
 
       // Try to fetch user preferences from backend
       try {
-        const userPrefsResponse = await fetch(`${apiUrl}/api/user-preferences`, {
+        const userPrefsResponse = await fetch(`${apiUrl}/user-preferences`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
           }
@@ -254,7 +254,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
 
       // Try to save to backend as well
       try {
-        const response = await fetch(`${apiUrl}/api/user-preferences`, {
+        const response = await fetch(`${apiUrl}/user-preferences`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -12,7 +12,7 @@ import { OwnerInfo } from "@/components/OwnerInfo";
 
 interface PeopleTableProps {
   people: Person[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string, name: string) => void;
   onView: (person: Person) => void;
 }
 
@@ -215,7 +215,7 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
         
         // Try to fetch from backend first
         try {
-          const response = await fetch(`${apiUrl}/api/user-preferences`, {
+          const response = await fetch(`${apiUrl}/user-preferences`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
             }
@@ -531,7 +531,8 @@ export const PeopleTable = ({ people, onDelete, onView }: PeopleTableProps) => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDelete(person.id);
+                        const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim() || 'Unknown';
+                        onDelete(person.id, fullName);
                       }}
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                     >

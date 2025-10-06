@@ -40,7 +40,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       }
       
       console.log('🔍 CUSTOM FIELDS: Fetching from new user preferences API...');
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+      const response = await fetch(`${apiUrl}/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -112,7 +112,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       // Add new field to current list
       const updatedFields = [...customFields, newFieldName.trim()];
 
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+      const response = await fetch(`${apiUrl}/custom-fields`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       // Remove field from current list
       const updatedFields = customFields.filter(field => field !== fieldName);
       
-      const response = await fetch(`${apiUrl}/api/custom-fields`, {
+      const response = await fetch(`${apiUrl}/custom-fields`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

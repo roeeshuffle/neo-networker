@@ -10,6 +10,7 @@ import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
 import DuplicateManager from './DuplicateManager';
 import CustomFieldsSettings from './CustomFieldsSettings';
 import TableColumnsSettings from './TableColumnsSettings';
+import { GroupSettings } from './GroupSettings';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -63,7 +64,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     contacts: false,
     calendar: false,
     customFields: false,
-    tableColumns: false
+    tableColumns: false,
+    group: false
   });
 
   // Loading state for initial data load
@@ -429,7 +431,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const checkGoogleStatus = async () => {
     try {
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/status`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/auth/google/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -793,7 +796,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const loadUserPreferences = async () => {
     try {
       setPreferencesLoading(true);
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user-preferences', {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/user-preferences`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -806,14 +810,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         const preferences = data.preferences || {};
         
         // Update calendar settings if available
-        if (preferences.calendar) {
+        if (preferences.calendar_settings) {
           setCalendarSettings(prev => ({
             ...prev,
-            ...preferences.calendar
+            ...preferences.calendar_settings
           }));
         }
         
         console.log('✅ User preferences loaded:', preferences);
+        console.log('🔍 CALENDAR SETTINGS LOADED:', preferences.calendar_settings);
       } else {
         console.log('⚠️ User preferences API not available, using defaults');
       }
@@ -828,15 +833,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const saveUserPreferences = async (category: string, settings: any) => {
     try {
       setPreferencesLoading(true);
-      const response = await fetch('https://dkdrn34xpx.us-east-1.awsapprunner.com/api/user-preferences', {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const response = await fetch(`${apiUrl}/user-preferences`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          category,
-          settings
+          [`${category}_settings`]: settings
         }),
       });
       
@@ -897,7 +902,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Show duplicates manager if active
   if (showDuplicates) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 px-[5%]">
         <div className="flex items-center justify-between">
           <Button 
             variant="outline" 
@@ -914,7 +919,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-[5%]">
       {/* Messaging Platform Connection Section */}
       <Card>
         <CardHeader>
@@ -1472,6 +1477,31 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <p>• Default View: Choose how the calendar displays by default</p>
               <p>• Start Weekday: Choose which day the week starts on</p>
             </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Group Settings Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Group Management
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpandedSections(prev => ({ ...prev, group: !prev.group }))}
+              className="p-1 h-auto"
+            >
+              {expandedSections.group ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {expandedSections.group && (
+          <CardContent>
+            <GroupSettings />
           </CardContent>
         )}
       </Card>

@@ -262,6 +262,8 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
   const handleImport = async () => {
     if (csvData.length === 0) return;
     
+    console.log(`🔍 CSV IMPORT DEBUG: Starting import of ${csvData.length} rows`);
+    
     setImporting(true);
     setImportProgress(0);
     setImportResults(null);
@@ -273,6 +275,10 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
     
     const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    
+    console.log(`🔍 CSV IMPORT DEBUG: API URL: ${apiUrl}`);
+    console.log(`🔍 CSV IMPORT DEBUG: Token exists: ${!!token}`);
+    console.log(`🔍 CSV IMPORT DEBUG: Column mapping:`, columnMapping);
     
     for (let i = 0; i < csvData.length; i++) {
       const row = csvData[i];
@@ -314,6 +320,10 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
         }
         
         // Send to API
+        console.log(`🔍 CSV IMPORT DEBUG: Sending request for row ${rowNumber}`);
+        console.log(`🔍 CSV IMPORT DEBUG: API URL: ${apiUrl}`);
+        console.log(`🔍 CSV IMPORT DEBUG: Person data:`, personData);
+        
         const response = await fetch(`${apiUrl}/api/people`, {
           method: 'POST',
           headers: {
@@ -323,14 +333,36 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
           body: JSON.stringify(personData)
         });
         
+        console.log(`🔍 CSV IMPORT DEBUG: Response status: ${response.status}`);
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `HTTP ${response.status}`);
+          const errorText = await response.text();
+          console.log(`🔍 CSV IMPORT DEBUG: Error response:`, errorText);
+          
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (e) {
+            errorMessage = errorText || errorMessage;
+          }
+          
+          throw new Error(errorMessage);
         }
+        
+        const responseData = await response.json();
+        console.log(`🔍 CSV IMPORT DEBUG: Success response:`, responseData);
         
         results.successful++;
         
       } catch (error: any) {
+        console.error(`❌ CSV IMPORT ERROR Row ${rowNumber}:`, error);
+        console.error(`❌ CSV IMPORT ERROR Details:`, {
+          error: error.message,
+          stack: error.stack,
+          data: row
+        });
+        
         results.failed.push({
           row: rowNumber,
           error: error.message || 'Unknown error',
@@ -342,13 +374,24 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
       setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
     }
     
+    console.log(`🔍 CSV IMPORT DEBUG: Import complete - ${results.successful} successful, ${results.failed.length} failed`);
+    console.log(`🔍 CSV IMPORT DEBUG: Failed rows:`, results.failed);
+    
     setImportResults(results);
     setImporting(false);
     
-    toast({
-      title: "Import Complete",
-      description: `Successfully imported ${results.successful} contacts, ${results.failed.length} failed`,
-    });
+    if (results.failed.length > 0) {
+      toast({
+        title: "Import Completed with Errors",
+        description: `Successfully imported ${results.successful} contacts, ${results.failed.length} failed. Check console for details.`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Import Complete",
+        description: `Successfully imported ${results.successful} contacts`,
+      });
+    }
     
     if (results.successful > 0) {
       onDataLoaded(); // Refresh the contacts list
