@@ -465,20 +465,6 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
         </Button>
       </div>
 
-      {/* View Mode Selector */}
-      <div className="flex justify-center">
-        <Select value={viewMode} onValueChange={handleViewModeChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Daily</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Calendar Views */}
       {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
@@ -680,6 +666,20 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           </Card>
         </div>
       )}
+
+      {/* View Mode Selector */}
+      <div className="flex justify-center">
+        <Select value={viewMode} onValueChange={handleViewModeChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">Daily</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Edit Event Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

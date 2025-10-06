@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -42,7 +42,9 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
   const loadGroupUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading group users...');
       const response = await apiClient.getGroupUsers();
+      console.log('Group users response:', response);
       
       if (response.success) {
         setGroupUsers(response.data || []);
@@ -51,9 +53,10 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
       }
     } catch (error: any) {
       console.error('Error loading group users:', error);
+      console.error('Error details:', error.message, error.response);
       toast({
         title: "Error",
-        description: "Failed to load group members",
+        description: `Failed to load group members: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -126,12 +129,12 @@ const ShareContactsModal: React.FC<ShareContactsModalProps> = ({
             <Share2 className="h-5 w-5" />
             Share Contacts
           </DialogTitle>
+          <DialogDescription>
+            Select group members to share all your contacts with. The source field will be updated to show who shared the contact.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Select group members to share all your contacts with. The source field will be updated to show who shared the contact.
-          </p>
 
           {loading ? (
             <div className="flex items-center justify-center py-8">
