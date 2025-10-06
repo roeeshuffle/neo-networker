@@ -518,6 +518,32 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     return counts;
   };
 
+  // Generate consistent color for project based on name
+  const getProjectColor = (projectName: string) => {
+    let hash = 0;
+    for (let i = 0; i < projectName.length; i++) {
+      hash = projectName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Generate hue from hash (0-360)
+    const hue = Math.abs(hash) % 360;
+    
+    // Create a vibrant but not too bright color
+    return `hsl(${hue}, 70%, 85%)`;
+  };
+
+  // Get text color that contrasts well with background
+  const getProjectTextColor = (projectName: string) => {
+    let hash = 0;
+    for (let i = 0; i < projectName.length; i++) {
+      hash = projectName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const hue = Math.abs(hash) % 360;
+    // Use darker text for better contrast
+    return `hsl(${hue}, 70%, 25%)`;
+  };
+
 
   if (loading) {
     return (
@@ -748,7 +774,14 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             const totalTasks = tasks.length;
             
             return (
-              <Card key={projectName} className="border-2 border-gray-300 dark:border-gray-600">
+              <Card 
+                key={projectName} 
+                className="border-2 border-gray-300 dark:border-gray-600"
+                style={{
+                  backgroundColor: getProjectColor(projectName),
+                  color: getProjectTextColor(projectName)
+                }}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -803,8 +836,12 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
                           <div
                             key={task.id}
                             className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                              isFutureScheduled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                              isFutureScheduled ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600' : 'bg-white dark:bg-gray-100 border-gray-300 dark:border-gray-400'
                             }`}
+                            style={{
+                              backgroundColor: isFutureScheduled ? undefined : 'rgba(255, 255, 255, 0.9)',
+                              backdropFilter: 'blur(10px)'
+                            }}
                           >
                             <div className="flex items-center gap-3 flex-1">
                               <StatusIcon className="w-4 h-4 text-muted-foreground" />
