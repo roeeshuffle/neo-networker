@@ -518,15 +518,6 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
     return counts;
   };
 
-  const getTotalTasks = () => {
-    return Object.values(projects).reduce((total, tasks) => total + tasks.length, 0);
-  };
-
-  const getCompletedTasks = () => {
-    return Object.values(projects).reduce((total, tasks) => 
-      total + tasks.filter(task => task.status === 'completed').length, 0
-    );
-  };
 
   if (loading) {
     return (
@@ -737,28 +728,6 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-2 border-gray-300 dark:border-gray-600">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{getTotalTasks()}</div>
-            <div className="text-sm text-muted-foreground">Total Tasks</div>
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-gray-300 dark:border-gray-600">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{getCompletedTasks()}</div>
-            <div className="text-sm text-muted-foreground">Completed</div>
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-gray-300 dark:border-gray-600">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{Object.values(projects).flat().filter(task => task.status !== 'completed' && task.status !== 'cancelled').length}</div>
-            <div className="text-sm text-muted-foreground">Open Tasks</div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Projects */}

@@ -434,29 +434,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     <div className="space-y-6 px-[5%]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Select value={viewMode} onValueChange={handleViewModeChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Empty space for consistency with other tabs */}
         </div>
         
         <div className="flex items-center gap-3">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                size="sm"
-                className="w-9 h-9 p-0"
-                title="Add new event"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
+          {/* + button removed as requested */}
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Event</DialogTitle>
@@ -646,6 +628,20 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
         }}>
           &gt;
         </Button>
+      </div>
+
+      {/* View Mode Selector */}
+      <div className="flex justify-center">
+        <Select value={viewMode} onValueChange={handleViewModeChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">Daily</SelectItem>
+            <SelectItem value="weekly">Weekly</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Calendar Views */}
