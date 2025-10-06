@@ -282,6 +282,10 @@ class ApiClient {
     return this.request('/user-group');
   }
 
+  async getGroupUsers() {
+    return this.request('/user-group');
+  }
+
   async addUserToGroup(email: string, name: string) {
     return this.request('/user-group', {
       method: 'POST',
