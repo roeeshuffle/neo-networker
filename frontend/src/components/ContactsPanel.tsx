@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/PeopleTable";
 import SimpleCsvUploader from "@/components/SimpleCsvUploader";
+import ShareContactsModal from "@/components/ShareContactsModal";
 import { SearchBar } from "@/components/SearchBar";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Share2 } from "lucide-react";
 import { Person } from "@/pages/Dashboard";
 import {
   AlertDialog,
@@ -28,6 +29,7 @@ interface ContactsPanelProps {
 
 export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onShowForm, onSearch }: ContactsPanelProps) => {
   const [showCsvUploader, setShowCsvUploader] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; personId: string | null; personName: string }>({
     isOpen: false,
     personId: null,
@@ -86,6 +88,15 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
             <Upload className="h-4 w-4" />
           </Button>
           <Button 
+            onClick={() => setShowShareModal(true)} 
+            variant="outline"
+            size="sm"
+            className="w-9 h-9 p-0"
+            title="Share contacts with group members"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+          <Button 
             onClick={onShowForm} 
             size="sm"
             className="w-9 h-9 p-0"
@@ -112,6 +123,16 @@ export const ContactsPanel = ({ filteredPeople, onDelete, onView, onRefresh, onS
           onClose={() => setShowCsvUploader(false)}
           onImportComplete={() => {
             setShowCsvUploader(false);
+            onRefresh();
+          }}
+        />
+
+        {/* Share Contacts Dialog */}
+        <ShareContactsModal 
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onShareComplete={() => {
+            setShowShareModal(false);
             onRefresh();
           }}
         />

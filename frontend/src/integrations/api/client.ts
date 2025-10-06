@@ -317,6 +317,14 @@ class ApiClient {
     });
   }
 
+  // Share contacts with group members
+  async shareContacts(userIds: string[]) {
+    return this.request('/people/share', {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds }),
+    });
+  }
+
   isAuthenticated() {
     return !!this.token;
   }
