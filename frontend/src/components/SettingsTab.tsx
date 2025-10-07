@@ -250,6 +250,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       
       // Refresh the user data in the authentication context
       await refreshUser();
+      
+      // Add a small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Also refresh the local state
       await checkAllStatus();
       

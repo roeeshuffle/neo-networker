@@ -14,6 +14,7 @@ class Event(db.Model):
     end_datetime = db.Column(db.DateTime, nullable=False)
     location = db.Column(db.String(255))
     event_type = db.Column(db.String(50), default='event')  # 'meeting' or 'event'
+    project = db.Column(db.String(100))  # Project name for color coding
     participants = db.Column(db.JSON)  # List of participant objects with name, email, etc.
     owner_id = db.Column(db.String(255), nullable=False)  # User who created the event
     alert_minutes = db.Column(db.Integer, default=15)  # Minutes before event to alert
@@ -41,6 +42,7 @@ class Event(db.Model):
             'end_datetime': self.end_datetime.isoformat() if self.end_datetime else None,
             'location': self.location,
             'event_type': self.event_type,
+            'project': self.project,
             'participants': self.participants or [],
             'alert_minutes': self.alert_minutes,
             'repeat_pattern': self.repeat_pattern,

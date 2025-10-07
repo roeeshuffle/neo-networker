@@ -83,6 +83,8 @@ def create_event():
             start_datetime=start_datetime,
             end_datetime=end_datetime,
             location=data.get('location', ''),
+            event_type=data.get('event_type', 'event'),
+            project=data.get('project', ''),
             participants=data.get('participants', []),
             alert_minutes=data.get('alert_minutes', 15),
             repeat_pattern=data.get('repeat_pattern', 'none'),
@@ -168,6 +170,10 @@ def update_event(event_id):
             event.end_datetime = datetime.fromisoformat(data['end_datetime'].replace('Z', '+00:00'))
         if 'location' in data:
             event.location = data['location']
+        if 'event_type' in data:
+            event.event_type = data['event_type']
+        if 'project' in data:
+            event.project = data['project']
         if 'participants' in data:
             event.participants = data['participants']
         if 'alert_minutes' in data:

@@ -1667,6 +1667,7 @@ def add_event_from_telegram(args: dict, user: User) -> str:
             end_datetime=end_datetime,
             location=args.get('location'),
             event_type=args.get('event_type', 'event'),
+            project=args.get('project', ''),
             participants=participants,
             owner_id=user.id,  # Use owner_id instead of user_id
             alert_minutes=args.get('alert_minutes', 15),

@@ -14,13 +14,13 @@ import { toast } from '@/hooks/use-toast';
 import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfMonth, isToday } from 'date-fns';
 import { UserSelector } from './UserSelector';
 
-// Generate consistent color from event type
-const getColorFromEventType = (eventType: string): string => {
-  if (!eventType) return 'hsl(0, 0%, 85%)'; // Default gray for empty types
+// Generate consistent color from project name
+const getColorFromProject = (project: string): string => {
+  if (!project) return 'hsl(0, 0%, 85%)'; // Default gray for empty projects
   
   let hash = 0;
-  for (let i = 0; i < eventType.length; i++) {
-    hash = eventType.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < project.length; i++) {
+    hash = project.charCodeAt(i) + ((hash << 5) - hash);
   }
   
   const hue = Math.abs(hash) % 360;
@@ -41,6 +41,7 @@ interface Event {
   end_datetime: string;
   location: string;
   event_type: 'meeting' | 'event';
+  project: string;
   participants: Array<{ name: string; email: string }>;
   alert_minutes: number;
   repeat_pattern: string;
@@ -62,6 +63,7 @@ interface EventFormData {
   end_datetime: string;
   location: string;
   event_type: 'meeting' | 'event';
+  project: string;
   participants: Array<{ name: string; email: string }>;
   alert_minutes: number;
   repeat_pattern: string;
@@ -130,6 +132,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     end_datetime: '',
     location: '',
     event_type: 'event',
+    project: '',
     participants: [],
     alert_minutes: 15,
     repeat_pattern: 'none',
@@ -355,6 +358,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       start_datetime: '',
       end_datetime: '',
       location: '',
+      event_type: 'event',
+      project: '',
       participants: [],
       alert_minutes: 15,
       repeat_pattern: 'none',
@@ -381,6 +386,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       end_datetime: event.end_datetime,
       location: event.location,
       event_type: event.event_type,
+      project: event.project,
       participants: event.participants,
       alert_minutes: event.alert_minutes,
       repeat_pattern: event.repeat_pattern,
@@ -567,7 +573,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
         <div className="space-y-4 min-h-[600px]">
-          <Card className={`border-2 border-gray-300 dark:border-gray-600 ${isToday(currentDay) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
+          <Card className={`border-2 border-gray-300 dark:border-gray-600 ${isToday(currentDay) ? 'ring-2 ring-primary' : ''}`}>
             <CardHeader>
               <CardTitle className={`text-lg ${isToday(currentDay) ? 'text-primary font-bold' : ''}`}>
                 {format(currentDay, 'EEEE, MMMM d, yyyy')}
@@ -586,8 +592,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                     key={event.id}
                     className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:opacity-80 transition-all"
                     style={{
-                      backgroundColor: getColorFromEventType(event.event_type),
-                      color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                      backgroundColor: getColorFromProject(event.project),
+                      color: getTextColorFromBg(getColorFromProject(event.project))
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -642,7 +648,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           {weekDates.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             return (
-              <Card key={index} className={`min-h-[400px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
+              <Card key={index} className={`min-h-[400px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary' : ''}`}>
                 <CardHeader className="pb-2">
                   <CardTitle className={`text-sm ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                     {weekDays[index]}
@@ -726,7 +732,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                       key={i}
                       className={`min-h-[80px] p-2 border-2 border-gray-300 dark:border-gray-600 rounded cursor-pointer hover:bg-muted/20 transition-colors ${
                         isCurrentMonth ? 'bg-background' : 'bg-muted/30'
-                      } ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}
+                      } ${isToday(date) ? 'ring-2 ring-primary' : ''}`}
                       onClick={() => handleDateClick(date)}
                       onContextMenu={(e) => handleDateRightClick(date, e)}
                     >
@@ -852,6 +858,29 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="Enter event location"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-event-type">Event Type</Label>
+              <Select value={formData.event_type} onValueChange={(value: 'meeting' | 'event') => setFormData({ ...formData, event_type: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="event">Event</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-project">Project</Label>
+              <Input
+                id="edit-project"
+                value={formData.project}
+                onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                placeholder="Enter project name"
               />
             </div>
 
@@ -1028,6 +1057,16 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
             </div>
 
             <div>
+              <Label htmlFor="add-project">Project</Label>
+              <Input
+                id="add-project"
+                value={formData.project}
+                onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                placeholder="Enter project name"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="add-participants">Participants</Label>
               <UserSelector
                 selectedUsers={formData.participants}
@@ -1079,8 +1118,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                   <Badge 
                     variant={editingEvent.event_type === 'meeting' ? 'default' : 'secondary'}
                     style={{
-                      backgroundColor: getColorFromEventType(editingEvent.event_type),
-                      color: getTextColorFromBg(getColorFromEventType(editingEvent.event_type))
+                      backgroundColor: getColorFromProject(editingEvent.project),
+                      color: getTextColorFromBg(getColorFromProject(editingEvent.project))
                     }}
                   >
                     {editingEvent.event_type}
