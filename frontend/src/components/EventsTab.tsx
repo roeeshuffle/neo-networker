@@ -14,6 +14,25 @@ import { toast } from '@/hooks/use-toast';
 import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfMonth, isToday } from 'date-fns';
 import { UserSelector } from './UserSelector';
 
+// Generate consistent color from event type
+const getColorFromEventType = (eventType: string): string => {
+  if (!eventType) return 'hsl(0, 0%, 85%)'; // Default gray for empty types
+  
+  let hash = 0;
+  for (let i = 0; i < eventType.length; i++) {
+    hash = eventType.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 85%)`;
+};
+
+const getTextColorFromBg = (bgColor: string): string => {
+  const hue = parseInt(bgColor.match(/\d+/)?.[0] || '0');
+  // Use darker text for better contrast
+  return `hsl(${hue}, 65%, 25%)`;
+};
+
 interface Event {
   id: number;
   title: string;
@@ -95,6 +114,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   };
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isEventDetailsOpen, setIsEventDetailsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -346,6 +366,13 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   };
 
   const openEditDialog = (event: Event) => {
+    // Check if current user is the event owner
+    if (currentUserEmail !== event.owner_email) {
+      // If not owner, open view-only dialog
+      openViewDialog(event);
+      return;
+    }
+    
     setEditingEvent(event);
     setFormData({
       title: event.title,
@@ -353,6 +380,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       start_datetime: event.start_datetime,
       end_datetime: event.end_datetime,
       location: event.location,
+      event_type: event.event_type,
       participants: event.participants,
       alert_minutes: event.alert_minutes,
       repeat_pattern: event.repeat_pattern,
@@ -362,6 +390,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       notes: event.notes
     });
     setIsEditDialogOpen(true);
+  };
+
+  const openViewDialog = (event: Event) => {
+    setEditingEvent(event);
+    setIsViewDialogOpen(true);
   };
 
   const addParticipant = () => {
@@ -551,7 +584,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 events.map((event) => (
                   <div
                     key={event.id}
-                    className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-muted/50"
+                    className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:opacity-80 transition-all"
+                    style={{
+                      backgroundColor: getColorFromEventType(event.event_type),
+                      color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       openEditDialog(event);
@@ -622,7 +659,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                   {dayEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 mb-2"
+                      className="p-3 rounded-lg text-xs cursor-pointer hover:opacity-80 mb-2 transition-all"
+                      style={{
+                        backgroundColor: getColorFromEventType(event.event_type),
+                        color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditDialog(event);
@@ -696,7 +737,11 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                         {dayEvents.slice(0, 2).map((event) => (
                           <div
                             key={event.id}
-                            className="text-xs bg-blue-100 text-blue-800 rounded px-1 truncate cursor-pointer hover:bg-blue-200"
+                            className="text-xs rounded px-1 truncate cursor-pointer hover:opacity-80 transition-all"
+                            style={{
+                              backgroundColor: getColorFromEventType(event.event_type),
+                              color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
                               openEditDialog(event);
@@ -1012,6 +1057,105 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Event Dialog (Read-only for non-owners) */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>View Event</DialogTitle>
+          </DialogHeader>
+          {editingEvent && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Event Title</Label>
+                <p className="text-sm text-muted-foreground mt-1">{editingEvent.title}</p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Event Type</Label>
+                <div className="mt-1">
+                  <Badge 
+                    variant={editingEvent.event_type === 'meeting' ? 'default' : 'secondary'}
+                    style={{
+                      backgroundColor: getColorFromEventType(editingEvent.event_type),
+                      color: getTextColorFromBg(getColorFromEventType(editingEvent.event_type))
+                    }}
+                  >
+                    {editingEvent.event_type}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Description</Label>
+                <p className="text-sm text-muted-foreground mt-1">{editingEvent.description || 'No description provided'}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Start Date & Time</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {format(parseISO(editingEvent.start_datetime), 'MMM dd, yyyy HH:mm')}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">End Date & Time</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {format(parseISO(editingEvent.end_datetime), 'MMM dd, yyyy HH:mm')}
+                  </p>
+                </div>
+              </div>
+              
+              {editingEvent.location && (
+                <div>
+                  <Label className="text-sm font-medium">Location</Label>
+                  <p className="text-sm text-muted-foreground mt-1 flex items-center">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {editingEvent.location}
+                  </p>
+                </div>
+              )}
+              
+              {editingEvent.participants && editingEvent.participants.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Participants</Label>
+                  <div className="mt-1 space-y-1">
+                    {editingEvent.participants.map((participant, index) => (
+                      <div key={index} className="text-sm text-muted-foreground flex items-center">
+                        <Users className="w-4 h-4 mr-2" />
+                        {participant.name || participant.email}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {editingEvent.owner_email && (
+                <div>
+                  <Label className="text-sm font-medium">Event Owner</Label>
+                  <p className="text-sm text-muted-foreground mt-1">{editingEvent.owner_email}</p>
+                </div>
+              )}
+              
+              {editingEvent.notes && (
+                <div>
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <p className="text-sm text-muted-foreground mt-1">{editingEvent.notes}</p>
+                </div>
+              )}
+              
+              {editingEvent.repeat_pattern && editingEvent.repeat_pattern !== 'none' && (
+                <div>
+                  <Label className="text-sm font-medium">Repeat Pattern</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {editingEvent.repeat_pattern} (every {editingEvent.repeat_interval} {editingEvent.repeat_pattern})
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
