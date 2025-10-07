@@ -4,6 +4,7 @@ from dal.database import db
 from dal.models import Event, User
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
+from bl.services.notification_service import notify_event_participant, notify_event_updated
 import json
 
 events_bp = Blueprint('events', __name__)
@@ -96,6 +97,12 @@ def create_event():
         db.session.add(event)
         db.session.commit()
         
+        # Notify participants about the new event
+        if data.get('participants'):
+            for participant in data['participants']:
+                if participant.get('email') and participant['email'] != current_user.email:
+                    notify_event_participant(current_user.email, event.title, participant['email'])
+        
         return jsonify({
             'message': 'Event created successfully',
             'event': event.to_dict()
@@ -179,6 +186,12 @@ def update_event(event_id):
         event.updated_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Notify participants about the event update
+        if event.participants:
+            for participant in event.participants:
+                if participant.get('email') and participant['email'] != current_user.email:
+                    notify_event_updated(current_user.email, event.title, participant['email'])
         
         return jsonify({
             'message': 'Event updated successfully',

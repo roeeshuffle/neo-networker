@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from dal.models import Person, User
 from dal.database import db
 from datetime import datetime
+from bl.services.notification_service import notify_contact_shared
 import uuid
 import logging
 
@@ -456,6 +457,23 @@ def share_contacts():
             db.session.rollback()
             people_logger.error(f"Failed to commit contact sharing: {e}")
             return jsonify({'error': f'Failed to save shared contacts: {str(e)}'}), 500
+        
+        # Notify users about shared contacts
+        for user_id in user_ids:
+            target_user = User.query.get(user_id)
+            if not target_user:
+                if '_' in user_id:
+                    email = user_id.split('_')[1] if len(user_id.split('_')) > 1 else user_id
+                else:
+                    email = user_id
+                target_user = User.query.filter_by(email=email).first()
+            
+            if target_user and target_user.email != current_user.email:
+                contact_names = [f"{c.first_name} {c.last_name}".strip() for c in contacts[:3]]  # First 3 contacts
+                if len(contacts) > 3:
+                    contact_names.append(f"and {len(contacts) - 3} more")
+                contact_list = ", ".join(contact_names)
+                notify_contact_shared(current_user.email, target_user.email, contact_list)
         
         people_logger.info(f"Shared {shared_count} contacts with {len(user_ids)} users")
         

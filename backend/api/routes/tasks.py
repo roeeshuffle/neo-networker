@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from dal.models import Task, User
 from dal.database import db
 from datetime import datetime
+from bl.services.notification_service import notify_task_assigned, notify_task_updated
 import uuid
 
 tasks_bp = Blueprint('tasks', __name__)
@@ -256,6 +257,10 @@ def create_task():
         db.session.add(task)
         db.session.commit()
         
+        # Notify assigned user about the new task
+        if assign_to_email and assign_to_email != current_user.email:
+            notify_task_assigned(current_user.email, task.title, assign_to_email)
+        
         print(f"✅ TASK CREATED: Task created with ID {task.id}, assign_to: {assign_to_email}")
         
         return jsonify({
@@ -340,6 +345,10 @@ def update_task(task_id):
         task.updated_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Notify assigned user about the task update
+        if task.assign_to and task.assign_to != current_user.email:
+            notify_task_updated(current_user.email, task.title, task.assign_to)
         
         return jsonify(task.to_dict())
         
