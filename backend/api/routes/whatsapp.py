@@ -347,8 +347,14 @@ def connect_whatsapp():
         whatsapp_logger.info(f"🔧 [CONNECT] Updating user {user.email} with WhatsApp phone: {whatsapp_phone_number}")
         if not user.state_data:
             user.state_data = {}
-        user.state_data['whatsapp_phone_number'] = whatsapp_phone_number
+        
+        # Create a new state_data dict to ensure proper update
+        new_state_data = dict(user.state_data)
+        new_state_data['whatsapp_phone_number'] = whatsapp_phone_number
+        user.state_data = new_state_data
         user.preferred_messaging_platform = 'whatsapp'
+        
+        whatsapp_logger.info(f"🔧 [CONNECT] New state_data: {user.state_data}")
         db.session.commit()
         
         # Verify the save
