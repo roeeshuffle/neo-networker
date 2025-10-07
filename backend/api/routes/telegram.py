@@ -403,13 +403,161 @@ def cleanup_old_threads():
     except Exception as e:
         telegram_logger.error(f"💥 Error during thread cleanup: {e}")
 
+def process_simple_commands(text: str, user: User) -> str:
+    """Process simple commands without OpenAI"""
+    text_lower = text.lower().strip()
+    
+    
+    # Task commands - order matters! More specific patterns first
+    if any(phrase in text_lower for phrase in ['show done tasks', 'done tasks', 'completed tasks']):
+        return show_tasks_from_telegram({"status": "done"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show all tasks', 'all tasks']):
+        return show_tasks_from_telegram({"status": "all"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show tasks', 'my tasks', 'list tasks', 'tasks']):
+        return show_tasks_from_telegram({"status": "todo"}, user)
+    
+    # Project-specific task commands
+    elif any(phrase in text_lower for phrase in ['show personal tasks', 'personal tasks', 'tasks personal']):
+        return show_tasks_from_telegram({"status": "todo", "project": "Personal"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show alist tasks', 'alist tasks', 'tasks alist']):
+        return show_tasks_from_telegram({"status": "todo", "project": "Alist"}, user)
+    
+    # Event commands - order matters! More specific patterns first
+    elif any(phrase in text_lower for phrase in ['show tomorrow events', 'tomorrow events', 'events tomorrow', 'show tomorrow calendar', 'tomorrow calendar', 'calendar tomorrow', 'show tommorow events', 'tommorow events', 'events tommorow', 'show tommorow calendar', 'tommorow calendar', 'calendar tommorow']):
+        return show_events_from_telegram({"period": "tomorrow"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show today events', 'today events', 'events today', 'show today calendar', 'today calendar', 'calendar today']):
+        return show_events_from_telegram({"period": "today"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show week events', 'week events', 'events this week', 'show week calendar', 'week calendar', 'calendar this week', 'weekly events', 'show weekly events']):
+        return show_events_from_telegram({"period": "weekly"}, user)
+    
+    elif any(phrase in text_lower for phrase in ['show events', 'my events', 'list events', 'events', 'show calendar', 'my calendar', 'list calendar', 'calendar']):
+        return show_events_from_telegram({"period": "today"}, user)
+    
+    # Contact commands
+    elif any(phrase in text_lower for phrase in ['show contacts', 'my contacts', 'list contacts', 'contacts']):
+        return show_people_from_telegram({}, user)
+    
+    # Search commands
+    elif text_lower.startswith('find ') or text_lower.startswith('search '):
+        query = text_lower.replace('find ', '').replace('search ', '').strip()
+        # Clean up common search patterns
+        if 'people from ' in query:
+            query = query.replace('people from ', '').strip()
+        elif 'contacts from ' in query:
+            query = query.replace('contacts from ', '').strip()
+        elif 'persons from ' in query:
+            query = query.replace('persons from ', '').strip()
+        return search_from_telegram({"query": query, "type": "people"}, user)
+    
+    # Delete commands
+    elif text_lower.startswith('delete ') or text_lower.startswith('remove '):
+        task_title = text_lower.replace('delete ', '').replace('remove ', '').strip()
+        # Handle "delete task X" format - remove "task" prefix if present
+        if task_title.startswith('task '):
+            task_title = task_title[5:]  # Remove "task" prefix
+        return remove_task_from_telegram({"title": task_title}, user)
+    
+    # Update commands
+    elif text_lower.startswith('update '):
+        # Parse update commands like "update status of test2 task to done"
+        # Extract task title and updates from the text
+        update_text = text_lower.replace('update ', '').strip()
+        
+        telegram_logger.info(f"🔍 Parsing update command: '{update_text}'")
+        telegram_logger.info(f"🔍 Text length: {len(update_text)}")
+        telegram_logger.info(f"🔍 Contains 'status': {' status ' in update_text}")
+        telegram_logger.info(f"🔍 Contains 'to': {' to ' in update_text}")
+        
+        # Handle patterns like "status of X task to Y" or "X task status to Y"
+        if (' status ' in update_text or update_text.startswith('status ')) and ' to ' in update_text:
+            telegram_logger.info(f"🔍 Found 'status' and 'to' in text")
+            # Extract task title and new status
+            if ' of ' in update_text:
+                telegram_logger.info(f"🔍 Found 'of' in text")
+                # Pattern: "status of X task to Y"
+                parts = update_text.split(' of ')
+                telegram_logger.info(f"🔍 Split by 'of': {parts}")
+                if len(parts) == 2:
+                    status_part = parts[1]
+                    telegram_logger.info(f"🔍 Status part: '{status_part}'")
+                    if ' task to ' in status_part:
+                        telegram_logger.info(f"🔍 Found 'task to' in status part")
+                        task_title, new_status = status_part.split(' task to ')
+                        telegram_logger.info(f"🔍 Parsed: task_title='{task_title.strip()}', status='{new_status.strip()}'")
+                        return update_task_from_telegram({
+                            "task_id": task_title.strip(),
+                            "updates": {"status": new_status.strip()}
+                        }, user)
+                    else:
+                        telegram_logger.info(f"🔍 'task to' not found in status part: '{status_part}'")
+            elif ' task status to ' in update_text:
+                # Pattern: "X task status to Y"
+                task_title, new_status = update_text.split(' task status to ')
+                telegram_logger.info(f"🔍 Parsed: task_title='{task_title.strip()}', status='{new_status.strip()}'")
+                return update_task_from_telegram({
+                    "task_id": task_title.strip(),
+                    "updates": {"status": new_status.strip()}
+                }, user)
+        
+        # Handle other update patterns
+        elif ' task ' in update_text and ' to ' in update_text:
+            # Generic pattern: "X task Y to Z"
+            parts = update_text.split(' task ')
+            if len(parts) == 2:
+                task_title = parts[0].strip()
+                field_and_value = parts[1]
+                if ' to ' in field_and_value:
+                    field, value = field_and_value.split(' to ')
+                    telegram_logger.info(f"🔍 Parsed: task_title='{task_title}', field='{field.strip()}', value='{value.strip()}'")
+                    return update_task_from_telegram({
+                        "task_id": task_title,
+                        "updates": {field.strip(): value.strip()}
+                    }, user)
+        
+        return None
+    
+    # Help
+    elif any(phrase in text_lower for phrase in ['help', 'commands', 'what can you do']):
+        return """🤖 **Available Commands:**
+
+**Tasks:**
+• "Show tasks" - Show your open tasks
+• "Show all tasks" - Show all tasks
+• "Show done tasks" - Show completed tasks
+
+**Events:**
+• "Show events" - Show today's events
+• "Show tomorrow events" - Show tomorrow's events
+• "Show week events" - Show this week's events
+
+**Contacts:**
+• "Show contacts" - Show your contacts
+• "Find [name]" - Search for contacts
+
+**Examples:**
+• "Add task call John tomorrow"
+• "Schedule meeting with Sarah tomorrow 2pm"
+• "Find John Smith"
+
+Need more features? Contact administrator to enable AI processing."""
+    
+    # Default fallback - return None to trigger natural language processing
+    else:
+        return None
+
 def process_natural_language_request(text: str, user: User) -> str:
     """Process natural language requests using OpenAI Assistant API"""
     telegram_logger.info(f"🧠 Processing natural language request: '{text}' for user {user.full_name}")
     
     if not os.getenv('OPENAI_API_KEY'):
         telegram_logger.error("❌ OpenAI API key not configured")
-        return "❌ OpenAI API not configured. Please contact administrator."
+        # Fallback to simple command parsing
+        return process_simple_commands(text, user)
 
     try:
         # Get or create thread for user
@@ -570,183 +718,70 @@ def execute_bot_function(function_number: int, parameters: any, user: User, orig
         telegram_logger.error(f"💥 Error executing function {function_number} for user {user.full_name}: {str(e)}")
         return f"Error executing function: {str(e)}"
 
-def add_task_from_telegram(args: dict, user: User) -> str:
-    """Add a task from Telegram request"""
-    try:
-        print(f"DEBUG: add_task_from_telegram called with args: {args}")
-        
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
-        if not user:
-            return "❌ User not found. Please connect your Telegram account in the webapp first."
-
-        print(f"DEBUG: Found user: {user.email} (ID: {user.id})")
-
-        # Generate a unique task_id - find the highest existing task_id for this user
-        max_task = Task.query.filter(
-            Task.owner_id == user.id,
-            Task.task_id.isnot(None)
-        ).order_by(Task.task_id.desc()).first()
-        next_task_id = (max_task.task_id + 1) if max_task and max_task.task_id else 1
-        
-        print(f"DEBUG: Max task ID for user {user.id}: {max_task.task_id if max_task else 'None'}")
-        print(f"DEBUG: Next task ID: {next_task_id}")
-        
-        # Handle due_date parsing
-        due_date = None
-        if args.get('due_date'):
-            try:
-                # Parse the due_date string (format: YYYY-MM-DD HH:MM)
-                due_date_str = args.get('due_date')
-                print(f"DEBUG: Parsing due_date: {due_date_str}")
-                due_date = datetime.strptime(due_date_str, '%Y-%m-%d %H:%M')
-                print(f"DEBUG: Parsed due_date: {due_date}")
-            except ValueError as e:
-                print(f"DEBUG: Error parsing due_date '{due_date_str}': {e}")
-                # Try alternative format
-                try:
-                    due_date = datetime.fromisoformat(due_date_str.replace('Z', ''))
-                    print(f"DEBUG: Parsed with isoformat: {due_date}")
-                except:
-                    print(f"DEBUG: Could not parse due_date: {due_date_str}")
-        
-        # Handle alert_time parsing
-        alert_time = None
-        if args.get('alert_time'):
-            try:
-                alert_time_str = args.get('alert_time')
-                print(f"DEBUG: Parsing alert_time: {alert_time_str}")
-                alert_time = datetime.strptime(alert_time_str, '%Y-%m-%d %H:%M')
-                print(f"DEBUG: Parsed alert_time: {alert_time}")
-            except ValueError as e:
-                print(f"DEBUG: Error parsing alert_time '{alert_time_str}': {e}")
-                try:
-                    alert_time = datetime.fromisoformat(alert_time_str.replace('Z', ''))
-                    print(f"DEBUG: Parsed alert_time with isoformat: {alert_time}")
-                except:
-                    print(f"DEBUG: Could not parse alert_time: {alert_time_str}")
-
-        # Handle scheduled_date parsing
-        scheduled_date = None
-        if args.get('scheduled_date'):
-            try:
-                scheduled_date_str = args.get('scheduled_date')
-                print(f"DEBUG: Parsing scheduled_date: {scheduled_date_str}")
-                scheduled_date = datetime.strptime(scheduled_date_str, '%Y-%m-%d %H:%M')
-                print(f"DEBUG: Parsed scheduled_date: {scheduled_date}")
-            except ValueError as e:
-                print(f"DEBUG: Error parsing scheduled_date '{scheduled_date_str}': {e}")
-                try:
-                    scheduled_date = datetime.fromisoformat(scheduled_date_str.replace('Z', ''))
-                    print(f"DEBUG: Parsed scheduled_date with isoformat: {scheduled_date}")
-                except:
-                    print(f"DEBUG: Could not parse scheduled_date: {scheduled_date_str}")
-
-        # Create the task
-        task = Task(
-            id=str(uuid.uuid4()),
-            task_id=next_task_id,
-            title=args.get('title') or args.get('text') or 'Untitled Task',  # Ensure title is never None
-            description=args.get('description'),
-            project=args.get('project', 'Unrecognized project'),
-            status=args.get('status', 'todo'),
-            priority=args.get('priority', 'medium'),
-            due_date=due_date,
-            scheduled_date=scheduled_date,
-            is_scheduled=args.get('is_scheduled', False),
-            is_active=args.get('is_active', True),
-            assign_to=args.get('assign_to'),
-            label=args.get('label'),
-            notes=args.get('notes'),
-            alert_time=alert_time,
-            owner_id=user.id,
-            created_by=user.id
-        )
-        
-        print(f"DEBUG: Created task with ID: {task.id}, task_id: {task.task_id}, due_date: {task.due_date}")
-        
-        db.session.add(task)
-        db.session.commit()
-        
-        print(f"DEBUG: After commit - task.task_id: {task.task_id}, due_date: {task.due_date}")
-        
-        # Refresh the task from database to make sure it's saved correctly
-        db.session.refresh(task)
-        print(f"DEBUG: After refresh - task.task_id: {task.task_id}, due_date: {task.due_date}")
-        
-        return f"✅ Added task #{task.task_id}: {task.title or task.text}"
-        
-    except Exception as e:
-        telegram_logger.error(f"💥 Error adding task: {str(e)}")
-        return f"❌ Failed to add task. Please try again."
 
 def remove_task_from_telegram(args: any, user: User) -> str:
     """Remove a task from Telegram request"""
     try:
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        # Use the user parameter directly - it's already loaded from the webhook
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
-        # Extract task_id from args - handle different formats
+        # Extract task title from args - handle different formats
         if isinstance(args, dict):
-            # Handle dictionary format: {'task_id': 'call mom'}
-            search_term = args.get('task_id', '')
+            # Handle dictionary format: {'task_id': 'call mom'} or {'title': 'call mom'}
+            search_term = args.get('task_id', '') or args.get('title', '')
         elif isinstance(args, str):
             search_term = args
+            # Handle "delete task X" format - remove "task" prefix if present
+            if search_term.lower().startswith('task '):
+                search_term = search_term[5:]  # Remove "task " prefix
         else:
             search_term = str(args)
 
-        # Try to convert to int if it's a numeric string
-        try:
-            task_id = int(search_term)
-            # Direct delete by task_id
-            deleted_count = Task.query.filter(
-                Task.owner_id == user.id,
-                Task.task_id == task_id
-            ).delete()
-            
-            if deleted_count > 0:
-                db.session.commit()
-                return f"✅ Task #{task_id} removed successfully."
-            else:
-                return f"❌ Task #{task_id} not found."
-        except ValueError:
-            # Search by text instead
-            tasks = Task.query.filter(
-                Task.owner_id == user.id,
+        # Search by title/text
+        tasks = Task.query.filter(
+            Task.owner_id == user.id,
+            Task.is_active == True,
+            db.or_(
+                Task.title.ilike(f"%{search_term}%"),
                 Task.text.ilike(f"%{search_term}%")
-            ).all()
+            )
+        ).all()
+        
+        if not tasks:
+            return f"❌ No tasks found matching: '{search_term}'"
+        
+        if len(tasks) == 1:
+            # Single match, show confirmation
+            task = tasks[0]
+            task_title = task.title or task.text or "Untitled Task"
+            task_project = task.project or "No project"
             
-            if not tasks:
-                return f"❌ No tasks found matching: {search_term}"
+            # Set state to wait for confirmation
+            user.state_data = {
+                'current_state': 'waiting_task_delete_confirmation',
+                'task_to_delete_id': task.id,
+                'task_title': task_title
+            }
+            db.session.commit()
             
-            if len(tasks) == 1:
-                # Single match, delete directly
-                task = tasks[0]
-                task_name = task.text
-                task_id = task.task_id
-                db.session.delete(task)
-                db.session.commit()
-                return f"✅ Task #{task_id} '{task_name}' removed successfully."
-            else:
-                # Multiple matches, show list and set state for confirmation
-                response = f"🔍 Found {len(tasks)} matching task(s). Reply with task number to delete:\n\n"
-                for i, task in enumerate(tasks):
-                    response += f"{i + 1}. Task #{task.task_id}: {task.text}"
-                    if task.due_date:
-                        response += f" (Due: {task.due_date.strftime('%Y-%m-%d %H:%M')})"
-                    response += "\n"
-                
-                # Set state to wait for user selection
-                if not user.state_data:
-                    user.state_data = {}
-                user.state_data['current_state'] = 'waiting_task_delete_confirmation'
-                # Store the search term to recreate the list
-                user.state_data = {'search_term': search_term}
-                db.session.commit()
-                
-                return response
+            return f"🗑️ Are you sure you want to delete this task?\n\n• <b>{task_title}</b>\n📁 {task_project}\n\nReply 'yes' to confirm or 'no' to cancel."
+        else:
+            # Multiple matches, show list and ask user to be more specific
+            response = f"🔍 Found {len(tasks)} matching task(s). Please be more specific:\n\n"
+            for i, task in enumerate(tasks[:5]):  # Show max 5 matches
+                task_title = task.title or task.text or "Untitled Task"
+                task_project = task.project or "No project"
+                response += f"{i + 1}. <b>{task_title}</b>\n   📁 {task_project}\n"
+                if task.due_date:
+                    response += f"   📅 Due: {task.due_date.strftime('%Y-%m-%d %H:%M')}\n"
+                response += "\n"
+            
+            if len(tasks) > 5:
+                response += f"... and {len(tasks) - 5} more tasks.\n"
+            
+            response += "Please provide a more specific task title."
+            return response
             
     except Exception as e:
         telegram_logger.error(f"💥 Error removing task: {str(e)}")
@@ -762,31 +797,50 @@ def show_tasks_from_telegram(args: dict, user: User) -> str:
         # User is already the correct user since we're using the same model
         # No need to find user - we already have it
 
-        # Get tasks for the user
-        tasks = Task.query.filter_by(owner_id=user.id).limit(20).all()
+        # Build query based on filters
+        query = Task.query.filter(Task.owner_id == user.id, Task.is_active == True)
+        
+        # Apply status filter
+        status_filter = args.get('status', 'todo')
+        if status_filter == "all":
+            pass  # Show all tasks
+        elif status_filter == "done":
+            query = query.filter(Task.status == "done")
+        else:  # default to "todo" - show open tasks
+            query = query.filter(Task.status.in_(["todo", "in_progress"]))
+        
+        # Apply project filter if specified
+        project_filter = args.get('project')
+        if project_filter:
+            query = query.filter(Task.project == project_filter)
+        
+        # Order by due_date, then by created_at
+        tasks = query.order_by(Task.due_date.asc().nulls_last(), Task.created_at.desc()).limit(20).all()
         
         if not tasks:
             return "📝 No tasks found."
         
         response = f"📝 Found {len(tasks)} task(s):\n\n"
         for task in tasks:
-            status_emoji = "✅" if task.status == "completed" else "🔄" if task.status == "in-progress" else "⏳"
+            status_emoji = "✅" if task.status == "done" else "🔄" if task.status == "in_progress" else "⏳"
             priority_emoji = "🔥" if task.priority == "high" else "🔹" if task.priority == "low" else "📌"
             
-            response += f"{status_emoji} {priority_emoji} {task.text}\n"
-            response += f"ID: {task.task_id}\n"
-            response += f"Status: {task.status}\n"
-            response += f"Priority: {task.priority}\n"
+            # Use title if available, otherwise use text
+            task_title = task.title or task.text or "Untitled Task"
+            
+            response += f"• <b>{task_title}</b>\n"
+            if task.project:
+                response += f"📁 {task.project}\n"
+            response += f"{status_emoji} Status: {task.status}\n"
+            response += f"{priority_emoji} Priority: {task.priority}\n"
             if task.assign_to:
-                response += f"👤 {task.assign_to}\n"
+                response += f"👤 Assign: {task.assign_to}\n"
             if task.due_date:
-                response += f"📅 {task.due_date}\n"
+                response += f"📅 Due: {task.due_date.strftime('%Y-%m-%d %H:%M')}\n"
             if task.label:
-                response += f"🏷️ {task.label}\n"
+                response += f"🏷️ Label: {task.label}\n"
             if task.notes:
                 response += f"📝 Notes: {task.notes}\n"
-            if task.alert_time:
-                response += f"⏰ Alert: {task.alert_time}\n"
             response += "\n"
         
         return response
@@ -800,64 +854,65 @@ def add_people_from_telegram(args: list, user: User) -> str:
     try:
         telegram_logger.info(f"👥 Adding people with args: {args}")
         
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        # Use the user parameter directly - it's already loaded from the webhook
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
         results = []
         for person_data in args:
             # Handle datetime fields
-            last_email_interaction = None
-            if person_data.get('last_email_interaction'):
+            last_contact_date = None
+            if person_data.get('last_contact_date'):
                 try:
-                    last_email_interaction = datetime.strptime(person_data['last_email_interaction'], '%Y-%m-%d %H:%M')
+                    last_contact_date = datetime.strptime(person_data['last_contact_date'], '%Y-%m-%d %H:%M')
                 except ValueError:
                     try:
-                        last_email_interaction = datetime.fromisoformat(person_data['last_email_interaction'].replace('Z', ''))
+                        last_contact_date = datetime.fromisoformat(person_data['last_contact_date'].replace('Z', ''))
                     except:
                         pass
             
-            next_due_task = None
-            if person_data.get('next_due_task'):
+            next_follow_up_date = None
+            if person_data.get('next_follow_up_date'):
                 try:
-                    next_due_task = datetime.strptime(person_data['next_due_task'], '%Y-%m-%d %H:%M')
+                    next_follow_up_date = datetime.strptime(person_data['next_follow_up_date'], '%Y-%m-%d %H:%M')
                 except ValueError:
                     try:
-                        next_due_task = datetime.fromisoformat(person_data['next_due_task'].replace('Z', ''))
+                        next_follow_up_date = datetime.fromisoformat(person_data['next_follow_up_date'].replace('Z', ''))
                     except:
                         pass
             
             person = Person(
-                id=str(uuid.uuid4()),
-                full_name=person_data.get('full_name'),
-                company=person_data.get('company'),
-                categories=person_data.get('categories'),
-                email=person_data.get('email'),
-                newsletter=person_data.get('newsletter', False),
-                status=person_data.get('status'),
-                linkedin_profile=person_data.get('linkedin_profile'),
-                poc_in_apex=person_data.get('poc_in_apex'),
-                who_warm_intro=person_data.get('who_warm_intro'),
-                agenda=person_data.get('agenda'),
-                meeting_notes=person_data.get('meeting_notes'),
-                should_avishag_meet=person_data.get('should_avishag_meet', False),
-                more_info=person_data.get('more_info'),
+                first_name=person_data.get('first_name'),
+                last_name=person_data.get('last_name'),
+                gender=person_data.get('gender'),
+                birthday=person_data.get('birthday'),
+                organization=person_data.get('organization'),
                 job_title=person_data.get('job_title'),
+                job_status=person_data.get('job_status'),
+                email=person_data.get('email'),
+                phone=person_data.get('phone'),
+                mobile=person_data.get('mobile'),
+                address=person_data.get('address'),
+                linkedin_url=person_data.get('linkedin_url'),
+                github_url=person_data.get('github_url'),
+                facebook_url=person_data.get('facebook_url'),
+                twitter_url=person_data.get('twitter_url'),
+                website_url=person_data.get('website_url'),
+                notes=person_data.get('notes'),
+                source=person_data.get('source'),
                 tags=person_data.get('tags'),
-                zog=person_data.get('zog'),
-                intel_144=person_data.get('intel_144'),
-                connection_strength=person_data.get('connection_strength'),
-                last_email_interaction=last_email_interaction,
-                country=person_data.get('country'),
-                next_due_task=next_due_task,
-                owner_id=user.id,
-                created_by=user.id
+                last_contact_date=last_contact_date,
+                next_follow_up_date=next_follow_up_date,
+                status=person_data.get('status'),
+                priority=person_data.get('priority'),
+                group=person_data.get('group'),
+                custom_fields=person_data.get('custom_fields'),
+                owner_id=user.id
             )
             
-            if person.full_name:
+            if person.first_name:
                 db.session.add(person)
-                results.append(person.full_name)
+                results.append(f"{person.first_name} {person.last_name or ''}".strip())
         
         db.session.commit()
         
@@ -880,8 +935,7 @@ def update_task_from_telegram(args: dict, user: User) -> str:
     try:
         telegram_logger.info(f"✏️ Updating task with args: {args}")
         
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        # Use the user parameter directly - it's already loaded from the webhook
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -891,8 +945,19 @@ def update_task_from_telegram(args: dict, user: User) -> str:
         if not task_id:
             return "❌ Task ID is required"
         
-        # Find task
-        task = Task.query.filter_by(task_id=task_id, owner_id=user.id).first()
+        # Find task - try by task_id first, then by title if task_id doesn't look like a UUID
+        task = None
+        if len(task_id) > 20 and '-' in task_id:  # Looks like a UUID
+            task = Task.query.filter_by(task_id=task_id, owner_id=user.id).first()
+        
+        if not task:
+            # Search by title instead
+            task = Task.query.filter(
+                Task.owner_id == user.id,
+                Task.is_active == True,
+                (Task.title.ilike(f'%{task_id}%') | Task.text.ilike(f'%{task_id}%'))
+            ).first()
+        
         if not task:
             return f"❌ Task with ID {task_id} not found"
         
@@ -908,7 +973,29 @@ def update_task_from_telegram(args: dict, user: User) -> str:
         if 'priority' in updates:
             task.priority = updates['priority']
         if 'assign_to' in updates:
-            task.assign_to = updates['assign_to']
+            assign_to_value = updates['assign_to']
+            if assign_to_value:
+                from bl.services.name_resolution_service import NameResolutionService
+                
+                # Check if it's already an email (contains @)
+                if '@' in assign_to_value:
+                    # It's already an email, validate it's in the group
+                    user_preferences = user.user_preferences or {}
+                    group_members = user_preferences.get('group_members', [])
+                    group_emails = [member.get('email') for member in group_members if member.get('status') == 'approved']
+                    
+                    if assign_to_value not in group_emails:
+                        group_list = NameResolutionService.get_group_members_list(user)
+                        return f"❌ User {assign_to_value} is not in your group. {group_list}"
+                else:
+                    # It's a name, try to resolve it
+                    resolved_email, error = NameResolutionService.resolve_name_to_email(user, assign_to_value)
+                    if error:
+                        group_list = NameResolutionService.get_group_members_list(user)
+                        return f"❌ {error}. {group_list}"
+                    assign_to_value = resolved_email
+            
+            task.assign_to = assign_to_value
         if 'label' in updates:
             task.label = updates['label']
         if 'notes' in updates:
@@ -1168,7 +1255,12 @@ def add_task_from_telegram(args: dict, user: User) -> str:
         max_task_id = db.session.query(db.func.max(Task.task_id)).filter(
             Task.owner_id == user.id
         ).scalar()
-        next_task_id = max_task_id + 1 if max_task_id else 1
+        # Convert to int if it's a string, otherwise use 0
+        try:
+            max_task_id_int = int(max_task_id) if max_task_id else 0
+        except (ValueError, TypeError):
+            max_task_id_int = 0
+        next_task_id = max_task_id_int + 1
 
         # Create the task
         task = Task(
@@ -1208,30 +1300,36 @@ def search_from_telegram(args: dict, user: User) -> str:
             if query.lower() in ['contacts', 'persons', 'people', 'all contacts', 'all persons', 'show all contacts', 'show all persons']:
                 people = Person.query.filter(Person.owner_id == user.id).limit(10).all()
             else:
+                # Search in first_name, last_name, email, and organization
                 people = Person.query.filter(
                     Person.owner_id == user.id,
-                    Person.full_name.ilike(f'%{query}%')
+                    db.or_(
+                        Person.first_name.ilike(f'%{query}%'),
+                        Person.last_name.ilike(f'%{query}%'),
+                        Person.email.ilike(f'%{query}%'),
+                        Person.organization.ilike(f'%{query}%')
+                    )
                 ).limit(5).all()
             
             results = []
             for p in people:
-                result = f"👤 {p.full_name}"
+                # Get full name from first_name and last_name
+                full_name = f"{p.first_name or ''} {p.last_name or ''}".strip() or "Unknown"
+                result = f"👤 {full_name}"
                 if p.email:
                     result += f" ({p.email})"
-                if p.company:
-                    result += f"\n   🏢 {p.company}"
+                if p.organization:
+                    result += f"\n   🏢 {p.organization}"
                 if p.status:
                     result += f"\n   💼 {p.status}"
-                if p.categories:
-                    result += f"\n   🏷️ {p.categories}"
-                if p.linkedin_profile:
-                    result += f"\n   🔗 LinkedIn: {p.linkedin_profile}"
-                if p.newsletter:
-                    result += f"\n   📧 Newsletter subscriber"
-                if p.should_avishag_meet:
-                    result += f"\n   🤝 Should meet with Avishag"
-                if p.more_info:
-                    result += f"\n   ℹ️ {p.more_info}"
+                if p.tags:
+                    result += f"\n   🏷️ {p.tags}"
+                if p.linkedin_url:
+                    result += f"\n   🔗 LinkedIn: {p.linkedin_url}"
+                if p.job_title:
+                    result += f"\n   💼 {p.job_title}"
+                if p.group:
+                    result += f"\n   👥 {p.group}"
                 results.append(result)
         elif search_type == 'companies':
             companies = Company.query.filter(
@@ -1322,70 +1420,46 @@ def telegram_check():
 
 @telegram_bp.route('/telegram/webhook', methods=['POST'])
 def telegram_webhook():
-    """Handle telegram webhook"""
+    """Handle Telegram webhook"""
     try:
         data = request.get_json()
+        telegram_logger.info(f"📨 Webhook received: {json.dumps(data, indent=2)}")
         
-        # Log incoming request
-        telegram_logger.info(f"📨 Incoming Telegram webhook: {json.dumps(data, indent=2)}")
-        
-        # Handle callback queries (button clicks)
-        if 'callback_query' in data:
-            return handle_callback_query(data['callback_query'])
-        
-        if not data or 'message' not in data:
-            telegram_logger.info("❌ No message in webhook data")
+        if 'message' not in data:
             return jsonify({'status': 'ok'})
         
         message = data['message']
         chat_id = message['chat']['id']
         user_id = message['from']['id']
-        username = message['from'].get('username', 'Unknown')
         first_name = message['from'].get('first_name', 'Unknown')
+        username = message['from'].get('username', 'Unknown')
+        text = message.get('text', '')
         
-        # Check if it's a voice message
-        if 'voice' in message:
-            telegram_logger.info(f"🎤 Voice message received from user {first_name}")
-            return handle_voice_message(message, chat_id, user_id, first_name, username)
-        
-        # Check if it's a text message
-        if 'text' not in message:
-            telegram_logger.info(f"❌ No text or voice in message from user {first_name}")
-            return jsonify({'status': 'ok'})
-            
-        text = message['text']
-        
-        # Log user and message details
         telegram_logger.info(f"👤 User: {first_name} (@{username}) ID: {user_id}")
         telegram_logger.info(f"💬 Message: '{text}' in chat {chat_id}")
         
-        # Get or create user
+        # Find or create user
         user = User.query.filter_by(telegram_id=user_id).first()
-        
         if not user:
-            telegram_logger.info(f"🆕 Creating new user for Telegram: {first_name} (@{username}) ID: {user_id}")
+            telegram_logger.info(f"👤 New user: {first_name}")
             user = User(
-                id=str(uuid.uuid4()),
                 telegram_id=user_id,
-                full_name=message['from'].get('first_name'),
-                email=f"telegram_{user_id}@temp.com"  # Temporary email for Telegram users
+                full_name=first_name,
+                email=f"{user_id}@telegram.local"
             )
             db.session.add(user)
             db.session.commit()
-            telegram_logger.info(f"✅ New user created with ID: {user.id}")
         else:
             telegram_logger.info(f"👤 Existing user found: {user.full_name} (ID: {user.id})")
         
-        # Check if user's Telegram ID is connected in the web app
-        webapp_user = User.query.filter_by(telegram_id=user.telegram_id).first()
-        
         # User is already the webapp user since we're using the same model
+        webapp_user = user  # Since we're using the same User model
         
         # Handle different commands
         telegram_logger.info(f"🔍 Processing command: '{text}' for user {user.full_name}")
         
-        # Since we're using the same User model, we can process commands directly
-        # No need to check for webapp connection since user already exists
+        # Initialize response_text
+        response_text = ""
         
         if text == '/start':
             telegram_logger.info(f"🚀 User {user.full_name} started the bot")
@@ -1421,51 +1495,63 @@ To use this bot, you need to connect your Telegram account via the webapp first.
                 telegram_logger.info(f"📊 User {user.full_name} checked status: {auth_status}")
                 response_text = f"Status: {auth_status}\n\nConnect via webapp to use the bot:\nhttps://d2fq8k5py78ii.cloudfront.net/"
         else:
-            # Handle state-based responses
+            # Handle state-based responses first
             telegram_logger.info(f"🔍 Current state for user {user.full_name}: '{user.state_data.get('current_state') if user.state_data else None}'")
-            if user.state_data and user.state_data.get('current_state') == 'waiting_delete_confirmation':
-                # User is selecting which contact to delete
-                try:
-                    selection = int(text.strip())
-                    if user.state_data and 'search_term' in user.state_data:
-                        search_term = user.state_data['search_term']
-                        people = Person.query.filter(Person.full_name.ilike(f'%{search_term}%')).limit(10).all()
-                        
-                        if 1 <= selection <= len(people):
-                            person = people[selection - 1]
-                            person_name = person.full_name
-                            db.session.delete(person)
+            
+            if user.state_data and user.state_data.get('current_state') == 'waiting_task_delete_confirmation':
+                # User is confirming task deletion
+                if text.lower().strip() in ['yes', 'y', 'confirm', 'ok', 'sure', 'yeah', 'yep']:
+                    task_id = user.state_data.get('task_to_delete_id')
+                    task_title = user.state_data.get('task_title', 'Unknown Task')
+                    
+                    if task_id:
+                        # Delete the task
+                        task = Task.query.filter(Task.id == task_id, Task.owner_id == user.id).first()
+                        if task:
+                            db.session.delete(task)
                             db.session.commit()
                             
                             # Reset state
-                            if not user.state_data:
-                                user.state_data = {}
-                            user.state_data['current_state'] = 'idle'
                             user.state_data = None
                             db.session.commit()
                             
-                            response_text = f"✅ {person_name} deleted successfully."
+                            response_text = f"✅ Task '<b>{task_title}</b>' deleted successfully."
                         else:
-                            response_text = f"❌ Invalid selection. Please choose a number between 1 and {len(people)}."
+                            response_text = "❌ Task not found or already deleted."
+                            # Reset state
+                            user.state_data = None
+                            db.session.commit()
                     else:
-                        response_text = "❌ Error: No delete operation in progress. Please start over."
-                except ValueError:
-                    response_text = "❌ Please enter a valid number to select the contact to delete."
-                except Exception as e:
-                    response_text = f"❌ Error deleting contact: {str(e)}"
-            elif user.state_data and user.state_data.get('current_state') == 'waiting_email':
-                # User is trying to authenticate but needs to connect via webapp first
-                telegram_logger.info(f"📧 User {user.full_name} tried to authenticate but not connected to webapp")
-                response_text = "🔗 Please connect your Telegram account via the webapp first:\n\n1. Go to your webapp settings\n2. Connect your Telegram account\n3. Then come back and use /auth again"
-            else:
-                # Use OpenAI to process natural language requests
-                if webapp_user:
-                    telegram_logger.info(f"🤖 Processing natural language request for user {user.full_name}: '{text}'")
-                    response_text = process_natural_language_request(text, user)
-                    telegram_logger.info(f"🤖 OpenAI response for user {user.full_name}: '{response_text[:100]}...'")
+                        response_text = "❌ Error: Task ID not found. Please try again."
+                        # Reset state
+                        user.state_data = None
+                        db.session.commit()
+                        
+                elif text.lower().strip() in ['no', 'n', 'cancel', 'nope', 'nah']:
+                    # User cancelled deletion
+                    task_title = user.state_data.get('task_title', 'Unknown Task')
+                    
+                    # Reset state
+                    user.state_data = None
+                    db.session.commit()
+                    
+                    response_text = f"❌ Task '<b>{task_title}</b>' deletion cancelled."
                 else:
-                    telegram_logger.info(f"🚫 Unconnected user {user.full_name} tried to use bot: '{text}'")
-                    response_text = "🔐 Please connect your Telegram account via the webapp first. Send /start for instructions."
+                    response_text = "❌ Please reply 'yes' to confirm or 'no' to cancel."
+            else:
+                # Try simple commands first
+                simple_response = process_simple_commands(text, user)
+                if simple_response:
+                    response_text = simple_response
+                else:
+                    # Use OpenAI to process natural language requests
+                    if webapp_user:
+                        telegram_logger.info(f"🤖 Processing natural language request for user {user.full_name}: '{text}'")
+                        response_text = process_natural_language_request(text, user)
+                        telegram_logger.info(f"🤖 OpenAI response for user {user.full_name}: '{response_text[:100]}...'")
+                    else:
+                        telegram_logger.info(f"🚫 Unconnected user {user.full_name} tried to use bot: '{text}'")
+                        response_text = "🔐 Please connect your Telegram account via the webapp first. Send /start for instructions."
         
         # Log response being sent
         telegram_logger.info(f"📤 Sending response to user {user.full_name}: '{response_text[:100]}...'")
@@ -1496,243 +1582,6 @@ To use this bot, you need to connect your Telegram account via the webapp first.
     except Exception as e:
         telegram_logger.error(f"💥 Error processing Telegram webhook for user {user_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-# Old callback endpoint removed - callbacks are now handled in the main webhook
-
-def answer_callback_query(callback_query_id, text):
-    """Answer a Telegram callback query"""
-    try:
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        if not bot_token:
-            return
-            
-        url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
-        data = {
-            'callback_query_id': callback_query_id,
-            'text': text,
-            'show_alert': False
-        }
-        
-        response = requests.post(url, data=data, timeout=5)
-        if response.status_code == 200:
-            telegram_logger.info(f"✅ Callback query answered: {text}")
-        else:
-            telegram_logger.error(f"❌ Failed to answer callback query: {response.status_code}")
-            
-    except Exception as e:
-        telegram_logger.error(f"💥 Error answering callback query: {str(e)}")
-
-@telegram_bp.route('/linkedin-profile-image', methods=['POST'])
-def linkedin_profile_image():
-    """Fetch LinkedIn profile image"""
-    try:
-        data = request.get_json()
-        linkedin_url = data.get('linkedin_url')
-        
-        if not linkedin_url:
-            return jsonify({'error': 'LinkedIn URL is required'}), 400
-        
-        # Validate LinkedIn URL format
-        if 'linkedin.com/in/' not in linkedin_url:
-            return jsonify({'error': 'Invalid LinkedIn profile URL'}), 400
-        
-        print(f'Fetching profile image for: {linkedin_url}')
-        
-        # Headers to mimic a real browser request
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-        }
-        
-        # Fetch the LinkedIn profile page
-        response = requests.get(linkedin_url, headers=headers, timeout=10)
-        
-        if not response.ok:
-            print(f'Failed to fetch LinkedIn page: {response.status_code} {response.reason}')
-            return jsonify({
-                'error': 'Failed to load LinkedIn profile page',
-                'profile_image_url': None
-            }), 200
-        
-        html = response.text
-        
-        # Parse HTML to find profile image
-        profile_image_url = extract_profile_image(html)
-        
-        if profile_image_url:
-            print(f'Found profile image: {profile_image_url}')
-            return jsonify({
-                'success': True,
-                'profile_image_url': profile_image_url,
-                'linkedin_url': linkedin_url
-            })
-        else:
-            print('No profile image found or profile is private')
-            return jsonify({
-                'success': False,
-                'profile_image_url': None,
-                'message': 'Profile image not found or profile is private',
-                'linkedin_url': linkedin_url
-            })
-        
-    except Exception as error:
-        print(f'Error processing LinkedIn profile: {error}')
-        return jsonify({
-            'error': 'Internal server error',
-            'profile_image_url': None,
-            'details': str(error)
-        }), 500
-
-def extract_profile_image(html: str) -> str:
-    """Extract profile image URL from LinkedIn HTML"""
-    try:
-        import re
-        
-        # Look for various patterns where LinkedIn profile images might be stored
-        patterns = [
-            # Main profile picture patterns
-            r'"https://media\.licdn\.com/dms/image/[^"]*"',
-            r'"https://media-exp\d*\.licdn\.com/dms/image/[^"]*"',
-            # Backup patterns for profile images
-            r'class="pv-top-card-profile-picture__image[^"]*"[^>]*src="([^"]*)"',
-            r'class="profile-photo-edit__preview"[^>]*src="([^"]*)"',
-            # Generic LinkedIn image patterns
-            r'"https://media\.licdn\.com/[^"]*profile[^"]*"',
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, html)
-            if matches:
-                # Extract the URL from the match (remove quotes and clean up)
-                image_url = matches[0].replace('"', '')
-                
-                # If it's from a src attribute, extract just the URL
-                if 'src=' in image_url:
-                    src_match = re.search(r'src="([^"]*)"', image_url)
-                    if src_match:
-                        image_url = src_match.group(1)
-                
-                # Validate that it's a proper LinkedIn media URL
-                if ('media.licdn.com' in image_url and 
-                    ('image' in image_url or 'profile' in image_url)):
-                    # Clean up any additional parameters and ensure it's a proper image URL
-                    clean_url = image_url.split('&')[0].split('?')[0]
-                    return clean_url
-        
-        # Fallback: look for any img tag with LinkedIn profile indicators
-        img_tag_pattern = r'<img[^>]*src="([^"]*)"[^>]*(?:class="[^"]*profile[^"]*"|alt="[^"]*profile[^"]*")'
-        img_matches = re.findall(img_tag_pattern, html, re.IGNORECASE)
-        
-        for img_url in img_matches:
-            if 'licdn.com' in img_url:
-                return img_url
-        
-        return None
-        
-    except Exception as error:
-        print(f'Error extracting profile image: {error}')
-        return None
-
-@telegram_bp.route('/telegram/connect', methods=['POST'])
-@jwt_required()
-def connect_telegram():
-    """Connect telegram account to user"""
-    try:
-        current_user_id = get_jwt_identity()
-        print(f"🔍 TELEGRAM CONNECT - JWT Identity: {current_user_id}")
-        current_user = User.query.get(current_user_id)
-        print(f"🔍 TELEGRAM CONNECT - User found: {current_user is not None}")
-        if current_user:
-            print(f"🔍 TELEGRAM CONNECT - User email: {current_user.email}")
-            print(f"🔍 TELEGRAM CONNECT - User approved: {current_user.is_approved}")
-            print(f"🔍 TELEGRAM CONNECT - User telegram_id: {current_user.telegram_id}")
-        
-        if not current_user:
-            print(f"❌ TELEGRAM CONNECT - User not found")
-            return jsonify({'error': 'User not found'}), 404
-        
-        data = request.get_json()
-        telegram_id = data.get('telegram_id')
-        
-        if not telegram_id:
-            return jsonify({'error': 'telegram_id is required'}), 400
-        
-        # Check if telegram_id is already connected to another user
-        existing_user = User.query.filter_by(telegram_id=telegram_id).first()
-        if existing_user and existing_user.id != current_user.id:
-            # Transfer the Telegram connection to the current user
-            print(f"🔄 TELEGRAM CONNECT - Transferring Telegram ID {telegram_id} from user {existing_user.email} to user {current_user.email}")
-            
-            # Store the username before clearing
-            old_username = existing_user.telegram_username
-            
-            # Clear the telegram_id from the existing user first
-            existing_user.telegram_id = None
-            existing_user.telegram_username = None
-            
-            # Commit the clearing first to avoid unique constraint violation
-            db.session.commit()
-            
-            # Now update current user with telegram_id
-            current_user.telegram_id = telegram_id
-            current_user.telegram_username = data.get('telegram_username', old_username)
-            
-            # Commit the assignment
-            db.session.commit()
-            
-            print(f"✅ TELEGRAM CONNECT - Successfully transferred Telegram connection")
-            
-            return jsonify({
-                'message': 'Telegram account transferred successfully',
-                'user': current_user.to_dict(),
-                'transferred_from': existing_user.email
-            })
-        
-        # If already connected to current user, just return success
-        if existing_user and existing_user.id == current_user.id:
-            print(f"✅ TELEGRAM CONNECT - Telegram ID {telegram_id} already connected to current user")
-            return jsonify({
-                'message': 'Telegram account already connected',
-                'user': current_user.to_dict()
-            })
-        
-        # Update user with telegram_id (new connection)
-        current_user.telegram_id = telegram_id
-        current_user.telegram_username = data.get('telegram_username', 'Unknown')
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Telegram account connected successfully',
-            'user': current_user.to_dict()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@telegram_bp.route('/telegram/disconnect', methods=['POST'])
-@jwt_required()
-def disconnect_telegram():
-    """Disconnect telegram account from user"""
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Remove telegram_id from user
-        current_user.telegram_id = None
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Telegram account disconnected successfully',
-            'user': current_user.to_dict()
-        })
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1766,8 +1615,7 @@ def add_event_from_telegram(args: dict, user: User) -> str:
     try:
         telegram_logger.info(f"📅 Adding event with args: {args}")
         
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        # Use the user parameter directly - it's already loaded from the webhook
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -1800,6 +1648,17 @@ def add_event_from_telegram(args: dict, user: User) -> str:
         if not start_datetime or not end_datetime:
             return "❌ Both start_datetime and end_datetime are required"
         
+        # Resolve participant names to emails if needed
+        participants = args.get('participants', [])
+        if participants:
+            from bl.services.name_resolution_service import NameResolutionService
+            
+            resolved_participants, error = NameResolutionService.resolve_participants(user, participants)
+            if error:
+                group_list = NameResolutionService.get_group_members_list(user)
+                return f"❌ {error}. {group_list}"
+            participants = resolved_participants
+        
         # Create event
         event = Event(
             title=args.get('title', 'Untitled Event'),
@@ -1808,7 +1667,8 @@ def add_event_from_telegram(args: dict, user: User) -> str:
             end_datetime=end_datetime,
             location=args.get('location'),
             event_type=args.get('event_type', 'event'),
-            participants=args.get('participants'),
+            participants=participants,
+            owner_id=user.id,  # Use owner_id instead of user_id
             alert_minutes=args.get('alert_minutes', 15),
             repeat_pattern=args.get('repeat_pattern'),
             repeat_interval=args.get('repeat_interval', 1),
@@ -1834,8 +1694,7 @@ def show_events_from_telegram(args: dict, user: User) -> str:
     try:
         telegram_logger.info(f"📅 Showing events with args: {args}")
         
-        # Find the user associated with this telegram user
-        user = User.query.filter_by(telegram_id=user.telegram_id).first()
+        # Use the user parameter directly - it's already loaded from the webhook
         if not user:
             return "❌ User not found. Please connect your Telegram account in the webapp first."
 
@@ -1844,12 +1703,24 @@ def show_events_from_telegram(args: dict, user: User) -> str:
         end_date = args.get('end_date')
         filter_obj = args.get('filter', {})
         
-        # Build query
-        query = Event.query.filter_by(user_id=user.id, is_active=True)
+        # Build query - include events where user is owner OR participant
+        from sqlalchemy import or_, and_, text
+        
+        # Single query with OR conditions to avoid UNION issues with JSON fields
+        query = Event.query.filter(
+            Event.is_active == True,
+            or_(
+                Event.user_id == user.id,  # User is the owner
+                Event.participants.op('@>')(f'[{{"email": "{user.email}"}}]')  # User is a participant
+            )
+        )
+        telegram_logger.info(f"📅 Base query: user_id={user.id} OR participant email={user.email}, is_active=True")
         
         # Apply date filters
         now = datetime.utcnow()
+        telegram_logger.info(f"📅 Current time: {now}")
         
+        # Apply date filters
         if start_date:
             try:
                 start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H:%M')
@@ -1882,11 +1753,18 @@ def show_events_from_telegram(args: dict, user: User) -> str:
                 start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_of_day = start_of_day + timedelta(days=1)
                 query = query.filter(Event.start_datetime >= start_of_day, Event.start_datetime < end_of_day)
+                telegram_logger.info(f"📅 Applied today filter: {start_of_day} to {end_of_day}")
+            elif period == 'tomorrow':
+                start_of_tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                end_of_tomorrow = start_of_tomorrow + timedelta(days=1)
+                query = query.filter(Event.start_datetime >= start_of_tomorrow, Event.start_datetime < end_of_tomorrow)
+                telegram_logger.info(f"📅 Applied tomorrow filter: {start_of_tomorrow} to {end_of_tomorrow}")
             elif period == 'weekly':
-                start_of_week = now - timedelta(days=now.weekday())
-                start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_of_week = start_of_week + timedelta(days=7)
-                query = query.filter(Event.start_datetime >= start_of_week, Event.start_datetime < end_of_week)
+                # Show events from today onwards for the rest of this week
+                start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_of_week = start_of_today + timedelta(days=7)
+                query = query.filter(Event.start_datetime >= start_of_today, Event.start_datetime < end_of_week)
+                telegram_logger.info(f"📅 Applied weekly filter: {start_of_today} to {end_of_week}")
             elif period == 'monthly':
                 start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 if start_of_month.month == 12:
@@ -1894,9 +1772,11 @@ def show_events_from_telegram(args: dict, user: User) -> str:
                 else:
                     end_of_month = start_of_month.replace(month=start_of_month.month + 1)
                 query = query.filter(Event.start_datetime >= start_of_month, Event.start_datetime < end_of_month)
+                telegram_logger.info(f"📅 Applied monthly filter: {start_of_month} to {end_of_month}")
             # 'all' period shows all events (no additional filter)
         
         events = query.order_by(Event.start_datetime).all()
+        telegram_logger.info(f"📅 Found {len(events)} events")
         
         if not events:
             if start_date or end_date:
@@ -1915,7 +1795,7 @@ def show_events_from_telegram(args: dict, user: User) -> str:
             end_time = event.end_datetime.strftime('%H:%M')
             date_str = event.start_datetime.strftime('%Y-%m-%d')
             
-            response += f"• **{event.title}**\n"
+            response += f"• <b>{event.title}</b>\n"
             response += f"  📅 {date_str} {start_time}-{end_time}\n"
             if event.location:
                 response += f"  📍 {event.location}\n"
@@ -1991,7 +1871,17 @@ def update_event_from_telegram(args: dict, user: User) -> str:
         if 'event_type' in updates:
             event.event_type = updates['event_type']
         if 'participants' in updates:
-            event.participants = updates['participants']
+            participants = updates['participants']
+            if participants:
+                from bl.services.name_resolution_service import NameResolutionService
+                
+                resolved_participants, error = NameResolutionService.resolve_participants(user, participants)
+                if error:
+                    group_list = NameResolutionService.get_group_members_list(user)
+                    return f"❌ {error}. {group_list}"
+                participants = resolved_participants
+            
+            event.participants = participants
         if 'alert_minutes' in updates:
             event.alert_minutes = updates['alert_minutes']
         if 'notes' in updates:
@@ -2049,17 +1939,19 @@ def show_people_from_telegram(args: dict, user: User) -> str:
         if filter_obj.get('company'):
             query = query.filter(Person.company.ilike(f"%{filter_obj['company']}%"))
         
-        people = query.order_by(Person.full_name).limit(20).all()  # Limit to 20 for Telegram
+        people = query.order_by(Person.first_name).limit(20).all()  # Limit to 20 for Telegram
         
         if not people:
             return "👥 No people found."
         
         # Format response
-        response = f"👥 **People ({len(people)}):**\n\n"
+        response = f"👥 <b>People ({len(people)}):</b>\n\n"
         for person in people:
-            response += f"• **{person.full_name}**\n"
-            if person.company:
-                response += f"  🏢 {person.company}\n"
+            # Get full name from first_name and last_name
+            full_name = f"{person.first_name or ''} {person.last_name or ''}".strip() or "Unknown"
+            response += f"• <b>{full_name}</b>\n"
+            if person.organization:
+                response += f"  🏢 {person.organization}\n"
             if person.email:
                 response += f"  📧 {person.email}\n"
             if person.status:

@@ -33,6 +33,10 @@ services:
       - ADMIN_EMAIL=admin@localhost
       - ENVIRONMENT=development
       - TESTING=false
+      - TELEGRAM_BOT_TOKEN=8257938180:AAFyNb48pNFNyyUtKZ0vVpPna4THzyA6KW8
+      - TELEGRAM_WEBHOOK_URL=https://reina-owlish-soila.ngrok-free.dev/api/telegram/webhook
+      - OPENAI_API_KEY=your_openai_api_key_here
+      - OPENAI_ASSISTANT_ID=asst_ywyYJshVjop8vd5hvXv1Nn1r
     ports:
       - "5002:5002"
     depends_on:

@@ -22,6 +22,8 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log('🔔 API Client: Making request to:', url);
+    console.log('🔔 API Client: Request options:', options);
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -32,20 +34,28 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    console.log('🔔 API Client: Request headers:', headers);
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
+      console.log('🔔 API Client: Response status:', response.status);
+      console.log('🔔 API Client: Response headers:', Object.fromEntries(response.headers.entries()));
+
       const data = await response.json();
+      console.log('🔔 API Client: Response data:', data);
 
       if (!response.ok) {
+        console.log('🔔 API Client: Request failed with status:', response.status);
         return { data: null, error: data };
       }
 
       return { data, error: null };
     } catch (error) {
+      console.log('🔔 API Client: Request exception:', error);
       return { data: null, error };
     }
   }
@@ -347,6 +357,35 @@ class ApiClient {
     return this.request('/people/share', {
       method: 'POST',
       body: JSON.stringify(body),
+    });
+  }
+
+  // Notifications methods
+  async getNotifications() {
+    console.log('🔔 API Client: Calling getNotifications()...');
+    console.log('🔔 API Client: Current token:', this.token ? 'Present' : 'Missing');
+    console.log('🔔 API Client: Base URL:', this.baseUrl);
+    const result = await this.request('/notifications');
+    console.log('🔔 API Client: getNotifications result:', result);
+    return result;
+  }
+
+  async getUnreadNotificationsCount() {
+    console.log('🔔 API Client: Calling getUnreadNotificationsCount()...');
+    const result = await this.request('/notifications/unread-count');
+    console.log('🔔 API Client: getUnreadNotificationsCount result:', result);
+    return result;
+  }
+
+  async markNotificationRead(notificationId: string) {
+    return this.request(`/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/read-all', {
+      method: 'PUT'
     });
   }
 

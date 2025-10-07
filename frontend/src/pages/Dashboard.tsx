@@ -70,6 +70,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("contacts");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -111,6 +112,19 @@ const Dashboard = () => {
       await fetchPeople();
       await fetchTasksCount();
       await fetchEventsCount();
+      await fetchUnreadNotificationsCount();
+    }
+  };
+
+  const fetchUnreadNotificationsCount = async () => {
+    try {
+      const response = await apiClient.getUnreadNotificationsCount();
+      if (response.data) {
+        setUnreadNotificationsCount(response.data.unread_count || 0);
+        setHasNotifications(response.data.has_unread || false);
+      }
+    } catch (error) {
+      console.error('Error fetching unread notifications count:', error);
     }
   };
 
@@ -422,15 +436,18 @@ const Dashboard = () => {
                 
                 {/* Notifications Bell */}
                 <Button 
-                  onClick={() => setActiveTab("notifications")}
+                  onClick={() => {
+                    setActiveTab("notifications");
+                    fetchUnreadNotificationsCount(); // Refresh count when opening notifications
+                  }}
                   variant="ghost" 
                   size="sm"
                   className="w-9 h-9 p-0 relative"
-                  title="Notifications"
+                  title={`Notifications${unreadNotificationsCount > 0 ? ` (${unreadNotificationsCount} unread)` : ''}`}
                 >
                   <Bell className="h-4 w-4" />
                   {hasNotifications && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
                   )}
                 </Button>
                 
@@ -493,6 +510,10 @@ const Dashboard = () => {
           
           {activeTab === "events" && (
             <EventsTab onEventsChange={fetchEventsCount} />
+          )}
+          
+          {activeTab === "notifications" && (
+            <NotificationsTab onNotificationRead={fetchUnreadNotificationsCount} />
           )}
           
           {activeTab === "settings" && (
