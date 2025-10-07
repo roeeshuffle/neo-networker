@@ -904,21 +904,13 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-alert_minutes">Alert (minutes before)</Label>
-                <Select
-                  value={formData.alert_minutes.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, alert_minutes: parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 minutes</SelectItem>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                    <SelectItem value="1440">1 day</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="edit-alert_minutes"
+                  type="number"
+                  value={formData.alert_minutes}
+                  onChange={(e) => setFormData({ ...formData, alert_minutes: parseInt(e.target.value) || 15 })}
+                  placeholder="15"
+                />
               </div>
               <div>
                 <Label htmlFor="edit-repeat_pattern">Repeat Pattern</Label>
@@ -1082,7 +1074,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 id="add-alert-minutes"
                 type="number"
                 value={formData.alert_minutes}
-                onChange={(e) => setFormData({ ...formData, alert_minutes: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, alert_minutes: parseInt(e.target.value) || 15 })}
                 placeholder="15"
               />
             </div>
