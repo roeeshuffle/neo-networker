@@ -307,7 +307,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     if (!editingEvent) return;
     
     try {
-      const response = await apiClient.put(`/events/${editingEvent.id}`, formData);
+      const response = await apiClient.updateEvent(editingEvent.id, formData);
       setEvents(events.map(event => 
         event.id === editingEvent.id ? response.data.event : event
       ));
@@ -380,20 +380,20 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     
     setEditingEvent(event);
     setFormData({
-      title: event.title,
-      description: event.description,
-      start_datetime: event.start_datetime,
-      end_datetime: event.end_datetime,
-      location: event.location,
-      event_type: event.event_type,
-      project: event.project,
-      participants: event.participants,
-      alert_minutes: event.alert_minutes,
-      repeat_pattern: event.repeat_pattern,
-      repeat_interval: event.repeat_interval,
-      repeat_days: event.repeat_days,
-      repeat_end_date: event.repeat_end_date,
-      notes: event.notes
+      title: event.title || '',
+      description: event.description || '',
+      start_datetime: event.start_datetime || '',
+      end_datetime: event.end_datetime || '',
+      location: event.location || '',
+      event_type: event.event_type || 'event',
+      project: event.project || '',
+      participants: event.participants || [],
+      alert_minutes: event.alert_minutes || 15,
+      repeat_pattern: event.repeat_pattern || 'none',
+      repeat_interval: event.repeat_interval || 1,
+      repeat_days: event.repeat_days || [],
+      repeat_end_date: event.repeat_end_date || null,
+      notes: event.notes || ''
     });
     setIsEditDialogOpen(true);
   };
