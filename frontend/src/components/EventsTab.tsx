@@ -667,8 +667,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                       key={event.id}
                       className="p-3 rounded-lg text-xs cursor-pointer hover:opacity-80 mb-2 transition-all"
                       style={{
-                        backgroundColor: getColorFromEventType(event.event_type),
-                        color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                        backgroundColor: getColorFromProject(event.project),
+                        color: getTextColorFromBg(getColorFromProject(event.project))
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -745,8 +745,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                             key={event.id}
                             className="text-xs rounded px-1 truncate cursor-pointer hover:opacity-80 transition-all"
                             style={{
-                              backgroundColor: getColorFromEventType(event.event_type),
-                              color: getTextColorFromBg(getColorFromEventType(event.event_type))
+                              backgroundColor: getColorFromProject(event.project),
+                              color: getTextColorFromBg(getColorFromProject(event.project))
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
