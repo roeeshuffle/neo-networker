@@ -216,6 +216,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     console.log('🚀 FRONTEND VERSION: 14.1 - FIX MONTHLY CALENDAR DATE ALIGNMENT');
     console.log('📅 EventsTab loaded with fixed monthly calendar date alignment!');
     fetchEvents();
+    getCurrentUserEmail(); // Get current user email for owner checks
   }, [currentWeek, currentDay, currentMonth, viewMode]);
 
   const fetchEvents = async () => {
@@ -532,7 +533,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       {/* Calendar Views */}
       {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
-        <div className="space-y-4">
+        <div className="space-y-4 min-h-[600px]">
           <Card className={`border-2 border-gray-300 dark:border-gray-600 ${isToday(currentDay) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
             <CardHeader>
               <CardTitle className={`text-lg ${isToday(currentDay) ? 'text-primary font-bold' : ''}`}>
@@ -560,36 +561,36 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                       // Right-click on event does nothing - prevents opening add dialog
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <h4 className="font-medium">{event.title}</h4>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="max-w-xs">
-                                <p className="font-medium">{event.title}</p>
-                                <p className="text-sm">{event.description}</p>
-                                <p className="text-sm">{event.location && `📍 ${event.location}`}</p>
-                                <p className="text-sm">{format(parseISO(event.start_datetime), 'MMM dd, yyyy HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <p className="text-sm text-muted-foreground">{event.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-lg">{event.title}</h4>
+                        <div className="text-sm font-medium text-primary">
                           {format(parseISO(event.start_datetime), 'HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}
                         </div>
-                        {event.location && (
-                          <div className="text-xs text-muted-foreground flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {event.location}
-                          </div>
-                        )}
                       </div>
+                      
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
+                      )}
+                      
+                      {event.location && (
+                        <div className="text-sm text-muted-foreground flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          {event.location}
+                        </div>
+                      )}
+                      
+                      {event.participants && event.participants.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Participants:</span> {event.participants.map(p => p.name || p.email).join(', ')}
+                        </div>
+                      )}
+                      
+                      {event.owner_email && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium">Owner:</span> {event.owner_email}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -604,7 +605,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           {weekDates.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             return (
-              <Card key={index} className={`min-h-[200px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
+              <Card key={index} className={`min-h-[400px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary bg-primary-soft' : ''}`}>
                 <CardHeader className="pb-2">
                   <CardTitle className={`text-sm ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                     {weekDays[index]}
@@ -621,7 +622,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                   {dayEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="p-2 bg-blue-50 rounded text-xs cursor-pointer hover:bg-blue-100"
+                      className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 mb-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditDialog(event);
@@ -631,28 +632,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                         // Right-click on event does nothing - prevents opening add dialog
                       }}
                     >
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="font-medium truncate">{event.title}</div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="max-w-xs">
-                              <p className="font-medium">{event.title}</p>
-                              <p className="text-sm">{event.description}</p>
-                              <p className="text-sm">{event.location && `📍 ${event.location}`}</p>
-                              <p className="text-sm">{format(parseISO(event.start_datetime), 'MMM dd, yyyy HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}</p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <div className="text-muted-foreground">
-                        {format(parseISO(event.start_datetime), 'HH:mm')}
+                      <div className="font-medium text-sm mb-1">{event.title}</div>
+                      <div className="text-xs text-muted-foreground mb-1">
+                        {format(parseISO(event.start_datetime), 'HH:mm')} - {format(parseISO(event.end_datetime), 'HH:mm')}
                       </div>
                       {event.location && (
-                        <div className="text-muted-foreground truncate">
-                          <MapPin className="w-3 h-3 inline mr-1" />
+                        <div className="text-xs text-muted-foreground flex items-center mb-1">
+                          <MapPin className="w-3 h-3 mr-1" />
                           {event.location}
+                        </div>
+                      )}
+                      {event.description && (
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {event.description}
                         </div>
                       )}
                     </div>
@@ -1094,13 +1086,25 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                                 </div>
                               )}
                               
+                              {/* Event Owner */}
+                              <div className="flex items-start gap-2">
+                                <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <Label className="text-sm font-medium">Event Owner</Label>
+                                  <p className="text-sm text-muted-foreground">{event.owner_email || event.owner_id}</p>
+                                </div>
+                              </div>
+                              
+                              {/* Participants (excluding owner) */}
                               {event.participants && event.participants.length > 0 && (
                                 <div className="flex items-start gap-2">
                                   <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
                                   <div>
                                     <Label className="text-sm font-medium">Participants</Label>
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                      {event.participants.map((participant, index) => (
+                                      {event.participants
+                                        .filter(participant => participant.email !== event.owner_id)
+                                        .map((participant, index) => (
                                         <Badge key={index} variant="outline" className="text-xs">
                                           {participant.name || participant.email}
                                         </Badge>
@@ -1127,31 +1131,36 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                               )}
                               
                               <div className="flex gap-2 pt-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingEvent(event);
-                                    setIsEditDialogOpen(true);
-                                    setIsEventDetailsOpen(false);
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (window.confirm('Are you sure you want to delete this event?')) {
-                                      handleDeleteEvent(event.id);
-                                      setIsEventDetailsOpen(false);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete
-                                </Button>
+                                {/* Only show Edit/Delete buttons if current user is the event owner */}
+                                {currentUserEmail === event.owner_id && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingEvent(event);
+                                        setIsEditDialogOpen(true);
+                                        setIsEventDetailsOpen(false);
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete this event?')) {
+                                          handleDeleteEvent(event.id);
+                                          setIsEventDetailsOpen(false);
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </CardContent>
