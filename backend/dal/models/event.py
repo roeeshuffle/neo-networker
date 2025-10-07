@@ -29,6 +29,9 @@ class Event(db.Model):
     # Foreign key to user
     user_id = db.Column(db.String(36), db.ForeignKey('profiles.id'), nullable=False)
     
+    # Relationship to user
+    user = relationship("User", foreign_keys=[user_id])
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -49,5 +52,6 @@ class Event(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'user_id': self.user_id,
-            'owner_id': self.owner_id
+            'owner_id': self.owner_id,
+            'owner_email': self.user.email if self.user else None
         }

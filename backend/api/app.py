@@ -89,7 +89,7 @@ except Exception as e:
 
 
 # Import models after db initialization
-from dal.models import User, Person, Task, Event
+from dal.models import User, Person, Task, Event, Notification
 
 # Import routes
 from api.routes import auth_bp, people_bp, tasks_bp, csv_bp, telegram_bp
@@ -103,6 +103,7 @@ from api.routes.custom_fields import custom_fields_bp
 from api.routes.csv_simple import csv_simple_bp
 from api.routes.csv_simple_mapping import csv_simple_mapping_bp
 from api.routes.user_group import user_group_bp
+from api.routes.notifications import notifications_bp
 # Removed db_migration import - migration completed
 # Removed temporary fix routes - no longer needed
 
@@ -123,6 +124,7 @@ app.register_blueprint(custom_fields_bp, url_prefix='/api')
 app.register_blueprint(csv_simple_bp, url_prefix='/api')
 app.register_blueprint(csv_simple_mapping_bp, url_prefix='/api')
 app.register_blueprint(user_group_bp, url_prefix='/api')
+app.register_blueprint(notifications_bp, url_prefix='/api')
 # app.register_blueprint(migration_bp, url_prefix='/api')  # Disabled - using direct endpoint instead
 # Removed temporary fix blueprint registrations - no longer needed
 

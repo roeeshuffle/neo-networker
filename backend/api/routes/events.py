@@ -118,7 +118,7 @@ def get_event(event_id):
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == current_user_id
+            Event.owner_id == current_user_id
         ).first()
         
         if not event:
@@ -142,7 +142,7 @@ def update_event(event_id):
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == current_user_id
+            Event.owner_id == current_user_id
         ).first()
         
         if not event:
@@ -202,7 +202,7 @@ def delete_event(event_id):
         
         event = Event.query.filter(
             Event.id == event_id,
-            Event.user_id == current_user_id
+            Event.owner_id == current_user_id
         ).first()
         
         if not event:
@@ -235,7 +235,7 @@ def get_upcoming_events():
         next_week = now + timedelta(days=7)
         
         events = Event.query.filter(
-            Event.user_id == current_user_id,
+            Event.owner_id == current_user_id,
             Event.is_active == True,
             Event.start_datetime >= now,
             Event.start_datetime <= next_week
