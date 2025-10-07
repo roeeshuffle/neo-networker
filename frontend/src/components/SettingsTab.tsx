@@ -302,8 +302,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setContactsLoading(true);
       setPreviewType('contacts');
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/auth/google/preview-contacts`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const response = await fetch(`${apiUrl}/auth/google/preview-contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -340,8 +340,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setCalendarLoading(true);
       setPreviewType('calendar');
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
-      const response = await fetch(`${apiUrl}/api/auth/google/preview-calendar`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const response = await fetch(`${apiUrl}/auth/google/preview-calendar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -378,8 +378,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setPreviewLoading(true);
       
       const endpoint = previewType === 'contacts' 
-        ? 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-selected-contacts'
-        : 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-selected-calendar';
+        ? `${import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api"}/auth/google/sync-selected-contacts`
+        : `${import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api"}/auth/google/sync-selected-calendar`;
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -435,7 +435,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const checkGoogleStatus = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
       const response = await fetch(`${apiUrl}/auth/google/status`, {
         method: 'GET',
         headers: {
@@ -469,7 +469,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setGoogleLoading(true);
     try {
       // Get Google OAuth authorization URL
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const response = await fetch(`${apiUrl}/auth/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -545,7 +546,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const disconnectGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/revoke`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const response = await fetch(`${apiUrl}/auth/google/revoke`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -580,7 +582,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const syncGoogleContacts = async () => {
     setGoogleLoading(true);
     try {
-      const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/sync-contacts`, {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const response = await fetch(`${apiUrl}/auth/google/sync-contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,

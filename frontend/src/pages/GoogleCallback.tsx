@@ -63,7 +63,8 @@ const GoogleCallback = () => {
         }
 
         // Send the code to the backend for processing
-        const response = await fetch(`https://dkdrn34xpx.us-east-1.awsapprunner.com/api/auth/google/callback?code=${code}&state=${state}`, {
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+        const response = await fetch(`${apiUrl}/auth/google/callback?code=${code}&state=${state}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
