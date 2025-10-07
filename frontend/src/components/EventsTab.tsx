@@ -54,6 +54,7 @@ interface Event {
   updated_at: string;
   user_id: string;
   owner_id: string;
+  owner_email?: string;
 }
 
 interface EventFormData {
@@ -203,19 +204,20 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   useEffect(() => {
     if (editingEvent) {
       setFormData({
-        title: editingEvent.title,
-        description: editingEvent.description,
-        start_datetime: editingEvent.start_datetime,
-        end_datetime: editingEvent.end_datetime,
-        location: editingEvent.location,
-        event_type: editingEvent.event_type,
-        participants: editingEvent.participants,
-        alert_minutes: editingEvent.alert_minutes,
-        repeat_pattern: editingEvent.repeat_pattern,
-        repeat_interval: editingEvent.repeat_interval,
-        repeat_days: editingEvent.repeat_days,
-        repeat_end_date: editingEvent.repeat_end_date,
-        notes: editingEvent.notes
+        title: editingEvent.title || '',
+        description: editingEvent.description || '',
+        start_datetime: editingEvent.start_datetime || '',
+        end_datetime: editingEvent.end_datetime || '',
+        location: editingEvent.location || '',
+        event_type: editingEvent.event_type || 'event',
+        project: editingEvent.project || '',
+        participants: editingEvent.participants || [],
+        alert_minutes: editingEvent.alert_minutes || 15,
+        repeat_pattern: editingEvent.repeat_pattern || 'none',
+        repeat_interval: editingEvent.repeat_interval || 1,
+        repeat_days: editingEvent.repeat_days || [],
+        repeat_end_date: editingEvent.repeat_end_date || null,
+        notes: editingEvent.notes || ''
       });
     }
   }, [editingEvent]);
