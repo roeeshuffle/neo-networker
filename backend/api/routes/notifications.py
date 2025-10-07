@@ -22,6 +22,10 @@ def get_notifications():
             Notification.user_email == current_user.email
         ).order_by(Notification.created_at.desc()).limit(10).all()
         
+        print(f"🔔 Found {len(notifications)} notifications for {current_user.email}")
+        for notif in notifications:
+            print(f"  - {notif.notification} (type: {notif.notification_type}, seen: {notif.seen})")
+        
         return jsonify({
             'notifications': [notification.to_dict() for notification in notifications],
             'count': len(notifications)

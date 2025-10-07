@@ -5,6 +5,7 @@ from datetime import datetime
 def create_notification(user_email: str, message: str, notification_type: str = 'general'):
     """Create a notification for a user"""
     try:
+        print(f"🔔 Creating notification for {user_email}: {message} (type: {notification_type})")
         notification = Notification(
             user_email=user_email,
             notification=message,
@@ -14,7 +15,7 @@ def create_notification(user_email: str, message: str, notification_type: str = 
         )
         db.session.add(notification)
         db.session.commit()
-        print(f"📢 Notification created for {user_email}: {message}")
+        print(f"📢 Notification created successfully with ID {notification.id}")
     except Exception as e:
         print(f"❌ Error creating notification: {e}")
         db.session.rollback()

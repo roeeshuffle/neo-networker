@@ -259,7 +259,10 @@ def create_task():
         
         # Notify assigned user about the new task
         if assign_to_email and assign_to_email != current_user.email:
+            print(f"🔔 Sending task assignment notification to {assign_to_email}")
             notify_task_assigned(current_user.email, task.title, assign_to_email)
+        else:
+            print(f"🔔 No notification sent - assign_to_email: {assign_to_email}, current_user.email: {current_user.email}")
         
         print(f"✅ TASK CREATED: Task created with ID {task.id}, assign_to: {assign_to_email}")
         
