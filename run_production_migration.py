@@ -9,8 +9,12 @@ import sys
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-# Database connection details
-DATABASE_URL = "postgresql://postgres:NeoNetworker2025!@neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres?sslmode=require"
+# Database connection details from environment variables
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    print("❌ Error: DATABASE_URL environment variable not set")
+    sys.exit(1)
 
 def run_migration():
     """Run the database migration to add project column to events table"""
