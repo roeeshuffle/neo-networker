@@ -438,8 +438,13 @@ def sync_selected_contacts():
         else:
             items_to_sync = [c for c in preview_data if not c['is_duplicate']]
         
-        # Get only selected items
-        selected_contacts = [items_to_sync[i] for i in selected_indices if i < len(items_to_sync)]
+        # Get only selected items by index
+        selected_contacts = []
+        for index in selected_indices:
+            if 0 <= index < len(items_to_sync):
+                selected_contacts.append(items_to_sync[index])
+        
+        logger.info(f"🔍 SYNC DEBUG: Selected {len(selected_contacts)} contacts from {len(items_to_sync)} available")
         
         # Import here to avoid circular imports
         from dal.models import Person
@@ -455,16 +460,30 @@ def sync_selected_contacts():
                 phone = contact.get('phone', '').replace('+', '').replace('-', '').replace(' ', '')
                 email = f"{name}_{phone}@noemail.local" if phone else f"{name}@noemail.local"
             
+            # Parse name into first_name and last_name
+            full_name = contact.get('name', '')
+            first_name = contact.get('first_name', '')
+            last_name = contact.get('last_name', '')
+            
+            # If first_name and last_name are empty but we have a full name, split it
+            if not first_name and not last_name and full_name:
+                name_parts = full_name.strip().split(' ', 1)
+                first_name = name_parts[0] if len(name_parts) > 0 else ''
+                last_name = name_parts[1] if len(name_parts) > 1 else ''
+            
             # Debug logging for first few contacts
             if synced_count < 3:
                 logger.info(f"🔍 SYNC DEBUG Contact {synced_count + 1}:")
                 logger.info(f"  - Raw contact data: {contact}")
+                logger.info(f"  - Full name: '{full_name}'")
+                logger.info(f"  - Parsed first_name: '{first_name}'")
+                logger.info(f"  - Parsed last_name: '{last_name}'")
                 logger.info(f"  - Generated email: {email}")
                 logger.info(f"  - Owner ID: {user.id}")
             
             person = Person(
-                first_name=contact.get('first_name', ''),
-                last_name=contact.get('last_name', ''),
+                first_name=first_name,
+                last_name=last_name,
                 email=email,
                 organization=contact.get('company', ''),
                 phone=contact.get('phone', ''),

@@ -585,6 +585,17 @@ class GoogleAuthService:
             
             synced_count = 0
             for contact in contacts:
+                # Parse name into first_name and last_name
+                full_name = contact.get('name', '')
+                first_name = contact.get('first_name', '')
+                last_name = contact.get('last_name', '')
+                
+                # If first_name and last_name are empty but we have a full name, split it
+                if not first_name and not last_name and full_name:
+                    name_parts = full_name.strip().split(' ', 1)
+                    first_name = name_parts[0] if len(name_parts) > 0 else ''
+                    last_name = name_parts[1] if len(name_parts) > 1 else ''
+                
                 # Generate unique email for contacts without email to avoid constraint violation
                 email = contact.get('email', '').strip()
                 if not email:
@@ -600,10 +611,11 @@ class GoogleAuthService:
                 ).first()
                 
                 if not existing_person:
+                    
                     # Create new person
                     person = Person(
-                        first_name=contact.get('first_name', ''),
-                        last_name=contact.get('last_name', ''),
+                        first_name=first_name,
+                        last_name=last_name,
                         email=email,
                         organization=contact.get('company', ''),
                         phone=contact.get('phone', ''),
