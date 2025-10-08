@@ -1367,7 +1367,11 @@ def telegram_auth():
         first_name = data.get('first_name')
         
         # Simple password check (you might want to implement proper auth)
-        if password != "121212":  # From the original code
+        telegram_webhook_password = os.getenv('TELEGRAM_WEBHOOK_PASSWORD')
+        if not telegram_webhook_password:
+            return jsonify({'error': 'Telegram webhook password not configured'}), 500
+        
+        if password != telegram_webhook_password:
             return jsonify({'error': 'Invalid password'}), 401
         
         # Find or create user with telegram_id

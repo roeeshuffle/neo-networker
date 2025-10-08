@@ -51,7 +51,7 @@ if not database_url:
         print(f"🧪 TESTING: Using SQLite in-memory database")
     else:
         # Try to use a default production database URL
-        database_url = 'postgresql://postgres:123456@localhost:5432/neo_networker'
+        database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/neo_networker')
         print(f"⚠️  WARNING: DATABASE_URL not set, using default: {database_url}")
 
 # Only set database URL if not in testing mode
@@ -60,7 +60,7 @@ if not TESTING:
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'change-this-secret-key-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 # Initialize extensions
