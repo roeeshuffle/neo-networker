@@ -266,6 +266,13 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           
           startDate = startOfDay(firstDayOfWeek).toISOString();
           endDate = endOfDay(lastDayOfVisibleRange).toISOString();
+          
+          console.log('📅 MONTHLY CALENDAR DEBUG:');
+          console.log('  - Current month:', currentMonth.toISOString());
+          console.log('  - First day of month:', firstDayOfMonth.toISOString());
+          console.log('  - First day of week:', firstDayOfWeek.toISOString());
+          console.log('  - Last day of visible range:', lastDayOfVisibleRange.toISOString());
+          console.log('  - Fetching events from:', startDate, 'to:', endDate);
           break;
         case 'weekly':
         default:
@@ -277,7 +284,12 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       const { data, error } = await apiClient.getEvents(startDate, endDate);
       
       if (error) throw error;
-      setEvents(data?.events || []);
+      const fetchedEvents = data?.events || [];
+      console.log('📅 FETCHED EVENTS:', fetchedEvents.length, 'events');
+      fetchedEvents.forEach(event => {
+        console.log('  - Event:', event.title, 'on', event.start_datetime);
+      });
+      setEvents(fetchedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -441,10 +453,23 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   };
 
   const getEventsForDate = (date: Date) => {
-    return filteredEvents.filter(event => {
+    const eventsForDate = filteredEvents.filter(event => {
       const eventDate = parseISO(event.start_datetime);
       return eventDate.toDateString() === date.toDateString();
     });
+    
+    // Debug logging for Nov 1 specifically
+    if (date.getMonth() === 10 && date.getDate() === 1) { // November is month 10 (0-indexed)
+      console.log('📅 NOV 1 DEBUG:');
+      console.log('  - Checking date:', date.toDateString());
+      console.log('  - Total filtered events:', filteredEvents.length);
+      console.log('  - Events for Nov 1:', eventsForDate.length);
+      eventsForDate.forEach(event => {
+        console.log('    - Event:', event.title, 'on', event.start_datetime);
+      });
+    }
+    
+    return eventsForDate;
   };
 
   const handleDateClick = (date: Date) => {
