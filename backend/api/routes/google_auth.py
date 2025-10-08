@@ -438,11 +438,20 @@ def sync_selected_contacts():
         else:
             items_to_sync = [c for c in preview_data if not c['is_duplicate']]
         
+        logger.info(f"🔍 SYNC DEBUG:")
+        logger.info(f"  - Total preview data: {len(preview_data)}")
+        logger.info(f"  - Filtered items to sync: {len(items_to_sync)}")
+        logger.info(f"  - Selected indices: {selected_indices}")
+        logger.info(f"  - Show duplicates: {show_duplicates}")
+        
         # Get only selected items by index
         selected_contacts = []
         for index in selected_indices:
             if 0 <= index < len(items_to_sync):
                 selected_contacts.append(items_to_sync[index])
+                logger.info(f"  - Selected contact {index}: {items_to_sync[index].get('name', 'Unknown')}")
+            else:
+                logger.warning(f"  - Invalid index {index} (max: {len(items_to_sync)-1})")
         
         logger.info(f"🔍 SYNC DEBUG: Selected {len(selected_contacts)} contacts from {len(items_to_sync)} available")
         
