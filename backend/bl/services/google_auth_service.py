@@ -409,18 +409,30 @@ class GoogleAuthService:
             raise ValueError("Google OAuth is not configured")
         
         try:
+            logger.info(f"🔍 GET CONTACTS PREVIEW DEBUG:")
+            logger.info(f"  - User ID: {user.id}")
+            logger.info(f"  - User email: {user.email}")
+            logger.info(f"  - User Google ID: {user.google_id}")
+            
             # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
             # Get ALL contacts from Google (with pagination support, up to 5000 contacts)
             contacts = self.get_contacts(access_token, max_results=5000)
             
+            logger.info(f"📊 Retrieved {len(contacts)} contacts from Google API")
+            
             # Import here to avoid circular imports
             from dal.models import Person
             from dal.database import db
             
             preview_data = []
-            for contact in contacts:
+            for i, contact in enumerate(contacts):
+                logger.info(f"👤 PREVIEW Contact {i+1}:")
+                logger.info(f"  - Name: '{contact.get('name', 'NO_NAME')}'")
+                logger.info(f"  - Email: '{contact.get('email', 'NO_EMAIL')}'")
+                logger.info(f"  - Company: '{contact.get('company', 'NO_COMPANY')}'")
+                
                 # Check if contact already exists (by email)
                 existing_person = None
                 if contact.get('email'):
@@ -582,22 +594,26 @@ class GoogleAuthService:
             
             synced_count = 0
             for contact in contacts:
+                # Skip contacts without email to avoid unique constraint violation
+                email = contact.get('email', '').strip()
+                if not email:
+                    logger.warning(f"Skipping contact without email: {contact.get('name', 'Unknown')}")
+                    continue
+                
                 # Check if contact already exists (by email)
-                existing_person = None
-                if contact.get('email'):
-                    existing_person = Person.query.filter_by(
-                        user_id=user.id,
-                        email=contact['email']
-                    ).first()
+                existing_person = Person.query.filter_by(
+                    owner_id=user.id,  # Fixed: use owner_id instead of user_id
+                    email=email
+                ).first()
                 
                 if not existing_person:
                     # Create new person
                     person = Person(
                         first_name=contact.get('first_name', ''),
                         last_name=contact.get('last_name', ''),
-                        email=contact.get('email'),
+                        email=email,
                         organization=contact.get('company', ''),  # Google returns 'company', we store as 'organization'
-                        phone=contact.get('phone'),
+                        phone=contact.get('phone', ''),
                         job_title=contact.get('job_title', ''),
                         owner_id=user.id,
                         source='google_contacts'
