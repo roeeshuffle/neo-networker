@@ -409,12 +409,6 @@ class GoogleAuthService:
             raise ValueError("Google OAuth is not configured")
         
         try:
-            logger.info(f"🔍 GET CONTACTS PREVIEW DEBUG:")
-            logger.info(f"  - User ID: {user.id}")
-            logger.info(f"  - User email: {user.email}")
-            logger.info(f"  - User Google ID: {user.google_id}")
-            
-            # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
             # Get ALL contacts from Google (with pagination support, up to 5000 contacts)
@@ -427,12 +421,9 @@ class GoogleAuthService:
             from dal.database import db
             
             preview_data = []
-            for i, contact in enumerate(contacts):
-                logger.info(f"👤 PREVIEW Contact {i+1}:")
-                logger.info(f"  - Name: '{contact.get('name', 'NO_NAME')}'")
-                logger.info(f"  - Email: '{contact.get('email', 'NO_EMAIL')}'")
-                logger.info(f"  - Company: '{contact.get('company', 'NO_COMPANY')}'")
-                
+            logger.info(f"📊 Processing {len(contacts)} contacts for preview")
+            
+            for contact in contacts:
                 # Check if contact already exists (by email)
                 existing_person = None
                 if contact.get('email'):
@@ -594,15 +585,17 @@ class GoogleAuthService:
             
             synced_count = 0
             for contact in contacts:
-                # Skip contacts without email to avoid unique constraint violation
+                # Generate unique email for contacts without email to avoid constraint violation
                 email = contact.get('email', '').strip()
                 if not email:
-                    logger.warning(f"Skipping contact without email: {contact.get('name', 'Unknown')}")
-                    continue
+                    # Create a unique email using name and phone to avoid duplicate key error
+                    name = contact.get('name', 'Unknown').replace(' ', '_')
+                    phone = contact.get('phone', '').replace('+', '').replace('-', '').replace(' ', '')
+                    email = f"{name}_{phone}@noemail.local" if phone else f"{name}@noemail.local"
                 
                 # Check if contact already exists (by email)
                 existing_person = Person.query.filter_by(
-                    owner_id=user.id,  # Fixed: use owner_id instead of user_id
+                    owner_id=user.id,
                     email=email
                 ).first()
                 
@@ -612,7 +605,7 @@ class GoogleAuthService:
                         first_name=contact.get('first_name', ''),
                         last_name=contact.get('last_name', ''),
                         email=email,
-                        organization=contact.get('company', ''),  # Google returns 'company', we store as 'organization'
+                        organization=contact.get('company', ''),
                         phone=contact.get('phone', ''),
                         job_title=contact.get('job_title', ''),
                         owner_id=user.id,

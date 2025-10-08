@@ -418,11 +418,6 @@ def sync_selected_contacts():
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        logger.info(f"🔍 SYNC SELECTED CONTACTS DEBUG:")
-        logger.info(f"  - Current user ID: {current_user_id}")
-        logger.info(f"  - User email: {user.email if user else 'User not found'}")
-        logger.info(f"  - User Google ID: {user.google_id if user else 'N/A'}")
-        
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
@@ -452,17 +447,26 @@ def sync_selected_contacts():
         
         synced_count = 0
         for contact in selected_contacts:
-            # Skip contacts without email to avoid unique constraint violation
+            # Generate unique email for contacts without email to avoid constraint violation
             email = contact.get('email', '').strip()
             if not email:
-                logger.warning(f"Skipping contact without email: {contact.get('name', 'Unknown')}")
-                continue
-                
+                # Create a unique email using name and phone to avoid duplicate key error
+                name = contact.get('name', 'Unknown').replace(' ', '_')
+                phone = contact.get('phone', '').replace('+', '').replace('-', '').replace(' ', '')
+                email = f"{name}_{phone}@noemail.local" if phone else f"{name}@noemail.local"
+            
+            # Debug logging for first few contacts
+            if synced_count < 3:
+                logger.info(f"🔍 SYNC DEBUG Contact {synced_count + 1}:")
+                logger.info(f"  - Raw contact data: {contact}")
+                logger.info(f"  - Generated email: {email}")
+                logger.info(f"  - Owner ID: {user.id}")
+            
             person = Person(
                 first_name=contact.get('first_name', ''),
                 last_name=contact.get('last_name', ''),
                 email=email,
-                organization=contact.get('company', ''),  # Fixed field mapping
+                organization=contact.get('company', ''),
                 phone=contact.get('phone', ''),
                 job_title=contact.get('job_title', ''),
                 owner_id=user.id,
