@@ -276,15 +276,32 @@ class GoogleAuthService:
             
             events = events_result.get('items', [])
             
+            logger.info(f"📅 DEBUG: Retrieved {len(events)} events from Google Calendar")
+            
             processed_events = []
-            for event in events:
+            for i, event in enumerate(events):
+                # Debug logging for each event
+                logger.info(f"📅 DEBUG Event {i+1}:")
+                logger.info(f"  - Raw event keys: {list(event.keys())}")
+                logger.info(f"  - Event ID: {event.get('id', 'NO_ID')}")
+                logger.info(f"  - Summary: '{event.get('summary', 'NO_SUMMARY')}'")
+                logger.info(f"  - Description: '{event.get('description', 'NO_DESCRIPTION')[:100]}...'")
+                logger.info(f"  - Location: '{event.get('location', 'NO_LOCATION')}'")
+                logger.info(f"  - Creator: {event.get('creator', {})}")
+                logger.info(f"  - Organizer: {event.get('organizer', {})}")
+                logger.info(f"  - Start: {event.get('start', {})}")
+                logger.info(f"  - End: {event.get('end', {})}")
+                
                 start = event.get('start', {})
                 end = event.get('end', {})
                 attendees = event.get('attendees', [])
                 
+                # Try multiple fields for title
+                title = event.get('summary') or event.get('title') or event.get('subject') or 'Untitled Event'
+                
                 processed_event = {
                     'google_id': event.get('id'),
-                    'title': event.get('summary', ''),
+                    'title': title,
                     'description': event.get('description', ''),
                     'start_time': start.get('dateTime') or start.get('date'),
                     'end_time': end.get('dateTime') or end.get('date'),
@@ -293,6 +310,8 @@ class GoogleAuthService:
                     'creator': event.get('creator', {}).get('email', ''),
                     'organizer': event.get('organizer', {}).get('email', '')
                 }
+                
+                logger.info(f"  - Processed title: '{processed_event['title']}'")
                 processed_events.append(processed_event)
             
             return processed_events
@@ -452,7 +471,15 @@ class GoogleAuthService:
             from dal.database import db
             
             preview_data = []
-            for event_data in events:
+            logger.info(f"📅 CALENDAR PREVIEW DEBUG: Processing {len(events)} events for preview")
+            
+            for i, event_data in enumerate(events):
+                logger.info(f"📅 PREVIEW Event {i+1}:")
+                logger.info(f"  - Event data keys: {list(event_data.keys())}")
+                logger.info(f"  - Summary field: '{event_data.get('summary', 'NO_SUMMARY')}'")
+                logger.info(f"  - Title field: '{event_data.get('title', 'NO_TITLE')}'")
+                logger.info(f"  - Subject field: '{event_data.get('subject', 'NO_SUBJECT')}'")
+                
                 # Check if event already exists (by Google event ID or title + start time)
                 existing_event = None
                 
@@ -463,8 +490,9 @@ class GoogleAuthService:
                         google_event_id=event_data['id']
                     ).first()
                 
-                # Parse event dates safely
-                event_title = event_data.get('summary', 'Untitled Event')
+                # Parse event dates safely - try multiple fields for title
+                event_title = event_data.get('summary') or event_data.get('title') or event_data.get('subject') or 'Untitled Event'
+                logger.info(f"  - Final event title: '{event_title}'")
                 event_start = None
                 event_end = None
                 
