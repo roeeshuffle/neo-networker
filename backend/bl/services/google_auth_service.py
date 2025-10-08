@@ -593,13 +593,13 @@ class GoogleAuthService:
                 if not existing_person:
                     # Create new person
                     person = Person(
-                        id=str(uuid.uuid4()),
-                        full_name=contact.get('name', 'Unknown'),
+                        first_name=contact.get('first_name', ''),
+                        last_name=contact.get('last_name', ''),
                         email=contact.get('email'),
-                        company=contact.get('company'),
+                        organization=contact.get('company', ''),  # Google returns 'company', we store as 'organization'
                         phone=contact.get('phone'),
-                        owner_id=user.id,
-                        created_by=user.id,
+                        job_title=contact.get('job_title', ''),
+                        user_id=user.id,
                         source='google_contacts'
                     )
                     db.session.add(person)
