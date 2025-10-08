@@ -256,8 +256,16 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           endDate = endOfDay(currentDay).toISOString();
           break;
         case 'monthly':
-          startDate = startOfMonth(currentMonth).toISOString();
-          endDate = endOfMonth(currentMonth).toISOString();
+          // Calculate the full visible date range for monthly calendar (35 days)
+          const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+          const firstDayOfWeek = new Date(firstDayOfMonth);
+          firstDayOfWeek.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay());
+          
+          const lastDayOfVisibleRange = new Date(firstDayOfWeek);
+          lastDayOfVisibleRange.setDate(firstDayOfWeek.getDate() + 34); // 35 days total (0-34)
+          
+          startDate = startOfDay(firstDayOfWeek).toISOString();
+          endDate = endOfDay(lastDayOfVisibleRange).toISOString();
           break;
         case 'weekly':
         default:
