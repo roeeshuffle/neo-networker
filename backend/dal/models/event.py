@@ -23,6 +23,7 @@ class Event(db.Model):
     repeat_days = db.Column(db.JSON)  # For weekly: [0,1,2,3,4,5,6] (Monday=0)
     repeat_end_date = db.Column(db.DateTime)  # When to stop repeating
     notes = db.Column(db.Text)
+    google_event_id = db.Column(db.String(255))  # Google Calendar event ID for syncing
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -50,6 +51,7 @@ class Event(db.Model):
             'repeat_days': self.repeat_days or [],
             'repeat_end_date': self.repeat_end_date.isoformat() if self.repeat_end_date else None,
             'notes': self.notes,
+            'google_event_id': self.google_event_id,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
