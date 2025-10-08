@@ -599,7 +599,7 @@ class GoogleAuthService:
                         organization=contact.get('company', ''),  # Google returns 'company', we store as 'organization'
                         phone=contact.get('phone'),
                         job_title=contact.get('job_title', ''),
-                        user_id=user.id,
+                        owner_id=user.id,
                         source='google_contacts'
                     )
                     db.session.add(person)

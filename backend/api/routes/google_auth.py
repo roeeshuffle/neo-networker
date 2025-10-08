@@ -454,7 +454,7 @@ def sync_selected_contacts():
                 organization=contact['company'],
                 phone=contact['phone'],
                 job_title=contact.get('job_title', ''),
-                user_id=user.id,
+                owner_id=user.id,
                 source='google_contacts'
             )
             db.session.add(person)
