@@ -514,15 +514,14 @@ def sync_selected_calendar():
         synced_count = 0
         for event_data in selected_events:
             event = Event(
-                id=str(uuid.uuid4()),
                 title=event_data['title'],
                 description=event_data['description'],
                 start_datetime=datetime.fromisoformat(event_data['start_datetime']),
                 end_datetime=datetime.fromisoformat(event_data['end_datetime']),
                 location=event_data['location'],
                 google_event_id=event_data['google_event_id'],
+                owner_id=user.id,
                 user_id=user.id,
-                created_by=user.id,
                 is_active=True
             )
             db.session.add(event)
