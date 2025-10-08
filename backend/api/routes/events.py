@@ -5,6 +5,7 @@ from dal.models import Event, User
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
 from bl.services.notification_service import notify_event_participant, notify_event_updated
+from bl.services.google_calendar_sync_service import google_calendar_sync_service
 import json
 
 events_bp = Blueprint('events', __name__)
@@ -92,12 +93,21 @@ def create_event():
             repeat_days=data.get('repeat_days', []),
             repeat_end_date=datetime.fromisoformat(data['repeat_end_date'].replace('Z', '+00:00')) if data.get('repeat_end_date') else None,
             notes=data.get('notes', ''),
+            google_sync=data.get('google_sync', True),  # Default to True for Google sync
             user_id=current_user_id,
             owner_id=current_user_id
         )
         
         db.session.add(event)
         db.session.commit()
+        
+        # Sync to Google Calendar if enabled and user has Google account
+        if event.google_sync and current_user.google_id:
+            try:
+                google_calendar_sync_service.sync_event_to_google_calendar(event, current_user, 'create')
+            except Exception as sync_error:
+                # Log the error but don't fail the event creation
+                print(f"Warning: Failed to sync event to Google Calendar: {str(sync_error)}")
         
         # Notify participants about the new event
         if data.get('participants'):
@@ -188,10 +198,20 @@ def update_event(event_id):
             event.repeat_end_date = datetime.fromisoformat(data['repeat_end_date'].replace('Z', '+00:00')) if data['repeat_end_date'] else None
         if 'notes' in data:
             event.notes = data['notes']
+        if 'google_sync' in data:
+            event.google_sync = data['google_sync']
         
         event.updated_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Sync to Google Calendar if enabled and user has Google account
+        if event.google_sync and current_user.google_id:
+            try:
+                google_calendar_sync_service.sync_event_to_google_calendar(event, current_user, 'update')
+            except Exception as sync_error:
+                # Log the error but don't fail the event update
+                print(f"Warning: Failed to sync event update to Google Calendar: {str(sync_error)}")
         
         # Notify participants about the event update
         if event.participants:
@@ -226,6 +246,14 @@ def delete_event(event_id):
         
         if not event:
             return jsonify({'error': 'Event not found'}), 404
+        
+        # Sync deletion to Google Calendar if enabled and user has Google account
+        if event.google_sync and current_user.google_id:
+            try:
+                google_calendar_sync_service.sync_event_to_google_calendar(event, current_user, 'delete')
+            except Exception as sync_error:
+                # Log the error but don't fail the event deletion
+                print(f"Warning: Failed to sync event deletion to Google Calendar: {str(sync_error)}")
         
         # Soft delete by setting is_active to False
         event.is_active = False

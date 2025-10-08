@@ -49,6 +49,7 @@ interface Event {
   repeat_days: number[];
   repeat_end_date: string | null;
   notes: string;
+  google_sync: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -72,6 +73,7 @@ interface EventFormData {
   repeat_days: number[];
   repeat_end_date: string | null;
   notes: string;
+  google_sync: boolean;
 }
 
 interface EventsTabProps {
@@ -140,7 +142,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     repeat_interval: 1,
     repeat_days: [],
     repeat_end_date: null,
-    notes: ''
+    notes: '',
+    google_sync: true
   });
 
   // Load user calendar preferences
@@ -217,7 +220,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
         repeat_interval: editingEvent.repeat_interval || 1,
         repeat_days: editingEvent.repeat_days || [],
         repeat_end_date: editingEvent.repeat_end_date || null,
-        notes: editingEvent.notes || ''
+        notes: editingEvent.notes || '',
+        google_sync: editingEvent.google_sync !== undefined ? editingEvent.google_sync : true
       });
     }
   }, [editingEvent]);
@@ -388,7 +392,8 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       repeat_interval: 1,
       repeat_days: [],
       repeat_end_date: null,
-      notes: ''
+      notes: '',
+      google_sync: true
     });
   };
 
@@ -996,6 +1001,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
               />
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-google-sync"
+                checked={formData.google_sync}
+                onChange={(e) => setFormData({ ...formData, google_sync: e.target.checked })}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="edit-google-sync" className="text-sm font-medium">
+                Sync with Google Calendar
+              </Label>
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel
@@ -1112,6 +1130,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 onChange={(e) => setFormData({ ...formData, alert_minutes: parseInt(e.target.value) || 15 })}
                 placeholder="15"
               />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="add-google-sync"
+                checked={formData.google_sync}
+                onChange={(e) => setFormData({ ...formData, google_sync: e.target.checked })}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="add-google-sync" className="text-sm font-medium">
+                Sync with Google Calendar
+              </Label>
             </div>
 
             <div className="flex justify-end gap-2">

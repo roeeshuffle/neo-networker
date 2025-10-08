@@ -37,6 +37,13 @@ confirm_deployment() {
     echo "This will deploy the current test branch to PRODUCTION."
     echo "This action will affect live users and data."
     echo ""
+    
+    # Check if --yes flag is provided
+    if [ "$1" = "--yes" ]; then
+        print_success "Auto-confirming deployment with --yes flag"
+        return 0
+    fi
+    
     read -p "Are you sure you want to deploy to production? (yes/no): " confirm
     
     if [ "$confirm" != "yes" ]; then
@@ -48,34 +55,45 @@ confirm_deployment() {
 # Function to check current branch
 check_branch() {
     current_branch=$(git branch --show-current)
-    if [ "$current_branch" != "test" ]; then
-        print_error "You must be on the 'test' branch to deploy to production."
+    if [ "$current_branch" != "test" ] && [ "$current_branch" != "main" ]; then
+        print_error "You must be on the 'test' or 'main' branch to deploy to production."
         print_status "Current branch: $current_branch"
-        print_status "Please switch to test branch first: git checkout test"
+        print_status "Please switch to test or main branch first"
         exit 1
     fi
-    print_success "On test branch (correct for production deployment)"
+    if [ "$current_branch" = "main" ]; then
+        print_success "On main branch (already merged from test)"
+    else
+        print_success "On test branch (correct for production deployment)"
+    fi
 }
 
 # Function to deploy to production
 deploy_to_production() {
     print_status "Starting production deployment..."
     
-    # Switch to main branch
-    print_status "Switching to main branch..."
-    git checkout main
+    current_branch=$(git branch --show-current)
     
-    # Merge test branch
-    print_status "Merging test branch into main..."
-    git merge test
-    
-    # Push to production
-    print_status "Pushing to production..."
-    git push origin main
-    
-    print_success "Production deployment completed!"
-    print_status "Switching back to test branch for continued development..."
-    git checkout test
+    if [ "$current_branch" = "main" ]; then
+        print_status "Already on main branch, pushing to production..."
+        git push origin main
+    else
+        # Switch to main branch
+        print_status "Switching to main branch..."
+        git checkout main
+        
+        # Merge test branch
+        print_status "Merging test branch into main..."
+        git merge test
+        
+        # Push to production
+        print_status "Pushing to production..."
+        git push origin main
+        
+        print_success "Production deployment completed!"
+        print_status "Switching back to test branch for continued development..."
+        git checkout test
+    fi
     
     print_success "✅ Production deployment successful!"
     print_status "You can now continue development on the test branch."
@@ -98,7 +116,7 @@ show_help() {
 # Main script logic
 case "${1:-help}" in
     deploy)
-        confirm_deployment
+        confirm_deployment --yes
         check_branch
         deploy_to_production
         ;;
