@@ -174,22 +174,44 @@ class GoogleAuthService:
             logger.error(f"Error revoking tokens: {str(e)}")
             raise
     
-    def get_contacts(self, access_token, max_results=1000):
-        """Get Google contacts"""
+    def get_contacts(self, access_token, max_results=2000):
+        """Get Google contacts with pagination support"""
         try:
             credentials = Credentials(token=access_token)
             service = build('people', 'v1', credentials=credentials)
             
-            results = service.people().connections().list(
-                resourceName='people/me',
-                personFields='names,emailAddresses,phoneNumbers,organizations',
-                pageSize=max_results
-            ).execute()
+            all_contacts = []
+            page_token = None
+            page_size = min(1000, max_results)  # Google API max page size is 1000
             
-            contacts = results.get('connections', [])
+            while len(all_contacts) < max_results:
+                # Calculate how many contacts to fetch in this request
+                remaining = max_results - len(all_contacts)
+                current_page_size = min(page_size, remaining)
+                
+                request_params = {
+                    'resourceName': 'people/me',
+                    'personFields': 'names,emailAddresses,phoneNumbers,organizations',
+                    'pageSize': current_page_size
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = service.people().connections().list(**request_params).execute()
+                
+                contacts = results.get('connections', [])
+                all_contacts.extend(contacts)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
+                
+                logger.info(f"Fetched {len(contacts)} contacts, total so far: {len(all_contacts)}")
             
             processed_contacts = []
-            for contact in contacts:
+            for contact in all_contacts:
                 names = contact.get('names', [])
                 emails = contact.get('emailAddresses', [])
                 phones = contact.get('phoneNumbers', [])
@@ -208,6 +230,7 @@ class GoogleAuthService:
                 }
                 processed_contacts.append(processed_contact)
             
+            logger.info(f"Successfully fetched {len(processed_contacts)} contacts from Google")
             return processed_contacts
         except HttpError as e:
             logger.error(f"Error getting contacts: {str(e)}")
@@ -370,8 +393,8 @@ class GoogleAuthService:
             # Get valid access token (refresh if needed)
             access_token = self.ensure_valid_token(user)
             
-            # Get ALL contacts from Google (limited to 2000 per page due to API limits)
-            contacts = self.get_contacts(access_token, max_results=2000)
+            # Get ALL contacts from Google (with pagination support, up to 5000 contacts)
+            contacts = self.get_contacts(access_token, max_results=5000)
             
             # Import here to avoid circular imports
             from dal.models import Person
@@ -512,13 +535,18 @@ class GoogleAuthService:
         except Exception as e:
             logger.error(f"Error getting calendar events preview: {str(e)}")
             raise
+    
+    def sync_contacts(self, user):
         """Sync Google contacts to the database"""
         if not self.enabled:
             raise ValueError("Google OAuth is not configured")
         
         try:
-            # Get contacts from Google
-            contacts = self.get_contacts(user)
+            # Get valid access token (refresh if needed)
+            access_token = self.ensure_valid_token(user)
+            
+            # Get contacts from Google (with pagination support, up to 5000 contacts)
+            contacts = self.get_contacts(access_token, max_results=5000)
             
             # Import here to avoid circular imports
             from dal.models import Person
@@ -565,8 +593,11 @@ class GoogleAuthService:
             raise ValueError("Google OAuth is not configured")
         
         try:
+            # Get valid access token (refresh if needed)
+            access_token = self.ensure_valid_token(user)
+            
             # Get calendar events from Google
-            events = self.get_calendar_events(user)
+            events = self.get_calendar_events(access_token, max_results=1000)
             
             # Import here to avoid circular imports
             from dal.models import Event
