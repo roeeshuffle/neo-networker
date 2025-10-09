@@ -24,7 +24,7 @@ class GoogleAuthService:
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/contacts.readonly',
-        'https://www.googleapis.com/auth/calendar.readonly'
+        'https://www.googleapis.com/auth/calendar'  # Changed from calendar.readonly to calendar for write access
     ]
     
     def __init__(self):

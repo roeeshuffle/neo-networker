@@ -101,8 +101,12 @@ class GoogleCalendarSyncService:
             return google_event_id
             
         except HttpError as e:
-            logger.error(f"Error creating Google Calendar event: {str(e)}")
-            raise
+            if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
+                logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
+                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+            else:
+                logger.error(f"Error creating Google Calendar event: {str(e)}")
+                raise
         except Exception as e:
             logger.error(f"Unexpected error creating Google Calendar event: {str(e)}")
             raise
@@ -165,7 +169,10 @@ class GoogleCalendarSyncService:
             return True
             
         except HttpError as e:
-            if e.resp.status == 404:
+            if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
+                logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
+                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+            elif e.resp.status == 404:
                 logger.warning(f"Google Calendar event {event.google_event_id} not found, creating new event")
                 google_event_id = self.create_event_in_google_calendar(event, user)
                 event.google_event_id = google_event_id
@@ -199,7 +206,10 @@ class GoogleCalendarSyncService:
             return True
             
         except HttpError as e:
-            if e.resp.status == 404:
+            if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
+                logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
+                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+            elif e.resp.status == 404:
                 logger.warning(f"Google Calendar event {event.google_event_id} not found, already deleted")
                 return True
             else:
