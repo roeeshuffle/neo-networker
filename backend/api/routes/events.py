@@ -102,12 +102,24 @@ def create_event():
         db.session.commit()
         
         # Sync to Google Calendar if enabled and user has Google account
+        print(f"🔄 EVENT CREATE DEBUG: Event {event.id} created")
+        print(f"  - Event google_sync: {getattr(event, 'google_sync', 'NOT_SET')}")
+        print(f"  - User google_id: {current_user.google_id}")
+        print(f"  - User email: {current_user.email}")
+        
         if event.google_sync and current_user.google_id:
             try:
+                print(f"🔄 EVENT CREATE DEBUG: Attempting Google Calendar sync...")
                 google_calendar_sync_service.sync_event_to_google_calendar(event, current_user, 'create')
+                print(f"🔄 EVENT CREATE DEBUG: Google Calendar sync completed")
             except Exception as sync_error:
                 # Log the error but don't fail the event creation
+                print(f"🔄 EVENT CREATE DEBUG: Google Calendar sync failed: {str(sync_error)}")
                 print(f"Warning: Failed to sync event to Google Calendar: {str(sync_error)}")
+        else:
+            print(f"🔄 EVENT CREATE DEBUG: Skipping Google Calendar sync")
+            print(f"  - google_sync enabled: {getattr(event, 'google_sync', False)}")
+            print(f"  - user has google_id: {bool(current_user.google_id)}")
         
         # Notify participants about the new event
         if data.get('participants'):

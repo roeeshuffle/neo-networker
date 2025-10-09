@@ -212,31 +212,47 @@ class GoogleCalendarSyncService:
     def sync_event_to_google_calendar(self, event: Event, user: User, operation: str = 'create') -> bool:
         """Sync an event to Google Calendar based on operation"""
         try:
+            logger.info(f"🔄 GOOGLE SYNC DEBUG: Starting {operation} sync for event {event.id}")
+            logger.info(f"  - Event title: {event.title}")
+            logger.info(f"  - Event google_sync: {getattr(event, 'google_sync', 'NOT_SET')}")
+            logger.info(f"  - User google_id: {user.google_id}")
+            logger.info(f"  - User email: {user.email}")
+            
             # Check if Google sync is enabled for this event
-            if not event.google_sync:
-                logger.info(f"Google sync disabled for event {event.id}, skipping")
+            if hasattr(event, 'google_sync') and not event.google_sync:
+                logger.info(f"🔄 GOOGLE SYNC DEBUG: Google sync disabled for event {event.id}, skipping")
                 return True
             
             # Check if user has Google account connected
             if not user.google_id:
-                logger.warning(f"User {user.id} has no Google account connected, skipping sync")
+                logger.warning(f"🔄 GOOGLE SYNC DEBUG: User {user.id} has no Google account connected, skipping sync")
                 return True
+            
+            logger.info(f"🔄 GOOGLE SYNC DEBUG: Proceeding with {operation} sync...")
             
             if operation == 'create':
                 google_event_id = self.create_event_in_google_calendar(event, user)
                 event.google_event_id = google_event_id
                 db.session.commit()
+                logger.info(f"🔄 GOOGLE SYNC DEBUG: Created Google event {google_event_id} for event {event.id}")
                 return True
             elif operation == 'update':
-                return self.update_event_in_google_calendar(event, user)
+                result = self.update_event_in_google_calendar(event, user)
+                logger.info(f"🔄 GOOGLE SYNC DEBUG: Updated Google event for event {event.id}: {result}")
+                return result
             elif operation == 'delete':
-                return self.delete_event_from_google_calendar(event, user)
+                result = self.delete_event_from_google_calendar(event, user)
+                logger.info(f"🔄 GOOGLE SYNC DEBUG: Deleted Google event for event {event.id}: {result}")
+                return result
             else:
-                logger.error(f"Unknown operation: {operation}")
+                logger.error(f"🔄 GOOGLE SYNC DEBUG: Unknown operation: {operation}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Error syncing event {event.id} to Google Calendar: {str(e)}")
+            logger.error(f"🔄 GOOGLE SYNC DEBUG: Error syncing event {event.id} to Google Calendar: {str(e)}")
+            logger.error(f"🔄 GOOGLE SYNC DEBUG: Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"🔄 GOOGLE SYNC DEBUG: Traceback: {traceback.format_exc()}")
             # Don't raise the exception to avoid breaking the main operation
             return False
 
