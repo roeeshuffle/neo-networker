@@ -174,14 +174,8 @@ def google_auth_revoke():
         if not user or not user.google_id:
             return jsonify({'error': 'No Google account linked'}), 400
         
-        # Revoke tokens
-        if user.google_access_token:
-            google_auth_service.revoke_tokens(
-                user.google_access_token, 
-                user.google_refresh_token
-            )
-        
-        # Clear Google data
+        # Clear Google data (skip token revocation as it's not working)
+        logger.info(f"Clearing Google data for user {user.id}")
         user.google_id = None
         user.google_access_token = None
         user.google_refresh_token = None
@@ -192,6 +186,8 @@ def google_auth_revoke():
         
         db.session.commit()
         
+        logger.info(f"Successfully cleared Google data for user {user.id}")
+        
         return jsonify({
             'message': 'Google account unlinked successfully',
             'user': user.to_dict()
@@ -201,6 +197,42 @@ def google_auth_revoke():
         logger.error(f"Error revoking Google access: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to revoke Google access'}), 500
+
+@google_auth_bp.route('/auth/google/clear', methods=['POST'])
+@jwt_required()
+def google_auth_clear():
+    """Clear Google data for current user (manual cleanup)"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"Manually clearing Google data for user {user.id} ({user.email})")
+        
+        # Clear all Google-related fields
+        user.google_id = None
+        user.google_access_token = None
+        user.google_refresh_token = None
+        user.google_token_expires_at = None
+        user.google_contacts_synced_at = None
+        user.google_calendar_synced_at = None
+        user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        logger.info(f"Successfully cleared Google data for user {user.id}")
+        
+        return jsonify({
+            'message': 'Google data cleared successfully. You can now reconnect with fresh permissions.',
+            'user': user.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing Google data: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to clear Google data'}), 500
 
 @google_auth_bp.route('/auth/google/contacts', methods=['GET'])
 @jwt_required()
