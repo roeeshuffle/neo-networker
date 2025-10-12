@@ -1,0 +1,29 @@
+version: 1.0
+runtime: python3
+build:
+  commands:
+    build:
+      - echo "Building Neo Networker Backend"
+run:
+  runtime-version: 3.10.0
+  command: python main.py
+  network:
+    port: 5002
+    env: PORT
+  env:
+    - name: DATABASE_URL
+      value: postgresql://postgres:TestPassword123!@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres
+    - name: FLASK_ENV
+      value: test
+    - name: JWT_SECRET_KEY
+      value: test-jwt-secret-key-test
+    - name: OPENAI_API_KEY
+      value: 
+    - name: TELEGRAM_BOT_TOKEN
+      value: 
+    - name: GOOGLE_CLIENT_ID
+      value: 
+    - name: GOOGLE_CLIENT_SECRET
+      value: 
+    - name: GOOGLE_REDIRECT_URI
+      value: https://neo-networker-backend-test.us-east-1.awsapprunner.com/api/auth/google/callback

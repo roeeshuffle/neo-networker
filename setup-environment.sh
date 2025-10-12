@@ -65,9 +65,9 @@ create_rds_instance() {
         --vpc-security-group-ids sg-0b170ebb412ed8e6c \
         --db-subnet-group-name default \
         --backup-retention-period 7 \
-        --multi-az false \
-        --publicly-accessible true \
-        --storage-encrypted true \
+        --no-multi-az \
+        --publicly-accessible \
+        --storage-encrypted \
         --region ${REGION} \
         --tags Key=Environment,Value=${ENVIRONMENT} Key=Project,Value=neo-networker
     

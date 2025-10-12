@@ -1,0 +1,21 @@
+{
+  "ServiceName": "neo-networker-backend-test",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "587842257084.dkr.ecr.us-east-1.amazonaws.com/repo:latest",
+      "ImageConfiguration": {
+        "Port": "5002",
+        "RuntimeEnvironmentVariables": {
+          "DATABASE_URL": "postgresql://postgres:TestPassword123!@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres",
+          "FLASK_ENV": "test",
+          "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-environment"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    }
+  },
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
+  }
+}
