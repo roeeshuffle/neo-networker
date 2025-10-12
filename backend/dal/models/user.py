@@ -27,6 +27,7 @@ class User(db.Model):
     google_refresh_token = db.Column(db.Text, nullable=True)
     google_access_token = db.Column(db.Text, nullable=True)
     google_token_expires_at = db.Column(db.DateTime, nullable=True)
+    google_scopes = db.Column(db.Text, nullable=True)  # Store OAuth scopes to detect changes
     google_contacts_synced_at = db.Column(db.DateTime, nullable=True)
     google_calendar_synced_at = db.Column(db.DateTime, nullable=True)
     stripe_customer_id = db.Column(db.String(255), nullable=True)  # Stripe customer ID for billing

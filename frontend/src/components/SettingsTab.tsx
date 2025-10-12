@@ -493,7 +493,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
       // Listen for the popup to close or receive a message
       const checkClosed = setInterval(() => {
-        if (popup?.closed) {
+        try {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            setGoogleLoading(false);
+            checkGoogleStatus(); // Refresh status
+          }
+        } catch (error) {
+          // Handle COOP policy errors gracefully
+          console.warn('Popup check failed due to COOP policy:', error);
           clearInterval(checkClosed);
           setGoogleLoading(false);
           checkGoogleStatus(); // Refresh status

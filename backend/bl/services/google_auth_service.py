@@ -348,15 +348,30 @@ class GoogleAuthService:
                         avatar_url=user_info.get('picture'),
                         provider='google',
                         google_id=google_id,
+                        google_scopes=' '.join(sorted(self.SCOPES)),  # Store current scopes
                         is_approved=True  # Auto-approve Google users
                     )
                     user.approved_at = datetime.utcnow()
                     user.approved_by = user.id
                     db.session.add(user)
             
+            # Check if scopes have changed
+            current_scopes_str = ' '.join(sorted(self.SCOPES))
+            if user.google_scopes and user.google_scopes != current_scopes_str:
+                logger.warning(f"Google OAuth scopes changed for user {email}. Clearing old credentials.")
+                logger.warning(f"Old scopes: {user.google_scopes}")
+                logger.warning(f"New scopes: {current_scopes_str}")
+                # Clear old credentials
+                user.google_access_token = None
+                user.google_refresh_token = None
+                user.google_token_expires_at = None
+                user.google_contacts_synced_at = None
+                user.google_calendar_synced_at = None
+            
             # Update tokens
             user.google_access_token = tokens['access_token']
             user.google_refresh_token = tokens['refresh_token']
+            user.google_scopes = current_scopes_str  # Store current scopes
             if tokens.get('expires_at'):
                 user.google_token_expires_at = datetime.fromisoformat(tokens['expires_at'].replace('Z', '+00:00'))
             

@@ -54,11 +54,18 @@ const Auth = () => {
 
       // Listen for the popup to close or receive a message
       const checkClosed = setInterval(() => {
-        if (popup?.closed) {
+        try {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            setLoading(false);
+            // Check if user was authenticated by refreshing user data
+            // The actual authentication will be handled by the callback
+          }
+        } catch (error) {
+          // Handle COOP policy errors gracefully
+          console.warn('Popup check failed due to COOP policy:', error);
           clearInterval(checkClosed);
           setLoading(false);
-          // Check if user was authenticated by refreshing user data
-          // The actual authentication will be handled by the callback
         }
       }, 1000);
 
