@@ -47,7 +47,7 @@ interface Event {
   repeat_pattern: string;
   repeat_interval: number;
   repeat_days: number[];
-  repeat_end_date: string | null;
+  repeat_end_date: string;
   notes: string;
   google_sync: boolean;
   is_active: boolean;
@@ -71,7 +71,7 @@ interface EventFormData {
   repeat_pattern: string;
   repeat_interval: number;
   repeat_days: number[];
-  repeat_end_date: string | null;
+  repeat_end_date: string;
   notes: string;
   google_sync: boolean;
 }
@@ -141,7 +141,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     repeat_pattern: 'none',
     repeat_interval: 1,
     repeat_days: [],
-    repeat_end_date: null,
+    repeat_end_date: '',
     notes: '',
     google_sync: true
   });
@@ -219,9 +219,28 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
         repeat_pattern: editingEvent.repeat_pattern || 'none',
         repeat_interval: editingEvent.repeat_interval || 1,
         repeat_days: editingEvent.repeat_days || [],
-        repeat_end_date: editingEvent.repeat_end_date || null,
+        repeat_end_date: editingEvent.repeat_end_date || '',
         notes: editingEvent.notes || '',
         google_sync: editingEvent.google_sync !== undefined ? editingEvent.google_sync : true
+      });
+    } else {
+      // Reset form data when not editing
+      setFormData({
+        title: '',
+        description: '',
+        start_datetime: '',
+        end_datetime: '',
+        location: '',
+        event_type: 'event',
+        project: '',
+        participants: [],
+        alert_minutes: 15,
+        repeat_pattern: 'none',
+        repeat_interval: 1,
+        repeat_days: [],
+        repeat_end_date: '',
+        notes: '',
+        google_sync: true
       });
     }
   }, [editingEvent]);
@@ -391,7 +410,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       repeat_pattern: 'none',
       repeat_interval: 1,
       repeat_days: [],
-      repeat_end_date: null,
+      repeat_end_date: '',
       notes: '',
       google_sync: true
     });
@@ -419,7 +438,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       repeat_pattern: event.repeat_pattern || 'none',
       repeat_interval: event.repeat_interval || 1,
       repeat_days: event.repeat_days || [],
-      repeat_end_date: event.repeat_end_date || null,
+      repeat_end_date: event.repeat_end_date || '',
       notes: event.notes || ''
     });
     setIsEditDialogOpen(true);
@@ -511,7 +530,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       repeat_pattern: 'none',
       repeat_interval: 1,
       repeat_days: [],
-      repeat_end_date: null,
+      repeat_end_date: '',
       notes: ''
     });
     

@@ -1,7 +1,7 @@
 // API client for Flask backend
 // This replaces the Supabase client with our Flask backend
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
 
 interface ApiResponse<T> {
   data: T | null;
@@ -386,6 +386,41 @@ class ApiClient {
   async markAllNotificationsRead() {
     return this.request('/notifications/read-all', {
       method: 'PUT'
+    });
+  }
+
+  // Plan management methods
+  async getUserPlan() {
+    return this.request('/plan');
+  }
+
+  async updateUserPlan(plan: string) {
+    return this.request('/plan', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    });
+  }
+
+  async getAllPlans() {
+    return this.request('/all-plans');
+  }
+
+  async getPlanDetails(planName: string) {
+    return this.request(`/plan-details/${planName}`);
+  }
+
+  // Stripe Customer Portal methods
+  async createStripePortalSession() {
+    return this.request('/stripe-portal-session', {
+      method: 'POST'
+    });
+  }
+
+  // Stripe Checkout methods
+  async createStripeCheckoutSession(planName: string) {
+    return this.request('/stripe-checkout-session', {
+      method: 'POST',
+      body: JSON.stringify({ plan: planName }),
     });
   }
 

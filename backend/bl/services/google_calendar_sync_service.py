@@ -19,33 +19,41 @@ class GoogleCalendarSyncService:
     def ensure_valid_token(self, user: User) -> str:
         """Ensure user has a valid Google access token"""
         if not user.google_access_token:
-            raise ValueError("No Google access token found. Please reconnect your Google account.")
+            logger.warning(f"No Google access token found for user {user.id}. Google Calendar sync will be skipped.")
+            return None
         
         # Check if token is expired
         if user.google_token_expires_at and user.google_token_expires_at <= datetime.utcnow():
             if not user.google_refresh_token:
-                raise ValueError("Google token expired and no refresh token available. Please reconnect your Google account.")
+                logger.warning(f"Google token expired and no refresh token available for user {user.id}. Google Calendar sync will be skipped.")
+                return None
             
             # Refresh the token
-            credentials = Credentials(
-                token=user.google_access_token,
-                refresh_token=user.google_refresh_token,
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=os.getenv('GOOGLE_CLIENT_ID'),
-                client_secret=os.getenv('GOOGLE_CLIENT_SECRET')
-            )
-            
-            credentials.refresh(Request())
-            
-            # Update user with new tokens
-            user.google_access_token = credentials.token
-            if credentials.refresh_token:
-                user.google_refresh_token = credentials.refresh_token
-            if credentials.expiry:
-                user.google_token_expires_at = credentials.expiry
-            
-            db.session.commit()
-            logger.info(f"Refreshed Google token for user {user.id}")
+            try:
+                credentials = Credentials(
+                    token=user.google_access_token,
+                    refresh_token=user.google_refresh_token,
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+                    client_secret=os.getenv('GOOGLE_CLIENT_SECRET')
+                )
+                
+                credentials.refresh(Request())
+                
+                # Update user with new tokens
+                user.google_access_token = credentials.token
+                if credentials.refresh_token:
+                    user.google_refresh_token = credentials.refresh_token
+                if credentials.expiry:
+                    user.google_token_expires_at = credentials.expiry
+                
+                db.session.commit()
+                logger.info(f"Refreshed Google token for user {user.id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to refresh Google token for user {user.id}: {str(e)}")
+                logger.warning("Google Calendar sync will be skipped due to token refresh failure")
+                return None
         
         return user.google_access_token
     
@@ -53,6 +61,10 @@ class GoogleCalendarSyncService:
         """Create an event in Google Calendar and return the Google event ID"""
         try:
             access_token = self.ensure_valid_token(user)
+            if not access_token:
+                logger.warning("No valid Google access token available - skipping Google Calendar event creation")
+                return None
+            
             credentials = Credentials(token=access_token)
             service = build('calendar', 'v3', credentials=credentials)
             
@@ -103,13 +115,16 @@ class GoogleCalendarSyncService:
         except HttpError as e:
             if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
                 logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
-                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+                logger.warning("Google Calendar sync will be skipped due to insufficient permissions")
+                return None
             else:
                 logger.error(f"Error creating Google Calendar event: {str(e)}")
-                raise
+                logger.warning("Google Calendar sync will be skipped due to API error")
+                return None
         except Exception as e:
             logger.error(f"Unexpected error creating Google Calendar event: {str(e)}")
-            raise
+            logger.warning("Google Calendar sync will be skipped due to unexpected error")
+            return None
     
     def update_event_in_google_calendar(self, event: Event, user: User) -> bool:
         """Update an event in Google Calendar"""
@@ -122,6 +137,10 @@ class GoogleCalendarSyncService:
                 return True
             
             access_token = self.ensure_valid_token(user)
+            if not access_token:
+                logger.warning("No valid Google access token available - skipping Google Calendar event update")
+                return False
+            
             credentials = Credentials(token=access_token)
             service = build('calendar', 'v3', credentials=credentials)
             
@@ -171,19 +190,26 @@ class GoogleCalendarSyncService:
         except HttpError as e:
             if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
                 logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
-                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+                logger.warning("Google Calendar sync will be skipped due to insufficient permissions")
+                return False
             elif e.resp.status == 404:
                 logger.warning(f"Google Calendar event {event.google_event_id} not found, creating new event")
                 google_event_id = self.create_event_in_google_calendar(event, user)
-                event.google_event_id = google_event_id
-                db.session.commit()
-                return True
+                if google_event_id:
+                    event.google_event_id = google_event_id
+                    db.session.commit()
+                    return True
+                else:
+                    logger.warning("Failed to create new Google Calendar event")
+                    return False
             else:
                 logger.error(f"Error updating Google Calendar event: {str(e)}")
-                raise
+                logger.warning("Google Calendar sync will be skipped due to API error")
+                return False
         except Exception as e:
             logger.error(f"Unexpected error updating Google Calendar event: {str(e)}")
-            raise
+            logger.warning("Google Calendar sync will be skipped due to unexpected error")
+            return False
     
     def delete_event_from_google_calendar(self, event: Event, user: User) -> bool:
         """Delete an event from Google Calendar"""
@@ -193,6 +219,10 @@ class GoogleCalendarSyncService:
                 return True
             
             access_token = self.ensure_valid_token(user)
+            if not access_token:
+                logger.warning("No valid Google access token available - skipping Google Calendar event deletion")
+                return False
+            
             credentials = Credentials(token=access_token)
             service = build('calendar', 'v3', credentials=credentials)
             
@@ -208,16 +238,19 @@ class GoogleCalendarSyncService:
         except HttpError as e:
             if e.resp.status == 403 and "insufficientPermissions" in str(e.content):
                 logger.error(f"Google Calendar API error: Insufficient permissions. User needs to re-authenticate with Google to get write access.")
-                raise ValueError("Insufficient Google Calendar permissions. Please disconnect and reconnect your Google account to enable calendar write access.")
+                logger.warning("Google Calendar sync will be skipped due to insufficient permissions")
+                return False
             elif e.resp.status == 404:
                 logger.warning(f"Google Calendar event {event.google_event_id} not found, already deleted")
                 return True
             else:
                 logger.error(f"Error deleting Google Calendar event: {str(e)}")
-                raise
+                logger.warning("Google Calendar sync will be skipped due to API error")
+                return False
         except Exception as e:
             logger.error(f"Unexpected error deleting Google Calendar event: {str(e)}")
-            raise
+            logger.warning("Google Calendar sync will be skipped due to unexpected error")
+            return False
     
     def sync_event_to_google_calendar(self, event: Event, user: User, operation: str = 'create') -> bool:
         """Sync an event to Google Calendar based on operation"""

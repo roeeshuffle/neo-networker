@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { apiClient } from "@/integrations/api/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { PeopleTable } from "@/components/PeopleTable";
 import DynamicContactForm from "@/components/DynamicContactForm";
 import ContactViewModal from "@/components/ContactViewModal";
-import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw, Bell } from "lucide-react";
+import { LogOut, Plus, CheckSquare, Calendar, Settings, User, RefreshCw, Bell, Star, Zap, Building2, Crown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TasksTab from "@/components/TasksTab";
 import EventsTab from "@/components/EventsTab";
@@ -71,6 +71,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasNotifications, setHasNotifications] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [userPlan, setUserPlan] = useState<string>('Free');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -113,6 +114,7 @@ const Dashboard = () => {
       await fetchTasksCount();
       await fetchEventsCount();
       await fetchUnreadNotificationsCount();
+      await fetchUserPlan();
     }
   };
 
@@ -125,6 +127,32 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching unread notifications count:', error);
+    }
+  };
+
+  const fetchUserPlan = async () => {
+    try {
+      const response = await apiClient.getUserPlan();
+      if (response.data && response.data.success) {
+        setUserPlan(response.data.plan);
+      }
+    } catch (error) {
+      console.error('Error fetching user plan:', error);
+    }
+  };
+
+  const getPlanIcon = (planName: string) => {
+    switch (planName) {
+      case 'Free':
+        return <Star className="w-4 h-4 text-gray-600" />;
+      case 'Starter':
+        return <Star className="w-4 h-4 text-blue-600" />;
+      case 'Pro':
+        return <Zap className="w-4 h-4 text-purple-600" />;
+      case 'Business':
+        return <Building2 className="w-4 h-4 text-green-600" />;
+      default:
+        return <Star className="w-4 h-4 text-gray-600" />;
     }
   };
 
@@ -377,15 +405,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background-soft">
+    <div className="h-screen bg-background-soft grid grid-rows-[auto_1fr_auto]">
       {/* Enterprise Header */}
-      <header className="enterprise-header sticky top-0 z-50">
+      <header className="enterprise-header">
         <div className="px-12 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Logo and Navigation */}
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <div className="w-8 h-8 rounded-sm bg-primary flex items-center justify-center">
                   <img 
                     src={alistLogo} 
                     alt="Alist Logo" 
@@ -479,6 +507,13 @@ const Dashboard = () => {
                     <p className="text-sm font-medium">{user?.email}</p>
                     <p className="text-xs text-muted-foreground">Signed in</p>
                   </div>
+                  <DropdownMenuItem 
+                    onClick={() => navigate('/subscription')} 
+                    className="flex items-center gap-2"
+                  >
+                    {getPlanIcon(userPlan)}
+                    <span className="text-sm">{userPlan} Plan</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out
@@ -490,7 +525,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="enterprise-content">
+      <main className="overflow-auto" style={{ minHeight: 0 }}>
         <div className="px-12 py-8">
           {/* Main content based on active tab */}
           {activeTab === "contacts" && (
@@ -539,6 +574,25 @@ const Dashboard = () => {
           isLoading={false}
         />
       </main>
+
+      {/* Footer with legal links */}
+      <footer className="border-t border-border bg-muted/30 py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-center items-center">
+            <div className="text-sm text-muted-foreground">
+              © 2025 Alist. All rights reserved.
+            </div>
+            <div className="flex space-x-6 text-sm ml-8">
+              <Link to="/privacy-policy" className="text-muted-foreground hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/terms-of-service" className="text-muted-foreground hover:text-foreground transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

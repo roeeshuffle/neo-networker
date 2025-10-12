@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mail, Lock, User, ArrowLeft } from "lucide-react";
@@ -15,6 +16,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -199,13 +201,14 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
-      {/* Theme Toggle in top-right corner */}
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      
-      <div className="w-full max-w-md">
+    <div className="h-screen bg-background flex flex-col">
+      <div className="flex-grow flex items-center justify-center p-4 relative">
+        {/* Theme Toggle in top-right corner */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+        
+        <div className="w-full max-w-md">
 
         <Card>
           <CardHeader className="text-center">
@@ -311,7 +314,29 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="terms" 
+                      checked={acceptedTerms}
+                      onCheckedChange={setAcceptedTerms}
+                    />
+                    <label htmlFor="terms" className="text-sm">
+                      I agree to the{' '}
+                      <Link to="/terms-of-service" className="text-blue-600 hover:underline">
+                        Terms of Service
+                      </Link>
+                      {' '}and{' '}
+                      <Link to="/privacy-policy" className="text-blue-600 hover:underline">
+                        Privacy Policy
+                      </Link>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading || (!isLogin && !acceptedTerms)}>
                 {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
               </Button>
             </form>
@@ -330,7 +355,7 @@ const Auth = () => {
             </div>
 
             {!isLogin && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
+              <div className="mt-4 p-3 bg-muted rounded-sm">
                 <p className="text-xs text-muted-foreground text-center">
                   New accounts require admin approval. Please wait for approval from the administrator.
                 </p>
@@ -338,7 +363,27 @@ const Auth = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
+
+      {/* Footer with legal links */}
+      <footer className="border-t border-border bg-muted/30 py-6 mt-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-center items-center">
+            <div className="text-sm text-muted-foreground">
+              © 2025 Alist. All rights reserved.
+            </div>
+            <div className="flex space-x-6 text-sm ml-8">
+              <Link to="/privacy-policy" className="text-muted-foreground hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/terms-of-service" className="text-muted-foreground hover:text-foreground transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

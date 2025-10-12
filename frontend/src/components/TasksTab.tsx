@@ -546,11 +546,11 @@ const TasksTab: React.FC<TasksTabProps> = ({ onTasksChange, searchQuery }) => {
   const openEditDialog = (task: Task) => {
     setEditingTask(task);
     setFormData({
-      title: task.title,
-      description: task.description,
-      project: task.project,
-      status: task.status,
-      priority: task.priority,
+      title: task.title || '',
+      description: task.description || '',
+      project: task.project || '',
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
       scheduled_date: task.scheduled_date || '',
       due_date: task.due_date || '',
       assign_to: task.assign_to || ''

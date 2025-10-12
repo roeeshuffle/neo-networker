@@ -37,6 +37,8 @@ services:
       - TELEGRAM_WEBHOOK_URL=https://reina-owlish-soila.ngrok-free.dev/api/telegram/webhook
       - OPENAI_API_KEY=your_openai_api_key_here
       - OPENAI_ASSISTANT_ID=asst_ywyYJshVjop8vd5hvXv1Nn1r
+          - STRIPE_SECRET_KEY=your_stripe_secret_key_here
+          - STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key_here
     ports:
       - "5002:5002"
     depends_on:

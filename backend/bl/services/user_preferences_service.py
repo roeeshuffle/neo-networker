@@ -140,3 +140,81 @@ class UserPreferencesService:
     def update_calendar_settings(user_id, calendar_settings_dict):
         """Update calendar_settings preference for user"""
         return UserPreferencesService.update_preference(user_id, 'calendar_settings', calendar_settings_dict)
+    
+    # Plan management methods
+    
+    @staticmethod
+    def get_user_plan(user_id):
+        """Get user plan preference"""
+        return UserPreferencesService.get_preference(user_id, 'plan') or 'Starter'
+    
+    @staticmethod
+    def update_user_plan(user_id, plan):
+        """Update user plan preference"""
+        valid_plans = ['Starter', 'Pro', 'Business']
+        if plan not in valid_plans:
+            logger.error(f"Invalid plan '{plan}' for user {user_id}. Valid plans: {valid_plans}")
+            return False
+        return UserPreferencesService.update_preference(user_id, 'plan', plan)
+    
+    @staticmethod
+    def get_plan_details(plan):
+        """Get plan details including product IDs and features"""
+        plan_details = {
+            'Starter': {
+                'name': 'Starter',
+                'product_id': 'prod_TBBYLl1MBmQJ2d',
+                'tax_code': 'Marketing Services',
+                'tax_code_id': 'txcd_20060055',
+                'description': '1 WhatsApp/Telegram workspace\nCore: chat-based task management, automatic reminders, basic STT→action (as it ships), CRM-in-chat, Google Calendar integration (as it ships).\nLimits: ~200 voice actions/mo, 500 tasks/mo, 5 GB storage.\nSupport: email (48h)',
+                'features': [
+                    '1 WhatsApp/Telegram workspace',
+                    'Chat-based task management',
+                    'Automatic reminders',
+                    'Basic STT→action',
+                    'CRM-in-chat',
+                    'Google Calendar integration',
+                    '200 voice actions/month',
+                    '500 tasks/month',
+                    '5 GB storage',
+                    'Email support (48h)'
+                ]
+            },
+            'Pro': {
+                'name': 'Pro',
+                'product_id': 'prod_TBBYP7nEOaevlJ',
+                'tax_code': 'Marketing Services',
+                'tax_code_id': 'txcd_20060055',
+                'description': 'Everything in Starter + meeting summaries from voice/transcripts, team collaboration in WhatsApp groups, email → actions + weekly email summaries\nLimits: ~1,000 voice actions/mo, 5,000 tasks/mo, 25 GB storage.\nSupport: priority email (24h)',
+                'features': [
+                    'Everything in Starter',
+                    'Meeting summaries from voice/transcripts',
+                    'Team collaboration in WhatsApp groups',
+                    'Email → actions',
+                    'Weekly email summaries',
+                    '1,000 voice actions/month',
+                    '5,000 tasks/month',
+                    '25 GB storage',
+                    'Priority email support (24h)'
+                ]
+            },
+            'Business': {
+                'name': 'Business',
+                'product_id': 'prod_TBBZfboYKzrWxH',
+                'tax_code': 'Marketing Services',
+                'tax_code_id': 'txcd_20060055',
+                'description': 'Everything in Pro + advanced team/roles, agent joins client groups to flag hot leads/issues (when released), security & role-based access\nLimits: ~5,000 voice actions/mo, 20,000 tasks/mo, 100 GB storage\nSupport: email + chat (8h)',
+                'features': [
+                    'Everything in Pro',
+                    'Advanced team/roles',
+                    'Agent joins client groups',
+                    'Flag hot leads/issues',
+                    'Security & role-based access',
+                    '5,000 voice actions/month',
+                    '20,000 tasks/month',
+                    '100 GB storage',
+                    'Email + chat support (8h)'
+                ]
+            }
+        }
+        return plan_details.get(plan, plan_details['Starter'])

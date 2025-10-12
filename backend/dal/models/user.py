@@ -29,6 +29,7 @@ class User(db.Model):
     google_token_expires_at = db.Column(db.DateTime, nullable=True)
     google_contacts_synced_at = db.Column(db.DateTime, nullable=True)
     google_calendar_synced_at = db.Column(db.DateTime, nullable=True)
+    stripe_customer_id = db.Column(db.String(255), nullable=True)  # Stripe customer ID for billing
     # group = db.Column(db.JSON, nullable=True)  # Temporarily disabled - column doesn't exist in DB
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -67,6 +68,7 @@ class User(db.Model):
             'google_token_expires_at': self.google_token_expires_at.isoformat() if self.google_token_expires_at else None,
             'google_contacts_synced_at': self.google_contacts_synced_at.isoformat() if self.google_contacts_synced_at else None,
             'google_calendar_synced_at': self.google_calendar_synced_at.isoformat() if self.google_calendar_synced_at else None,
+            'stripe_customer_id': self.stripe_customer_id,
             # 'group': self.group,  # Temporarily disabled
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
