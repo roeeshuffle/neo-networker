@@ -1,0 +1,113 @@
+name: Deploy to Test Environment
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 587842257084
+  ECR_REPOSITORY: repo
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build, tag, and push backend image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: test-${{ github.sha }}
+      run: |
+        # Build backend Docker image
+        docker build -t neo-networker-backend -f Dockerfile .
+        
+        # Tag for test environment
+        docker tag neo-networker-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:test
+        docker tag neo-networker-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+        # Push to ECR
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:test
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Build frontend
+      env:
+        VITE_API_URL: https://neo-networker-backend-test.us-east-1.awsapprunner.com/api
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Deploy frontend to S3
+      run: |
+        aws s3 sync frontend/dist/ s3://neo-networker-frontend-test --delete
+    
+    - name: Invalidate CloudFront cache
+      run: |
+        aws cloudfront create-invalidation --distribution-id ${{ secrets.TEST_CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+    
+    - name: Deploy backend to App Runner
+      run: |
+        # Get the service ARN
+        SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='neo-networker-backend-test'].ServiceArn" --output text)
+        
+        # Start deployment
+        aws apprunner start-deployment --service-arn $SERVICE_ARN
+    
+    - name: Run database migrations
+      run: |
+        # Get RDS endpoint
+        RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier neo-networker-db-test --query 'DBInstances[0].Endpoint.Address' --output text)
+        
+        # Install PostgreSQL client
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+        
+        # Run migrations
+        PGPASSWORD="${{ secrets.TEST_DB_PASSWORD }}" psql -h $RDS_ENDPOINT -U postgres -d postgres -f production_migration.sql
+        PGPASSWORD="${{ secrets.TEST_DB_PASSWORD }}" psql -h $RDS_ENDPOINT -U postgres -d postgres -f google_scopes_migration.sql
+    
+    - name: Run tests
+      run: |
+        # Add your test commands here
+        echo "Running tests..."
+        # Example: npm test, pytest, etc.
+    
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "✅ Successfully deployed to test environment"
+        echo "🌐 Test Frontend: https://neo-networker-frontend-test-cdn.cloudfront.net"
+        echo "🔧 Test Backend: https://neo-networker-backend-test.us-east-1.awsapprunner.com"
+    
+    - name: Notify deployment failure
+      if: failure()
+      run: |
+        echo "❌ Deployment to test environment failed"
+        exit 1
