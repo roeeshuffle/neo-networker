@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 from dal.models import User
 from bl.services.telegram_service import telegram_service
 from bl.services.whatsapp_service import whatsapp_service
+from bl.services.message_formatter import message_formatter
 
 messaging_logger = logging.getLogger('messaging_service')
 
@@ -20,13 +21,16 @@ class MessagingService:
                 
             platform = user.preferred_messaging_platform or 'telegram'
             
+            # Format message for the specific platform
+            formatted_message = message_formatter.format_for_platform(message, platform)
+            
             if platform == 'telegram' and user.telegram_id:
                 messaging_logger.info(f"Sending Telegram message to user {user.email}")
-                return self.telegram.send_message(user.telegram_id, message)
+                return self.telegram.send_message(user.telegram_id, formatted_message)
                 
             elif platform == 'whatsapp' and user.whatsapp_phone:
                 messaging_logger.info(f"Sending WhatsApp message to user {user.email}")
-                return self.whatsapp.send_message(user.whatsapp_phone, message)
+                return self.whatsapp.send_message(user.whatsapp_phone, formatted_message)
                 
             else:
                 messaging_logger.warning(f"User {user.email} has no {platform} connection configured")
@@ -39,8 +43,11 @@ class MessagingService:
     def send_message_to_phone(self, phone: str, message: str, platform: str = 'whatsapp') -> bool:
         """Send message directly to a phone number"""
         try:
+            # Format message for the specific platform
+            formatted_message = message_formatter.format_for_platform(message, platform)
+            
             if platform == 'whatsapp':
-                return self.whatsapp.send_message(phone, message)
+                return self.whatsapp.send_message(phone, formatted_message)
             else:
                 messaging_logger.error(f"Unsupported platform for phone messaging: {platform}")
                 return False
@@ -52,7 +59,9 @@ class MessagingService:
     def send_message_to_telegram_id(self, telegram_id: int, message: str) -> bool:
         """Send message directly to a Telegram ID"""
         try:
-            return self.telegram.send_message(telegram_id, message)
+            # Format message for Telegram
+            formatted_message = message_formatter.format_for_platform(message, 'telegram')
+            return self.telegram.send_message(telegram_id, formatted_message)
         except Exception as e:
             messaging_logger.error(f"Error sending message to Telegram ID {telegram_id}: {e}", exc_info=True)
             return False

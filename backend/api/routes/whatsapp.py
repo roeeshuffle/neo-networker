@@ -4,6 +4,7 @@ from dal.models import User
 from dal.database import db
 from bl.services.whatsapp_service import whatsapp_service
 from bl.services.messaging_service import messaging_service
+from bl.services.message_formatter import message_formatter
 import logging
 import json
 import requests
@@ -38,7 +39,7 @@ def handle_whatsapp_voice_message(message_data, from_phone):
         
         if not user:
             whatsapp_logger.info(f"❌ [VOICE] No user found with WhatsApp phone: {from_phone}")
-            response_text = f"🔐 **Connection Required**\n\nTo use voice commands, you need to connect your WhatsApp account to your webapp account.\n\n**Your WhatsApp Phone:** `{from_phone}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'"
+            response_text = f"🔐 *Connection Required*\n\nTo use voice commands, you need to connect your WhatsApp account to your webapp account.\n\n*Your WhatsApp Phone:* `{from_phone}`\n\n*Steps to connect:*\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'"
             whatsapp_service.send_message(from_phone, response_text)
             return jsonify({'status': 'ok'})
         
@@ -233,7 +234,7 @@ def whatsapp_webhook():
             
             if not user:
                 whatsapp_logger.info(f"❌ No user found with WhatsApp phone: {from_phone}")
-                response_text = f"🔐 **Connection Required**\n\nTo use this WhatsApp bot, you need to connect your WhatsApp account to your webapp account.\n\n**Your WhatsApp Phone:** `{from_phone}`\n\n**Steps to connect:**\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'\n\nOnce connected, you can use natural language commands like:\n• 'Add contact'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
+                response_text = f"🔐 *Connection Required*\n\nTo use this WhatsApp bot, you need to connect your WhatsApp account to your webapp account.\n\n*Your WhatsApp Phone:* `{from_phone}`\n\n*Steps to connect:*\n1. Go to your webapp: https://d2fq8k5py78ii.cloudfront.net/\n2. Login to your account\n3. Go to Settings tab\n4. Enter your WhatsApp phone: `{from_phone}`\n5. Click 'Connect WhatsApp'\n\nOnce connected, you can use natural language commands like:\n• 'Add contact'\n• 'Show my tasks'\n• 'Find contacts'\n• 'Add task call John tomorrow'"
                 
                 whatsapp_service.send_message(from_phone, response_text)
                 return jsonify({'status': 'ok'})

@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from dal.models import User, Person, Task, Event
 from dal.database import db
+from bl.services.messaging_service import messaging_service
+from bl.services.message_formatter import message_formatter
 from datetime import datetime, timedelta
 import uuid
 import requests
@@ -312,11 +314,14 @@ def send_telegram_message(chat_id, text):
         if not bot_token:
             return
             
+        # Format message for Telegram (convert HTML to Markdown)
+        formatted_text = message_formatter.format_for_platform(text, 'telegram')
+        
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         data = {
             'chat_id': chat_id,
-            'text': text,
-            'parse_mode': 'HTML'
+            'text': formatted_text,
+            'parse_mode': 'Markdown'
         }
         
         response = requests.post(url, data=data, timeout=10)
