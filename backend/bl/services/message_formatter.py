@@ -45,8 +45,13 @@ class MessageFormatter:
         # ~strikethrough~ for strikethrough
         # ```code``` for monospace
         
+        # First, clean up any existing asterisks that might interfere
+        # Remove standalone asterisks that aren't part of formatting
+        import re
+        formatted = re.sub(r'(?<!\*)\*(?!\*)', '', message)  # Remove single asterisks not part of **
+        
         # Convert HTML bold to WhatsApp bold
-        formatted = message.replace('<b>', '*').replace('</b>', '*')
+        formatted = formatted.replace('<b>', '*').replace('</b>', '*')
         formatted = formatted.replace('<strong>', '*').replace('</strong>', '*')
         
         # Convert HTML italic to WhatsApp italic
