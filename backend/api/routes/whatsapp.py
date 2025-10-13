@@ -262,7 +262,10 @@ def whatsapp_webhook():
                     
                     response_text = process_natural_language_request(transcription, user)
                     
-                    whatsapp_service.send_message(from_phone, response_text)
+                    # Format the response for WhatsApp (convert HTML to WhatsApp formatting)
+                    formatted_response = message_formatter.format_for_platform(response_text, 'whatsapp')
+                    
+                    whatsapp_service.send_message(from_phone, formatted_response)
                     return jsonify({'status': 'ok'})
                     
                 elif message_text.lower().strip() in ['no', 'n', 'reject', 'ignore', 'nope', 'nah', 'cancel']:
@@ -281,8 +284,11 @@ def whatsapp_webhook():
             
             response_text = process_natural_language_request(message_text, user)
             
+            # Format the response for WhatsApp (convert HTML to WhatsApp formatting)
+            formatted_response = message_formatter.format_for_platform(response_text, 'whatsapp')
+            
             # Send response back to WhatsApp
-            whatsapp_service.send_message(from_phone, response_text)
+            whatsapp_service.send_message(from_phone, formatted_response)
             
             return jsonify({'status': 'ok', 'response': response_text})
             
