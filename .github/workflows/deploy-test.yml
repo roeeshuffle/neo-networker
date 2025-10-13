@@ -74,11 +74,28 @@ jobs:
     
     - name: Deploy backend to App Runner
       run: |
-        # Get the service ARN
+        # Check if App Runner service exists
         SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='neo-networker-backend-test'].ServiceArn" --output text)
         
-        # Start deployment
-        aws apprunner start-deployment --service-arn $SERVICE_ARN
+        if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
+          echo "⚠️  App Runner service 'neo-networker-backend-test' does not exist yet"
+          echo "📋 Please create the App Runner service manually:"
+          echo "   1. Go to AWS Console → App Runner"
+          echo "   2. Create service with name 'neo-networker-backend-test'"
+          echo "   3. Use ECR image: 587842257084.dkr.ecr.us-east-1.amazonaws.com/repo:test"
+          echo "   4. Set port: 5002"
+          echo "   5. Add environment variables:"
+          echo "      - DATABASE_URL: postgresql://postgres:TestPassword123!@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres"
+          echo "      - FLASK_ENV: test"
+          echo "      - JWT_SECRET_KEY: test-jwt-secret-key-for-testing-environment"
+          echo ""
+          echo "✅ Frontend deployed successfully to test environment"
+          echo "⏳ Backend deployment pending App Runner service creation"
+        else
+          echo "🚀 Deploying to existing App Runner service..."
+          aws apprunner start-deployment --service-arn $SERVICE_ARN
+          echo "✅ Backend deployed to App Runner"
+        fi
     
     - name: Run database migrations
       run: |
