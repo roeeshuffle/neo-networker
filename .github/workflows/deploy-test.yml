@@ -59,7 +59,7 @@ jobs:
     
     - name: Build frontend
       env:
-        VITE_API_URL: https://dkdrn34xpx.us-east-1.awsapprunner.com/api
+        VITE_API_URL: https://xjqvitiic4.us-east-1.awsapprunner.com/api
       run: |
         cd frontend
         npm run build
@@ -78,19 +78,58 @@ jobs:
         SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='neo-networker-backend-test'].ServiceArn" --output text)
         
         if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
-          echo "⚠️  App Runner service 'neo-networker-backend-test' does not exist yet"
-          echo "📋 Please create the App Runner service manually:"
-          echo "   1. Go to AWS Console → App Runner"
-          echo "   2. Create service with name 'neo-networker-backend-test'"
-          echo "   3. Use ECR image: 587842257084.dkr.ecr.us-east-1.amazonaws.com/repo:test"
-          echo "   4. Set port: 5002"
-          echo "   5. Add environment variables:"
-          echo "      - DATABASE_URL: postgresql://postgres:TestPassword123!@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres"
-          echo "      - FLASK_ENV: test"
-          echo "      - JWT_SECRET_KEY: test-jwt-secret-key-for-testing-environment"
-          echo ""
-          echo "✅ Frontend deployed successfully to test environment"
-          echo "⏳ Backend deployment pending App Runner service creation"
+          echo "🚀 Creating new App Runner service for test environment..."
+          
+          # Create the service
+          aws apprunner create-service \
+            --service-name neo-networker-backend-test \
+            --source-configuration '{
+              "ImageRepository": {
+                "ImageIdentifier": "'$ECR_REGISTRY'/'$ECR_REPOSITORY':test",
+                "ImageConfiguration": {
+                  "Port": "5002",
+                  "RuntimeEnvironmentVariables": {
+                    "DATABASE_URL": "postgresql://postgres:'${{ secrets.TEST_DB_PASSWORD }}'@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres",
+                    "ENVIRONMENT": "test",
+                    "FLASK_DEBUG": "True",
+                    "FRONTEND_URL": "https://d2fq8k5py78ii.cloudfront.net",
+                    "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-environment",
+                    "ADMIN_EMAIL": "roee2912@gmail.com",
+                    "GOOGLE_CLIENT_ID": "${{ secrets.GOOGLE_CLIENT_ID }}",
+                    "GOOGLE_CLIENT_SECRET": "${{ secrets.GOOGLE_CLIENT_SECRET }}",
+                    "GOOGLE_REDIRECT_URI": "https://d2fq8k5py78ii.cloudfront.net/auth/google/callback",
+                    "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+                    "PORT": "5002",
+                    "SECRET_KEY": "test-secret-key-for-testing-environment",
+                    "TELEGRAM_BOT_TOKEN": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
+                    "WHATSAPP_ACCESS_TOKEN": "${{ secrets.WHATSAPP_ACCESS_TOKEN }}",
+                    "WHATSAPP_APP_ID": "${{ secrets.WHATSAPP_APP_ID }}",
+                    "WHATSAPP_APP_SECRET": "${{ secrets.WHATSAPP_APP_SECRET }}",
+                    "WHATSAPP_BUSINESS_ACCOUNT_ID": "${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}",
+                    "WHATSAPP_PHONE_NUMBER_ID": "${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}",
+                    "WHATSAPP_REFRESH_TOKEN": "${{ secrets.WHATSAPP_REFRESH_TOKEN }}",
+                    "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}"
+                  }
+                },
+                "ImageRepositoryType": "ECR"
+              },
+              "AutoDeploymentsEnabled": false
+            }' \
+            --instance-configuration '{
+              "Cpu": "1024",
+              "Memory": "2048"
+            }' \
+            --health-check-configuration '{
+              "Protocol": "TCP",
+              "Path": "/",
+              "Interval": 5,
+              "Timeout": 2,
+              "HealthyThreshold": 1,
+              "UnhealthyThreshold": 5
+            }'
+          
+          echo "✅ Test App Runner service created successfully"
+          echo "⏳ Service is starting up..."
         else
           echo "🚀 Deploying to existing App Runner service..."
           aws apprunner start-deployment --service-arn $SERVICE_ARN
