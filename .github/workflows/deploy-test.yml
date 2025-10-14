@@ -131,9 +131,18 @@ jobs:
           echo "✅ Test App Runner service created successfully"
           echo "⏳ Service is starting up..."
         else
-          echo "🚀 Deploying to existing App Runner service..."
-          aws apprunner start-deployment --service-arn $SERVICE_ARN
-          echo "✅ Backend deployed to App Runner"
+          echo "🔍 Checking service status..."
+          SERVICE_STATUS=$(aws apprunner describe-service --service-arn $SERVICE_ARN --query 'Service.Status' --output text)
+          echo "Service status: $SERVICE_STATUS"
+          
+          if [ "$SERVICE_STATUS" = "RUNNING" ]; then
+            echo "🚀 Deploying to existing App Runner service..."
+            aws apprunner start-deployment --service-arn $SERVICE_ARN
+            echo "✅ Backend deployed to App Runner"
+          else
+            echo "⏳ Service is not in RUNNING state ($SERVICE_STATUS). Skipping deployment."
+            echo "ℹ️  Service will be ready for deployment once it reaches RUNNING state."
+          fi
         fi
     
     - name: Run database migrations
