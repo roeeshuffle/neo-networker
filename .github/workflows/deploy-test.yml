@@ -59,7 +59,7 @@ jobs:
     
     - name: Build frontend
       env:
-        VITE_API_URL: https://ay4kujpkus.us-east-1.awsapprunner.com/api
+        VITE_API_URL: https://yh5nw949uc.us-east-1.awsapprunner.com/api
       run: |
         cd frontend
         npm run build
@@ -84,48 +84,52 @@ jobs:
           aws apprunner create-service \
             --service-name neo-networker-backend-test \
             --source-configuration '{
-              "ImageRepository": {
-                "ImageIdentifier": "'$ECR_REGISTRY'/'$ECR_REPOSITORY':test",
-                "ImageConfiguration": {
-                  "Port": "5002",
-                  "RuntimeEnvironmentVariables": {
-                    "DATABASE_URL": "postgresql://postgres:'${{ secrets.TEST_DB_PASSWORD }}'@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres",
-                    "ENVIRONMENT": "test",
-                    "FLASK_DEBUG": "True",
-                    "FRONTEND_URL": "https://d2fq8k5py78ii.cloudfront.net",
-                    "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-environment",
-                    "ADMIN_EMAIL": "roee2912@gmail.com",
-                    "GOOGLE_CLIENT_ID": "${{ secrets.GOOGLE_CLIENT_ID }}",
-                    "GOOGLE_CLIENT_SECRET": "${{ secrets.GOOGLE_CLIENT_SECRET }}",
-                    "GOOGLE_REDIRECT_URI": "https://d2fq8k5py78ii.cloudfront.net/auth/google/callback",
-                    "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
-                    "PORT": "5002",
-                    "SECRET_KEY": "test-secret-key-for-testing-environment",
-                    "TELEGRAM_BOT_TOKEN": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
-                    "WHATSAPP_ACCESS_TOKEN": "${{ secrets.WHATSAPP_ACCESS_TOKEN }}",
-                    "WHATSAPP_APP_ID": "${{ secrets.WHATSAPP_APP_ID }}",
-                    "WHATSAPP_APP_SECRET": "${{ secrets.WHATSAPP_APP_SECRET }}",
-                    "WHATSAPP_BUSINESS_ACCOUNT_ID": "${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}",
-                    "WHATSAPP_PHONE_NUMBER_ID": "${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}",
-                    "WHATSAPP_REFRESH_TOKEN": "${{ secrets.WHATSAPP_REFRESH_TOKEN }}",
-                    "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}"
-                  }
+              "CodeRepository": {
+                "RepositoryUrl": "https://github.com/roeeshuffle/neo-networker",
+                "SourceCodeVersion": {
+                  "Type": "BRANCH",
+                  "Value": "dev"
                 },
-                "ImageRepositoryType": "ECR"
+                "CodeConfiguration": {
+                  "ConfigurationSource": "API",
+                  "CodeConfigurationValues": {
+                    "Runtime": "PYTHON_3",
+                    "BuildCommand": "pip install -r backend/requirements.txt",
+                    "StartCommand": "python backend/app.py",
+                    "Port": "5002",
+                    "RuntimeEnvironmentVariables": {
+                      "DATABASE_URL": "postgresql://postgres:'${{ secrets.TEST_DB_PASSWORD }}'@neo-networker-db-test.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres",
+                      "ENVIRONMENT": "test",
+                      "FLASK_DEBUG": "True",
+                      "FRONTEND_URL": "https://d2fq8k5py78ii.cloudfront.net",
+                      "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-environment",
+                      "ADMIN_EMAIL": "roee2912@gmail.com",
+                      "GOOGLE_CLIENT_ID": "${{ secrets.GOOGLE_CLIENT_ID }}",
+                      "GOOGLE_CLIENT_SECRET": "${{ secrets.GOOGLE_CLIENT_SECRET }}",
+                      "GOOGLE_REDIRECT_URI": "https://d2fq8k5py78ii.cloudfront.net/auth/google/callback",
+                      "OPENAI_API_KEY": "${{ secrets.OPENAI_API_KEY }}",
+                      "PORT": "5002",
+                      "SECRET_KEY": "test-secret-key-for-testing-environment",
+                      "TELEGRAM_BOT_TOKEN": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
+                      "WHATSAPP_ACCESS_TOKEN": "${{ secrets.WHATSAPP_ACCESS_TOKEN }}",
+                      "WHATSAPP_APP_ID": "${{ secrets.WHATSAPP_APP_ID }}",
+                      "WHATSAPP_APP_SECRET": "${{ secrets.WHATSAPP_APP_SECRET }}",
+                      "WHATSAPP_BUSINESS_ACCOUNT_ID": "${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}",
+                      "WHATSAPP_PHONE_NUMBER_ID": "${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}",
+                      "WHATSAPP_REFRESH_TOKEN": "${{ secrets.WHATSAPP_REFRESH_TOKEN }}",
+                      "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}"
+                    }
+                  }
+                }
               },
-              "AutoDeploymentsEnabled": false
+              "AutoDeploymentsEnabled": false,
+              "AuthenticationConfiguration": {
+                "ConnectionArn": "arn:aws:apprunner:us-east-1:587842257084:connection/neo-networker-github/af81df6776b14fcaa53ada4c143541bc"
+              }
             }' \
             --instance-configuration '{
               "Cpu": "1024",
               "Memory": "2048"
-            }' \
-            --health-check-configuration '{
-              "Protocol": "TCP",
-              "Path": "/",
-              "Interval": 5,
-              "Timeout": 2,
-              "HealthyThreshold": 1,
-              "UnhealthyThreshold": 5
             }'
           
           echo "✅ Test App Runner service created successfully"
