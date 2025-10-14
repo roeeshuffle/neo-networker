@@ -3,7 +3,7 @@ import { apiClient } from '@/integrations/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users, Download } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight, Trash2, Merge, Calendar, Users, Download, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { GoogleSyncPreviewDialog } from './GoogleSyncPreviewDialog';
@@ -11,6 +11,7 @@ import DuplicateManager from './DuplicateManager';
 import CustomFieldsSettings from './CustomFieldsSettings';
 import TableColumnsSettings from './TableColumnsSettings';
 import { GroupSettings } from './GroupSettings';
+import { EmailForm } from './EmailForm';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -65,7 +66,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     calendar: false,
     customFields: false,
     tableColumns: false,
-    group: false
+    group: false,
+    email: false
   });
 
   // Loading state for initial data load
@@ -1517,6 +1519,34 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {expandedSections.group && (
           <CardContent>
             <GroupSettings />
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Email Management Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Management
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpandedSections(prev => ({ ...prev, email: !prev.email }))}
+              className="p-1 h-auto"
+            >
+              {expandedSections.email ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Send emails to your webapp users from alerts@weralist.com
+          </p>
+        </CardHeader>
+        {expandedSections.email && (
+          <CardContent>
+            <EmailForm onClose={() => setExpandedSections(prev => ({ ...prev, email: false }))} />
           </CardContent>
         )}
       </Card>
