@@ -72,7 +72,8 @@ jwt = JWTManager(app)
 CORS(app, origins=[
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://d2fq8k5py78ii.cloudfront.net',  # Production frontend
+    'https://d2fq8k5py78ii.cloudfront.net',  # Test frontend
+    'https://weralist.com',  # Production frontend
     'https://dkdrn34xpx.us-east-1.awsapprunner.com'  # Production backend
 ], supports_credentials=True, 
     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
