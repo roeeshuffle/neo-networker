@@ -59,7 +59,7 @@ jobs:
     
     - name: Build frontend
       env:
-        VITE_API_URL: https://fekwrpfyad.us-east-1.awsapprunner.com/api
+        VITE_API_URL: https://ay4kujpkus.us-east-1.awsapprunner.com/api
       run: |
         cd frontend
         npm run build
