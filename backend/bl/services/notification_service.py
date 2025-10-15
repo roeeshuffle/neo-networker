@@ -289,6 +289,40 @@ class NotificationService:
             logger.error(f"Error sending group invitation notification: {e}")
             return False
     
+    def send_contact_shared_notification(self, sharer_email: str, recipient_email: str, contact_list: str) -> bool:
+        """Send notification when contacts are shared"""
+        try:
+            subject = "Contacts Shared with You"
+            body = f"""
+Hello,
+
+{sharer_email} has shared the following contacts with you:
+
+{contact_list}
+
+You can view these contacts in your Alist dashboard.
+
+Best regards,
+Alist Team
+            """.strip()
+            
+            success = self.email_service.send_email(
+                to_email=recipient_email,
+                subject=subject,
+                body=body
+            )
+            
+            if success:
+                logger.info(f"Contact shared notification sent to {recipient_email}")
+            else:
+                logger.error(f"Failed to send contact shared notification to {recipient_email}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error sending contact shared notification: {e}")
+            return False
+    
     def check_and_send_event_reminders(self) -> int:
         """Check for events that need reminders and send them"""
         try:
@@ -341,3 +375,62 @@ class NotificationService:
 
 # Create global instance
 notification_service = NotificationService()
+
+# Module-level convenience functions
+def notify_contact_shared(sharer_email: str, recipient_email: str, contact_list: str) -> bool:
+    """Convenience function for contact shared notifications"""
+    return notification_service.send_contact_shared_notification(sharer_email, recipient_email, contact_list)
+
+def notify_event_participant(event_title: str, participant_email: str, event_datetime: str) -> bool:
+    """Convenience function for event participant notifications"""
+    try:
+        subject = "You've been added to an event"
+        body = f"""
+Hello,
+
+You've been added as a participant to the following event:
+
+Event: {event_title}
+Date/Time: {event_datetime}
+
+You can view this event in your Alist calendar.
+
+Best regards,
+Alist Team
+        """.strip()
+        
+        return notification_service.email_service.send_email(
+            to_email=participant_email,
+            subject=subject,
+            body=body
+        )
+    except Exception as e:
+        logger.error(f"Error sending event participant notification: {e}")
+        return False
+
+def notify_event_updated(event_title: str, participant_email: str, event_datetime: str) -> bool:
+    """Convenience function for event update notifications"""
+    try:
+        subject = "Event Updated"
+        body = f"""
+Hello,
+
+The following event has been updated:
+
+Event: {event_title}
+Date/Time: {event_datetime}
+
+Please check your Alist calendar for the latest details.
+
+Best regards,
+Alist Team
+        """.strip()
+        
+        return notification_service.email_service.send_email(
+            to_email=participant_email,
+            subject=subject,
+            body=body
+        )
+    except Exception as e:
+        logger.error(f"Error sending event update notification: {e}")
+        return False
