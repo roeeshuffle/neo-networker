@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,19 @@ const Auth = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { login, refreshUser, isAuthenticated } = useAuth();
+
+  // Get the intended destination from location state, default to dashboard
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   // Frontend version logging
   console.log("🚀 FRONTEND VERSION: 13.9 - GOOGLE AUTH SYNC FUNCTIONALITY");
@@ -91,7 +102,7 @@ const Auth = () => {
             description: "Successfully signed in with Google.",
           });
           
-          navigate("/dashboard");
+          navigate(from);
           setLoading(false);
         } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
           clearInterval(checkClosed);
@@ -135,7 +146,7 @@ const Auth = () => {
             title: "Welcome back!",
             description: "Successfully signed in.",
           });
-          navigate("/dashboard");
+          navigate(from);
         } else {
           console.log("Login failed");
           toast({
@@ -179,7 +190,7 @@ const Auth = () => {
               description: "Account created and approved successfully.",
               variant: "default",
             });
-            navigate("/dashboard");
+            navigate(from);
           }
         } else {
           toast({
