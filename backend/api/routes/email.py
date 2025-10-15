@@ -90,6 +90,11 @@ def test_email():
     try:
         current_user_email = get_jwt_identity()
         
+        # Check if email service is configured
+        if not email_service.sender_password:
+            logger.warning("Email service not configured: GOOGLE_WORKSPACE_APP_PASSWORD not set")
+            return jsonify({'error': 'Email service not configured. Please add GOOGLE_WORKSPACE_APP_PASSWORD environment variable.'}), 400
+        
         # Send test email to current user
         success = email_service.send_notification_email(
             user_email=current_user_email,
@@ -102,7 +107,7 @@ def test_email():
             return jsonify({'message': 'Test email sent successfully'}), 200
         else:
             logger.error(f"Failed to send test email to {current_user_email}")
-            return jsonify({'error': 'Failed to send test email'}), 500
+            return jsonify({'error': 'Failed to send test email. Check email service configuration.'}), 500
             
     except Exception as e:
         logger.error(f"Error sending test email: {str(e)}")
