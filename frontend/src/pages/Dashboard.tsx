@@ -313,7 +313,7 @@ const Dashboard = () => {
   };
 
   const handleLogout = async () => {
-    await apiClient.logout();
+    logout(); // Clear authentication state
     navigate("/auth");
   };
 

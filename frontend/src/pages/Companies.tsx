@@ -12,6 +12,7 @@ import { EditableCompanyModal } from "@/components/EditableCompanyModal";
 import { LogOut, Plus, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompaniesPanel } from "@/components/CompaniesPanel";
+import { useAuth } from "@/hooks/useAuth";
 import alistLogo from "@/assets/alist-logo-final.svg";
 
 export interface Company {
@@ -43,6 +44,7 @@ const Companies = () => {
   const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { logout } = useAuth();
 
   useEffect(() => {
     // Set up auth state listener
@@ -84,7 +86,7 @@ const Companies = () => {
       if (error) throw error;
 
       if (!profile?.is_approved) {
-        await apiClient.logout();
+        logout(); // Clear authentication state
         navigate("/auth");
         toast({
           title: "Account Not Approved",
@@ -94,7 +96,7 @@ const Companies = () => {
       }
     } catch (error: any) {
       console.error('Error checking user approval:', error);
-      await apiClient.auth.signOut();
+      logout(); // Clear authentication state
       navigate("/auth");
     }
   };
