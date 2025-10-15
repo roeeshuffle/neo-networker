@@ -387,6 +387,11 @@ def delete_user(user_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Start the scheduler service for event reminders
+        from bl.services.scheduler_service import scheduler_service
+        scheduler_service.start_scheduler()
+        print("🚀 Event reminder scheduler started")
     
     # Production vs Development
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'

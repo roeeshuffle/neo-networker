@@ -4,6 +4,7 @@ from dal.database import db
 from dal.models.user_group import UserGroup
 from dal.models.user import User
 from datetime import datetime
+from bl.services.notification_service import notification_service
 import re
 
 user_group_bp = Blueprint('user_group', __name__)
@@ -169,6 +170,14 @@ def add_user_to_group():
             from sqlalchemy.orm.attributes import flag_modified
             flag_modified(current_user, 'user_preferences')
             db.session.commit()
+            
+            # Send email notification to the added user
+            group_name = f"{current_user.full_name or current_user.email}'s Group"
+            notification_service.send_group_invitation_notification(
+                group_name=group_name,
+                inviter_email=current_user.email,
+                invitee_email=email
+            )
             
             print(f"✅ ADD USER DEBUG: Successfully added user {email}")
             print(f"✅ ADD USER DEBUG: New member data: {new_member}")
