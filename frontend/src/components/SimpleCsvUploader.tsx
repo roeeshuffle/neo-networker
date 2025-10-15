@@ -43,7 +43,7 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
   useEffect(() => {
     const fetchCustomFields = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
         const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
         
         if (!token) return;
@@ -94,7 +94,7 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const response = await fetch(`${apiUrl}/csv/get-columns`, {
         method: 'POST',
         headers: {
@@ -168,7 +168,7 @@ const SimpleCsvUploader: React.FC<SimpleCsvUploaderProps> = ({
       formData.append('file', file);
       formData.append('mapping', JSON.stringify(mapping));
 
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const response = await fetch(`${apiUrl}/csv/import-with-mapping`, {
         method: 'POST',
         headers: {

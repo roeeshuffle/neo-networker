@@ -302,7 +302,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setContactsLoading(true);
       setPreviewType('contacts');
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google/preview-contacts`, {
         method: 'POST',
         headers: {
@@ -340,7 +340,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setCalendarLoading(true);
       setPreviewType('calendar');
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google/preview-calendar`, {
         method: 'POST',
         headers: {
@@ -378,8 +378,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       setPreviewLoading(true);
       
       const endpoint = previewType === 'contacts' 
-        ? `${import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api"}/auth/google/sync-selected-contacts`
-        : `${import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api"}/auth/google/sync-selected-calendar`;
+        ? `${import.meta.env.VITE_API_URL || "http://localhost:5002/api"}/auth/google/sync-selected-contacts`
+        : `${import.meta.env.VITE_API_URL || "http://localhost:5002/api"}/auth/google/sync-selected-calendar`;
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -435,7 +435,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const checkGoogleStatus = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google/status`, {
         method: 'GET',
         headers: {
@@ -469,7 +469,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setGoogleLoading(true);
     try {
       // Get Google OAuth authorization URL
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google`, {
         method: 'GET',
         headers: {
@@ -554,7 +554,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const disconnectGoogle = async () => {
     setGoogleLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google/revoke`, {
         method: 'POST',
         headers: {
@@ -590,7 +590,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const syncGoogleContacts = async () => {
     setGoogleLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
       const response = await fetch(`${apiUrl}/auth/google/sync-contacts`, {
         method: 'POST',
         headers: {

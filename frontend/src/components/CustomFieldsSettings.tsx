@@ -27,7 +27,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
       console.log('🔍 CUSTOM FIELDS: Starting fetchCustomFields');
       setIsLoading(true);
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
       console.log('🔍 CUSTOM FIELDS: API URL:', apiUrl);
@@ -97,7 +97,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
 
     try {
       setIsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
       if (!token) {
@@ -154,7 +154,7 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
 
     try {
       setIsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
       if (!token) {

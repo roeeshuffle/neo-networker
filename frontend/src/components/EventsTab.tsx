@@ -150,7 +150,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
   useEffect(() => {
     const loadCalendarSettings = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
         const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
         
         if (!token) return;

@@ -273,7 +273,7 @@ export const SimpleColumnViewer = ({ onDataLoaded }: SimpleColumnViewerProps) =>
       failed: [] as Array<{ row: number; error: string; data: any }>
     };
     
-    const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     
     console.log(`🔍 CSV IMPORT DEBUG: API URL: ${apiUrl}`);

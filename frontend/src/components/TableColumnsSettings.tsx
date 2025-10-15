@@ -91,7 +91,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
             
             // Still try to fetch custom fields from backend
             try {
-              const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+              const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
               const customFieldsResponse = await fetch(`${apiUrl}/custom-fields`, {
                 headers: {
                   'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
@@ -136,7 +136,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       console.log('📡 No localStorage data, trying backend...');
       
       // Fetch custom fields
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const customFieldsResponse = await fetch(`${apiUrl}/custom-fields`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('token')}`
@@ -236,7 +236,7 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
   const saveSettings = async () => {
     setIsSaving(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       
       // Prepare the columns data to save
       const columnsToSave = columns.map(col => ({

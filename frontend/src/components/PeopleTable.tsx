@@ -275,7 +275,7 @@ export const PeopleTable = ({ people, onDelete, onView, onShare, onRefresh }: Pe
 
         // If no localStorage data, try backend
         
-        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
         
         // Try to fetch from backend first
         try {

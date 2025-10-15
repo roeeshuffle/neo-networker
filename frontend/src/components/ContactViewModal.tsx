@@ -136,7 +136,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
       console.log('🔍 CONTACT MODAL: Starting loadUserCustomFields');
       
       // Always try backend first to get the latest data
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       
       console.log('🔍 CONTACT MODAL: API URL:', apiUrl);
@@ -237,7 +237,7 @@ const ContactViewModal: React.FC<ContactViewModalProps> = ({
     try {
       // Create field definition in user settings
       
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       const response = await fetch(`${apiUrl}/custom-fields`, {
         method: 'POST',
         headers: {

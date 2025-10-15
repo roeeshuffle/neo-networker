@@ -63,7 +63,7 @@ const GoogleCallback = () => {
         }
 
         // Send the code to the backend for processing
-        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
         const response = await fetch(`${apiUrl}/auth/google/callback?code=${code}&state=${state}`, {
           method: 'GET',
           headers: {

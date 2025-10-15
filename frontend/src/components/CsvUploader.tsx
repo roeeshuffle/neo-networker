@@ -114,7 +114,7 @@ export const CsvUploader = ({ onDataLoaded }: CsvUploaderProps) => {
       formData.append('custom_mapping', JSON.stringify({}));
 
       console.log('🔍 CSV UPLOAD DEBUG: FormData created');
-      const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002";
       console.log('🔍 CSV UPLOAD DEBUG: API URL:', `${apiUrl}/api/csv/preview`);
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
       console.log('🔍 CSV UPLOAD DEBUG: Token exists:', !!token);
