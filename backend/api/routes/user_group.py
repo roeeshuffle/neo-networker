@@ -101,6 +101,7 @@ def add_user_to_group():
                 'message': 'Cannot add yourself to your group'
             }), 400
         
+        # Always require approval - don't add directly to group
         # Check if target user exists in the system
         target_user = User.query.filter_by(email=email).first()
         
@@ -141,50 +142,42 @@ def add_user_to_group():
                 'message': f'Invitation sent to {email}. They will need to approve it.'
             }), 201
         else:
-            # User doesn't exist - add directly to group (no approval needed)
+            # User doesn't exist - still send invitation (they'll need to register first)
+            # Store invitation in current user's preferences for non-existent users
             user_preferences = current_user.user_preferences or {}
-            group_members = user_preferences.get('group_members', [])
+            pending_invitations = user_preferences.get('pending_invitations', [])
             
-            # Check if user already exists in group
-            if any(member.get('email') == email for member in group_members):
+            # Check if already sent invitation to this email
+            if any(inv.get('email') == email for inv in pending_invitations):
                 return jsonify({
                     'success': False,
-                    'message': 'User already in your group'
+                    'message': 'Invitation already sent to this email'
                 }), 400
             
-            # Create new group member object
-            new_member = {
-                'id': f"{current_user_id}_{email}_{len(group_members)}",
+            # Create invitation for non-existent user
+            invitation_request = {
+                'id': f"{current_user_id}_{email}_{len(pending_invitations)}",
                 'email': email,
-                'full_name': name or email,
-                'added_at': datetime.utcnow().isoformat(),
-                'status': 'approved'
+                'name': name or email,
+                'requested_at': datetime.utcnow().isoformat(),
+                'status': 'pending',
+                'user_exists': False
             }
             
-            # Add to group members
-            group_members.append(new_member)
-            user_preferences['group_members'] = group_members
+            pending_invitations.append(invitation_request)
+            user_preferences['pending_invitations'] = pending_invitations
             
-            # Update user preferences
+            # Update current user preferences
             current_user.user_preferences = user_preferences
             from sqlalchemy.orm.attributes import flag_modified
             flag_modified(current_user, 'user_preferences')
             db.session.commit()
             
-            # Send email notification to the added user
-            group_name = f"{current_user.full_name or current_user.email}'s Group"
-            notification_service.send_group_invitation_notification(
-                group_name=group_name,
-                inviter_email=current_user.email,
-                invitee_email=email
-            )
-            
-            print(f"✅ ADD USER DEBUG: Successfully added user {email}")
-            print(f"✅ ADD USER DEBUG: New member data: {new_member}")
+            print(f"✅ INVITATION SENT: Sent invitation to non-existent user {email}")
             return jsonify({
                 'success': True,
-                'data': new_member,
-                'message': 'User added to group successfully'
+                'data': invitation_request,
+                'message': f'Invitation sent to {email}. They will need to register and approve it.'
             }), 201
         
     except Exception as e:
