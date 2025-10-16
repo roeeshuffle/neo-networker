@@ -280,6 +280,22 @@ class NotificationService:
             
             if success:
                 logger.info(f"Group invitation notification sent to {invitee_email} for group '{group_name}'")
+                
+                # Create database notification
+                try:
+                    notification = Notification(
+                        user_email=invitee_email,
+                        notification=f"You've been added to group: {group_name}",
+                        notification_type='group_invitation',
+                        is_read=False,
+                        seen=False
+                    )
+                    db.session.add(notification)
+                    db.session.commit()
+                    logger.info(f"Database notification created for {invitee_email}")
+                except Exception as db_error:
+                    logger.error(f"Failed to create database notification: {db_error}")
+                    db.session.rollback()
             else:
                 logger.error(f"Failed to send group invitation notification to {invitee_email}")
             
