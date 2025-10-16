@@ -26,13 +26,10 @@ def get_events():
         end_date = request.args.get('end_date')
         project = request.args.get('project')
         
-        # Build query - show events where user is owner OR participant
-        from sqlalchemy import text
+        # Build query - for now, just show events owned by user
+        # TODO: Add participant support when we have proper JSONB columns
         query = Event.query.filter(
-            or_(
-                Event.owner_id == current_user_id,
-                text("participants @> :email").params(email=f'[{{"email": "{current_user.email}"}}]')
-            ),
+            Event.owner_id == current_user_id,
             Event.is_active == True
         )
         

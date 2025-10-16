@@ -116,14 +116,9 @@ def get_tasks():
         print(f"📋 GET /tasks - project: {project}, status: {status}, include_scheduled: {include_scheduled}")
         print(f"🔍 USER DEBUG: Current user ID: {current_user_id}, Email: {current_user.email}")
         
-        # Build query - include tasks owned by user OR where user is a participant
-        from sqlalchemy import or_, text
-        query = Task.query.filter(
-            or_(
-                Task.owner_id == current_user_id,
-                text("participants @> :email").params(email=f'["{current_user.email}"]')
-            )
-        )
+        # Build query - for now, just show tasks owned by user
+        # TODO: Add participant support when we have proper JSONB columns
+        query = Task.query.filter(Task.owner_id == current_user_id)
         
         # Handle missing columns gracefully
         if project:
