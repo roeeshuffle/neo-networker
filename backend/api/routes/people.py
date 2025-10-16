@@ -415,11 +415,12 @@ def share_contacts():
                     ).first()
                 else:
                     # For contacts without email, use first_name + last_name as unique identifier
+                    # Check for contacts with NULL email (not empty string)
                     existing_contact = Person.query.filter(
                         Person.owner_id == target_user.id,
                         Person.first_name == contact.first_name,
                         Person.last_name == contact.last_name,
-                        Person.email == contact.email  # Also check email is empty
+                        Person.email.is_(None)  # Check for NULL email
                     ).first()
                 
                 if existing_contact:
@@ -430,11 +431,14 @@ def share_contacts():
                     people_logger.info(f"Updated existing contact: {contact.first_name} {contact.last_name}")
                 else:
                     # Create new contact for target user
+                    # Handle empty email by setting to None to avoid unique constraint issues
+                    contact_email = contact.email if contact.email and contact.email.strip() else None
+                    
                     new_contact = Person(
                         owner_id=target_user.id,
                         first_name=contact.first_name,
                         last_name=contact.last_name,
-                        email=contact.email,
+                        email=contact_email,
                         phone=contact.phone,
                         organization=contact.organization,
                         job_title=contact.job_title,
