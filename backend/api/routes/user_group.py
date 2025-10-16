@@ -135,6 +135,23 @@ def add_user_to_group():
             flag_modified(target_user, 'user_preferences')
             db.session.commit()
             
+            # Create notification for the invited user
+            try:
+                from dal.models.notification import Notification
+                notification = Notification(
+                    user_email=email,
+                    notification=f"You've been invited to join {current_user.full_name or current_user.email}'s group",
+                    notification_type='group_invitation',
+                    is_read=False,
+                    seen=False
+                )
+                db.session.add(notification)
+                db.session.commit()
+                print(f"✅ NOTIFICATION CREATED: Notification created for {email}")
+            except Exception as notif_error:
+                print(f"❌ NOTIFICATION ERROR: Failed to create notification: {notif_error}")
+                db.session.rollback()
+            
             print(f"✅ INVITATION SENT: Sent invitation to {email}")
             return jsonify({
                 'success': True,
