@@ -223,9 +223,53 @@ class ApiClient {
     return this.request('/events/upcoming');
   }
 
-  // Telegram methods
-  async getTelegramStatus() {
-    return this.request('/telegram/status');
+  // User Preferences methods
+  async getUserPreferences() {
+    return this.request('/user-preferences');
+  }
+
+  async updateUserPreferences(preferences: any) {
+    return this.request('/user-preferences', {
+      method: 'POST',
+      body: JSON.stringify(preferences)
+    });
+  }
+
+  async getSpecificPreference(preferenceName: string) {
+    return this.request(`/user-preferences/${preferenceName}`);
+  }
+
+  async updateSpecificPreference(preferenceName: string, value: any) {
+    return this.request(`/user-preferences/${preferenceName}`, {
+      method: 'POST',
+      body: JSON.stringify({ value })
+    });
+  }
+
+  async connectGoogle() {
+    return this.request('/auth/google');
+  }
+
+  async disconnectGoogle() {
+    return this.request('/auth/google/clear', {
+      method: 'POST'
+    });
+  }
+
+  async syncGoogleContacts() {
+    return this.request('/auth/google/contacts');
+  }
+
+  async syncGoogleCalendar() {
+    return this.request('/auth/google/calendar');
+  }
+
+  async previewGoogleContacts() {
+    return this.request('/auth/google/contacts?preview=true');
+  }
+
+  async previewGoogleCalendar() {
+    return this.request('/auth/google/calendar?preview=true');
   }
 
   async connectTelegram(telegramId: string) {

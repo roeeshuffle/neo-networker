@@ -322,7 +322,7 @@ export const CompanyDuplicateManager = ({ onDuplicatesRemoved }: CompanyDuplicat
           </DialogHeader>
           <div className="space-y-4">
             {selectedDuplicate?.companies.map((company, index) => (
-              <Card key={company.id} className="border-2">
+              <Card key={company.id} className="nested-card border-2">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base">
                     Record {index + 1}

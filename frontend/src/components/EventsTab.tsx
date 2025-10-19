@@ -506,7 +506,36 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
     
     setSelectedDate(date);
     setSelectedDateEvents(eventsForDate);
-    setIsEventDetailsOpen(true);
+    
+    // If no events, open add event dialog instead
+    if (eventsForDate.length === 0) {
+      // Set the form data with the clicked date and default values
+      const startDate = new Date(date);
+      startDate.setHours(9, 0, 0, 0); // Default to 9:00 AM
+      const endDate = new Date(date);
+      endDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
+      
+      setFormData({
+        title: '',
+        description: '',
+        start_datetime: startDate.toISOString().slice(0, 16), // Format for datetime-local input
+        end_datetime: endDate.toISOString().slice(0, 16),
+        location: '',
+        event_type: 'event',
+        project: '',
+        participants: [],
+        alert_minutes: 15,
+        repeat_pattern: 'none',
+        repeat_interval: 1,
+        repeat_days: [],
+        repeat_end_date: '',
+        notes: ''
+      });
+      
+      setIsAddDialogOpen(true);
+    } else {
+      setIsEventDetailsOpen(true);
+    }
   };
 
   const handleDateRightClick = (date: Date, event: React.MouseEvent) => {
@@ -632,19 +661,19 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       {console.log('Current viewMode:', viewMode)}
       {viewMode === 'daily' && (
         <div className="space-y-4 min-h-[600px]">
-          <Card className={`border-2 border-gray-300 dark:border-gray-600 ${isToday(currentDay) ? 'ring-2 ring-primary' : ''}`}>
+          <Card 
+            className={`border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-muted/20 transition-colors ${isToday(currentDay) ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => handleDateClick(currentDay)}
+            onContextMenu={(e) => handleDateRightClick(currentDay, e)}
+          >
             <CardHeader>
               <CardTitle className={`text-lg ${isToday(currentDay) ? 'text-primary font-bold' : ''}`}>
                 {format(currentDay, 'EEEE, MMMM d, yyyy')}
               </CardTitle>
             </CardHeader>
-            <CardContent 
-              className="space-y-3 cursor-pointer hover:bg-muted/20 transition-colors"
-              onClick={() => handleDateClick(currentDay)}
-              onContextMenu={(e) => handleDateRightClick(currentDay, e)}
-            >
+            <CardContent className="space-y-3">
               {events.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No events scheduled for this day. Right-click to add an event.</p>
+                <p className="text-muted-foreground text-center py-8">No events scheduled for this day. Click to add an event.</p>
               ) : (
                 events.map((event) => (
                   <div
@@ -707,7 +736,12 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
           {weekDates.map((date, index) => {
             const dayEvents = getEventsForDate(date);
             return (
-              <Card key={index} className={`min-h-[400px] border-2 border-gray-300 dark:border-gray-600 ${isToday(date) ? 'ring-2 ring-primary' : ''}`}>
+              <Card 
+                key={index} 
+                className={`min-h-[400px] border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-muted/20 transition-colors ${isToday(date) ? 'ring-2 ring-primary' : ''}`}
+                onClick={() => handleDateClick(date)}
+                onContextMenu={(e) => handleDateRightClick(date, e)}
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className={`text-sm ${isToday(date) ? 'text-primary font-bold' : ''}`}>
                     {weekDays[index]}
@@ -716,11 +750,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                     {format(date, 'MMM d')}
                   </div>
                 </CardHeader>
-                <CardContent 
-                  className="space-y-2 cursor-pointer hover:bg-muted/20 transition-colors"
-                  onClick={() => handleDateClick(date)}
-                  onContextMenu={(e) => handleDateRightClick(date, e)}
-                >
+                <CardContent className="space-y-2">
                   {dayEvents.map((event) => (
                     <div
                       key={event.id}
@@ -1279,9 +1309,44 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
       <Dialog open={isEventDetailsOpen} onOpenChange={setIsEventDetailsOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>
-              Events for {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : ''}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>
+                Events for {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : ''}
+              </DialogTitle>
+              <Button
+                onClick={() => {
+                  // Set the form data with the selected date and default values
+                  const startDate = new Date(selectedDate!);
+                  startDate.setHours(9, 0, 0, 0); // Default to 9:00 AM
+                  const endDate = new Date(selectedDate!);
+                  endDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
+                  
+                  setFormData({
+                    title: '',
+                    description: '',
+                    start_datetime: startDate.toISOString().slice(0, 16), // Format for datetime-local input
+                    end_datetime: endDate.toISOString().slice(0, 16),
+                    location: '',
+                    event_type: 'event',
+                    project: '',
+                    participants: [],
+                    alert_minutes: 15,
+                    repeat_pattern: 'none',
+                    repeat_interval: 1,
+                    repeat_days: [],
+                    repeat_end_date: '',
+                    notes: ''
+                  });
+                  
+                  setIsAddDialogOpen(true);
+                  setIsEventDetailsOpen(false);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Event
+              </Button>
+            </div>
           </DialogHeader>
           
           <div className="flex-1 overflow-hidden flex flex-col">
@@ -1290,7 +1355,7 @@ const EventsTab: React.FC<EventsTabProps> = ({ onEventsChange, searchQuery }) =>
                 <div className="text-center">
                   <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p className="text-lg">No events scheduled for this date</p>
-                  <p className="text-sm">Right-click on any date to add a new event</p>
+                  <p className="text-sm">Click "Add Event" button above to create a new event</p>
                 </div>
               </div>
             ) : (

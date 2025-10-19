@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Check, Star, Zap, Building2, Crown } from 'lucide-react';
+import { Check, Star, Zap, Building2, Crown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiClient } from '@/integrations/api/client';
 import { toast } from 'sonner';
+import { PluginsSettings } from '@/components/settings/PluginsSettings';
 
 interface PlanDetails {
   name: string;
@@ -140,6 +141,7 @@ const SubscriptionManagement: React.FC = () => {
     }
   };
 
+
   const getPlanIcon = (planName: string) => {
     switch (planName) {
       case 'Free':
@@ -196,23 +198,11 @@ const SubscriptionManagement: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-background-soft flex flex-col">
-      <div className="container mx-auto px-4 py-8 max-w-6xl flex-grow overflow-auto">
-        <div className="mb-6">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Button>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Subscription Management</h1>
-          <p className="text-gray-600">Choose the plan that best fits your needs</p>
-        </div>
+    <div className="px-12 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Subscription Management</h1>
+        <p className="text-gray-600">Choose the plan that best fits your needs</p>
+      </div>
 
 
       {/* Plans Grid */}
@@ -224,7 +214,7 @@ const SubscriptionManagement: React.FC = () => {
         }).map(([planName, planDetails]) => (
           <Card 
             key={planName} 
-            className={`relative ${getPlanColor(planName)} ${
+            className={`relative flex flex-col h-full ${getPlanColor(planName)} ${
               currentPlan === planName ? 'ring-2 ring-blue-500' : ''
             }`}
           >
@@ -236,8 +226,8 @@ const SubscriptionManagement: React.FC = () => {
               <CardTitle className="text-xl">{planName}</CardTitle>
             </CardHeader>
             
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="flex flex-col h-full p-6">
+              <div className="space-y-2 flex-grow">
                 <h4 className="font-semibold text-sm">Features:</h4>
                 <ul className="space-y-1 text-sm">
                   {planDetails.features.map((feature, index) => (
@@ -249,7 +239,8 @@ const SubscriptionManagement: React.FC = () => {
                 </ul>
               </div>
               
-              <div className="pt-4">
+              {/* Button positioned at bottom with padding */}
+              <div className="mt-6 pt-4">
                 <Button
                   onClick={() => currentPlan === planName ? handleManageBilling() : handleSubscribe(planName)}
                   disabled={true}
@@ -268,6 +259,12 @@ const SubscriptionManagement: React.FC = () => {
         ))}
       </div>
 
+      {/* Plugins Section */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-6">Available Plugins</h2>
+        <PluginsSettings />
+      </div>
+
       {/* Additional Information */}
       <Card className="mt-8">
         <CardHeader>
@@ -281,26 +278,6 @@ const SubscriptionManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      </div>
-
-      {/* Footer with legal links */}
-      <footer className="border-t border-border bg-muted/30 py-6">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center items-center">
-            <div className="text-sm text-muted-foreground">
-              © 2025 Alist. All rights reserved.
-            </div>
-            <div className="flex space-x-6 text-sm ml-8">
-              <Link to="/terms-of-service" className="text-muted-foreground hover:text-foreground transition-colors">
-                Terms of Service
-              </Link>
-              <Link to="/privacy-policy" className="text-muted-foreground hover:text-foreground transition-colors">
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

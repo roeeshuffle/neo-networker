@@ -68,9 +68,15 @@ def create_person():
         # Clean gender field - must be valid or None
         gender = clean_constrained_field(data.get('gender'), ['male', 'female', 'other'])
         
+        # Clean email field - convert empty strings to None to avoid unique constraint violations
+        email = data.get('email')
+        if email and email.strip() == '':
+            email = None
+        
         # Add logging for debugging
         print(f"📝 Creating person: {data.get('first_name', 'Unknown')} {data.get('last_name', '')}")
         print(f"🔍 Gender field: '{data.get('gender')}' -> '{gender}'")
+        print(f"🔍 Email field: '{data.get('email')}' -> '{email}'")
         
         person = Person(
                 first_name=data.get('first_name'),
@@ -80,7 +86,7 @@ def create_person():
                 organization=data.get('organization'),
                 job_title=data.get('job_title'),
                 job_status=clean_constrained_field(data.get('job_status'), ['employed', 'unemployed', 'student', 'retired', 'other']),
-                email=data.get('email'),
+                email=email,
                 phone=data.get('phone'),
                 mobile=data.get('mobile'),
                 address=data.get('address'),
@@ -150,6 +156,12 @@ def update_person(person_id):
             data['status'] = clean_constrained_field(data.get('status'), ['active', 'inactive', 'prospect', 'client', 'partner']) or 'active'
         if 'priority' in data:
             data['priority'] = clean_constrained_field(data.get('priority'), ['low', 'medium', 'high']) or 'medium'
+        
+        # Clean email field - convert empty strings to None to avoid unique constraint violations
+        if 'email' in data:
+            email = data.get('email')
+            if email and email.strip() == '':
+                data['email'] = None
 
         # Update fields dynamically
         person.first_name = data.get('first_name', person.first_name)

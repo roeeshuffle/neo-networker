@@ -9,9 +9,10 @@ import { toast } from '@/hooks/use-toast';
 interface CustomFieldsSettingsProps {
   isOpen: boolean;
   onClose?: () => void;
+  onUpdate?: () => void;
 }
 
-const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onClose }) => {
+const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onClose, onUpdate }) => {
   const [customFields, setCustomFields] = useState<string[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -131,6 +132,11 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         
         setCustomFields(updatedFields);
         setNewFieldName('');
+        
+        // Notify parent component that fields have been updated
+        if (onUpdate) {
+          onUpdate();
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to create custom field');
@@ -187,6 +193,11 @@ const CustomFieldsSettings: React.FC<CustomFieldsSettingsProps> = ({ isOpen, onC
         });
         
         setCustomFields(updatedFields);
+        
+        // Notify parent component that fields have been updated
+        if (onUpdate) {
+          onUpdate();
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to delete custom field');

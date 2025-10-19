@@ -8,16 +8,17 @@ import { ArrowUp, ArrowDown, Save, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface CustomField {
-  id: number;
+  id?: number;
   name: string;
-  key: string;
-  type: string;
-  options: string[];
+  key?: string;
+  type?: string;
+  options?: string[];
 }
 
 interface TableColumnsSettingsProps {
   isOpen: boolean;
   onClose: () => void;
+  refreshTrigger?: number;
 }
 
 interface ColumnConfig {
@@ -27,7 +28,7 @@ interface ColumnConfig {
   order: number;
 }
 
-const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onClose }) => {
+const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onClose, refreshTrigger }) => {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +62,12 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
       fetchData();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      fetchData();
+    }
+  }, [refreshTrigger]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -105,17 +112,20 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
                 
                 // Add custom fields to columns if they're not already there
                 const updatedColumns = [...mergedColumns];
-                customFieldsData.custom_fields?.forEach((field: CustomField) => {
-                  const customColKey = `custom_${field.key}`;
+                customFieldsData.custom_fields?.forEach((field: string | CustomField) => {
+                  // Handle both string format and object format
+                  const fieldName = typeof field === 'string' ? field : field.name;
+                  const fieldKey = typeof field === 'string' ? field : (field.key || field.name);
+                  const customColKey = `custom_${fieldKey}`;
                   const existingIndex = updatedColumns.findIndex(col => col.key === customColKey);
                   if (existingIndex === -1) {
                     updatedColumns.push({
                       key: customColKey,
-                      label: field.name,
+                      label: fieldName,
                       enabled: false,
                       order: updatedColumns.length + 1
                     });
-                    console.log('➕ Added custom field to columns:', field.name);
+                    console.log('➕ Added custom field to columns:', fieldName);
                   }
                 });
                 
@@ -174,13 +184,16 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
             });
             
             // Add custom fields
-            customFieldsData.custom_fields?.forEach((field: CustomField) => {
-              const customColKey = `custom_${field.key}`;
+            customFieldsData.custom_fields?.forEach((field: string | CustomField) => {
+              // Handle both string format and object format
+              const fieldName = typeof field === 'string' ? field : field.name;
+              const fieldKey = typeof field === 'string' ? field : (field.key || field.name);
+              const customColKey = `custom_${fieldKey}`;
               const existingIndex = mergedColumns.findIndex(col => col.key === customColKey);
               if (existingIndex === -1) {
                 mergedColumns.push({
                   key: customColKey,
-                  label: field.name,
+                  label: fieldName,
                   enabled: false,
                   order: mergedColumns.length + 1
                 });
@@ -304,12 +317,9 @@ const TableColumnsSettings: React.FC<TableColumnsSettingsProps> = ({ isOpen, onC
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Contact Table Columns</CardTitle>
-        <CardDescription>
-          Choose which columns to display and their order in the contacts table
-        </CardDescription>
-      </CardHeader>
+        <CardHeader>
+          <CardTitle>Contact Table Columns</CardTitle>
+        </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
           <div className="text-center py-4">Loading...</div>

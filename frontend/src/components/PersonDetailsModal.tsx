@@ -34,7 +34,7 @@ export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsMod
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Basic Information */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -116,7 +116,7 @@ export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsMod
           </Card>
 
           {/* Business Information */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />
@@ -147,7 +147,7 @@ export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsMod
 
           {/* Agenda */}
           {person.agenda && (
-            <Card>
+            <Card className="nested-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-4 w-4" />
@@ -162,7 +162,7 @@ export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsMod
 
           {/* Meeting Notes */}
           {person.meeting_notes && (
-            <Card>
+            <Card className="nested-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -177,7 +177,7 @@ export const PersonDetailsModal = ({ person, isOpen, onClose }: PersonDetailsMod
 
           {/* More Info */}
           {person.more_info && (
-            <Card className="md:col-span-2">
+            <Card className="nested-card md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />

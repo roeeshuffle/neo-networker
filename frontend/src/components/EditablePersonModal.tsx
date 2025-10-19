@@ -141,7 +141,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Basic Information */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -220,7 +220,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
           </Card>
 
           {/* Business Information */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />
@@ -235,7 +235,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
           </Card>
 
           {/* Agenda */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
@@ -248,7 +248,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
           </Card>
 
           {/* Meeting Notes */}
-          <Card>
+          <Card className="nested-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -261,7 +261,7 @@ export const EditablePersonModal = ({ person, isOpen, onClose, onSave }: Editabl
           </Card>
 
           {/* More Info */}
-          <Card className="md:col-span-2">
+          <Card className="nested-card md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />

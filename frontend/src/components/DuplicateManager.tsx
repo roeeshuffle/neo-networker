@@ -319,7 +319,7 @@ const DuplicateManager = ({ onDuplicatesRemoved }: DuplicateManagerProps) => {
           </DialogHeader>
           <div className="space-y-4">
             {selectedDuplicate?.records.map((record, index) => (
-              <Card key={record.id} className="border-2">
+              <Card key={record.id} className="nested-card border-2">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base">
                     Record {index + 1}

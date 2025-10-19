@@ -54,13 +54,14 @@ export function GoogleSyncPreviewDialog({
   
   // Initialize all non-duplicate items as selected by default
   React.useEffect(() => {
+    if (!previewData || !Array.isArray(previewData)) return;
     const newItems = previewData.filter(item => !item.is_duplicate);
     const defaultSelected = new Set(newItems.map((_, index) => index));
     setSelectedItems(defaultSelected);
   }, [previewData]);
   
-  const newItems = previewData.filter(item => !item.is_duplicate);
-  const duplicateItems = previewData.filter(item => item.is_duplicate);
+  const newItems = previewData?.filter(item => !item.is_duplicate) || [];
+  const duplicateItems = previewData?.filter(item => item.is_duplicate) || [];
   
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -223,7 +224,7 @@ export function GoogleSyncPreviewDialog({
               <div className="text-sm text-muted-foreground">Duplicates</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{previewData.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{previewData?.length || 0}</div>
               <div className="text-sm text-muted-foreground">Total Items</div>
             </div>
             <div className="text-center">
