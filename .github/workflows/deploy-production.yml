@@ -97,8 +97,9 @@ jobs:
       run: |
         echo "⚠️  Production database migrations should be run manually for safety"
         echo "📋 Run these commands on your production database:"
-        echo "  psql -h neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com -U postgres -d postgres -f production_migration.sql"
-        echo "  psql -h neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com -U postgres -d postgres -f google_scopes_migration.sql"
+        echo "  cd backend/dal"
+        echo "  export DATABASE_URL='postgresql://postgres:PASSWORD@neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres'"
+        echo "  alembic upgrade head"
         echo ""
         echo "🔧 Or use the manual migration script:"
         echo "  ./deploy.sh prod migrations"

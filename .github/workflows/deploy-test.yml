@@ -154,13 +154,15 @@ jobs:
         # Get RDS endpoint
         RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier neo-networker-db-test --query 'DBInstances[0].Endpoint.Address' --output text)
         
-        # Install PostgreSQL client
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
+        # Set database URL for Alembic
+        export DATABASE_URL="postgresql://postgres:${{ secrets.TEST_DB_PASSWORD }}@$RDS_ENDPOINT:5432/postgres"
         
-        # Run migrations
-        PGPASSWORD="${{ secrets.TEST_DB_PASSWORD }}" psql -h $RDS_ENDPOINT -U postgres -d postgres -f production_migration.sql
-        PGPASSWORD="${{ secrets.TEST_DB_PASSWORD }}" psql -h $RDS_ENDPOINT -U postgres -d postgres -f google_scopes_migration.sql
+        # Install Python dependencies
+        pip install -r backend/requirements.txt
+        
+        # Run Alembic migrations
+        cd backend/dal
+        alembic upgrade head
     
     - name: Run tests
       run: |

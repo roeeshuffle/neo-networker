@@ -111,15 +111,19 @@ run_migrations() {
         # Get test database endpoint
         RDS_ENDPOINT=$(aws rds describe-db-instances --db-instance-identifier ${DB_INSTANCE_ID} --query 'DBInstances[0].Endpoint.Address' --output text)
         
-        # Run migrations on test database
-        PGPASSWORD="TestPassword123!" psql -h ${RDS_ENDPOINT} -U postgres -d postgres -f production_migration.sql
-        PGPASSWORD="TestPassword123!" psql -h ${RDS_ENDPOINT} -U postgres -d postgres -f google_scopes_migration.sql
+        # Set database URL for Alembic
+        export DATABASE_URL="postgresql://postgres:TestPassword123!@${RDS_ENDPOINT}:5432/postgres"
+        
+        # Run Alembic migrations
+        cd backend/dal
+        alembic upgrade head
         
     elif [ "$ENVIRONMENT" = "prod" ]; then
         echo -e "${YELLOW}⚠️  Production migrations should be run manually for safety${NC}"
         echo -e "${BLUE}📋 Run these commands on your production database:${NC}"
-        echo "  psql -h neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com -U postgres -d postgres -f production_migration.sql"
-        echo "  psql -h neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com -U postgres -d postgres -f google_scopes_migration.sql"
+        echo "  cd backend/dal"
+        echo "  export DATABASE_URL='postgresql://postgres:PASSWORD@neo-networker-db-v2.c0d2k4qwgenr.us-east-1.rds.amazonaws.com:5432/postgres'"
+        echo "  alembic upgrade head"
     fi
     
     echo -e "${GREEN}✅ Database migrations completed for ${ENVIRONMENT}${NC}"
