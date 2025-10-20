@@ -42,7 +42,7 @@ const Auth = () => {
     
     try {
       // Get Google OAuth authorization URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002/api'}/auth/google`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://dkdrn34xpx.us-east-1.awsapprunner.com/api'}/auth/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,8 @@ const Auth = () => {
       // Listen for the popup to close or receive a message
       const checkClosed = setInterval(() => {
         try {
-          if (popup?.closed) {
+          // Use a try-catch to handle COOP policy errors
+          if (popup && popup.closed) {
             clearInterval(checkClosed);
             setLoading(false);
             // Check if user was authenticated by refreshing user data
@@ -75,10 +76,16 @@ const Auth = () => {
         } catch (error) {
           // Handle COOP policy errors gracefully
           console.warn('Popup check failed due to COOP policy:', error);
-          clearInterval(checkClosed);
-          setLoading(false);
+          // Don't clear the interval immediately, let the message listener handle it
         }
       }, 1000);
+
+      // Add a timeout to handle cases where popup doesn't send a message
+      const timeout = setTimeout(() => {
+        clearInterval(checkClosed);
+        setLoading(false);
+        console.warn('Google auth popup timeout');
+      }, 300000); // 5 minutes timeout
 
       // Listen for messages from the popup
       const messageListener = async (event: MessageEvent) => {
@@ -86,6 +93,7 @@ const Auth = () => {
         
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
           clearInterval(checkClosed);
+          clearTimeout(timeout);
           window.removeEventListener('message', messageListener);
           popup?.close();
           
@@ -106,6 +114,7 @@ const Auth = () => {
           setLoading(false);
         } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
           clearInterval(checkClosed);
+          clearTimeout(timeout);
           window.removeEventListener('message', messageListener);
           popup?.close();
           

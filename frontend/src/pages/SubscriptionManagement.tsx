@@ -261,7 +261,7 @@ const SubscriptionManagement: React.FC = () => {
 
       {/* Plugins Section */}
       <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-6">Available Plugins</h2>
+        <h2 className="text-2xl font-bold mb-6">Plugin</h2>
         <PluginsSettings />
       </div>
 

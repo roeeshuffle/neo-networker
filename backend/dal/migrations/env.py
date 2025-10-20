@@ -12,11 +12,11 @@ from alembic import context
 load_dotenv()
 
 # Add the backend directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Import models to get metadata
-from models import User, Person, Task, Event
-from app import db
+from dal.models import User, Person, Task, Event
+from dal.database import db
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -372,33 +372,35 @@ export const PluginsSettings: React.FC = () => {
                 {plugin.name}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col flex-grow space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {plugin.description}
-              </p>
-              
-              {/* Integration Logos */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Integrates with:</p>
-                <div className="flex flex-wrap gap-1">
-                  {plugin.integrations.map((integration, index) => (
-                    <div key={index} className="flex items-center gap-1 bg-muted/50 rounded px-2 py-1">
-                      {getIntegrationLogo(integration)}
-                      <span className="text-xs text-muted-foreground">{integration}</span>
-                    </div>
-                  ))}
+            <CardContent className="flex flex-col h-full">
+              <div className="flex-grow space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {plugin.description}
+                </p>
+                
+                {/* Integration Logos */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Integrates with:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {plugin.integrations.map((integration, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-muted/50 rounded px-2 py-1">
+                        {getIntegrationLogo(integration)}
+                        <span className="text-xs text-muted-foreground">{integration}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary">{plugin.category}</Badge>
+                  <span className="text-sm font-semibold text-green-600">
+                    {plugin.price}
+                  </span>
                 </div>
               </div>
               
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">{plugin.category}</Badge>
-                <span className="text-sm font-semibold text-green-600">
-                  {plugin.price}
-                </span>
-              </div>
-              
               {/* Button - positioned at bottom */}
-              <div className="mt-auto pt-3">
+              <div className="mt-4 pt-3 border-t border-border">
                 {plugin.id === 'basic' ? (
                   <Button
                     variant="default"
@@ -411,7 +413,6 @@ export const PluginsSettings: React.FC = () => {
                   </Button>
                 ) : (
                   <Button
-                    variant="outline"
                     size="sm"
                     className="w-full"
                     onClick={() => handleViewPlugin(plugin)}

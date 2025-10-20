@@ -63,7 +63,7 @@ const GoogleCallback = () => {
         }
 
         // Send the code to the backend for processing
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
         const response = await fetch(`${apiUrl}/auth/google/callback?code=${code}&state=${state}`, {
           method: 'GET',
           headers: {
@@ -79,12 +79,24 @@ const GoogleCallback = () => {
         const data = await response.json();
         
         // Send success message to parent window
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'GOOGLE_AUTH_SUCCESS',
-            user: data.user,
-            access_token: data.access_token
-          }, window.location.origin);
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'GOOGLE_AUTH_SUCCESS',
+              user: data.user,
+              access_token: data.access_token
+            }, window.location.origin);
+          }
+        } catch (error) {
+          console.warn('Failed to send message to parent window due to COOP policy:', error);
+          // Fallback: try to redirect the parent window
+          if (window.opener) {
+            try {
+              window.opener.location.href = '/';
+            } catch (e) {
+              console.warn('Cannot redirect parent window:', e);
+            }
+          }
         }
 
         setStatus('success');
@@ -99,11 +111,15 @@ const GoogleCallback = () => {
         console.error('Google callback error:', error);
         
         // Send error message to parent window
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'GOOGLE_AUTH_ERROR',
-            error: error.message
-          }, window.location.origin);
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({
+              type: 'GOOGLE_AUTH_ERROR',
+              error: error.message
+            }, window.location.origin);
+          }
+        } catch (postError) {
+          console.warn('Failed to send error message to parent window due to COOP policy:', postError);
         }
 
         setStatus('error');
