@@ -312,6 +312,10 @@ class ApiClient {
     return this.request('/auth/google');
   }
 
+  async getGoogleStatus() {
+    return this.request('/auth/google/status');
+  }
+
   async disconnectGoogle() {
     return this.request('/auth/google/clear', {
       method: 'POST'

@@ -18,6 +18,37 @@ except ValueError as e:
     logger.warning(f"Google Auth not configured: {str(e)}")
     google_auth_service = None
 
+@google_auth_bp.route('/auth/google/status', methods=['GET'])
+@jwt_required()
+def get_google_status():
+    """Get Google integration status for the current user"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Check if user has Google integration
+        has_google_token = bool(user.google_access_token)
+        google_connected = has_google_token
+        
+        # Get sync status
+        contacts_synced_at = user.google_contacts_synced_at.isoformat() if user.google_contacts_synced_at else None
+        calendar_synced_at = user.google_calendar_synced_at.isoformat() if user.google_calendar_synced_at else None
+        
+        return jsonify({
+            'connected': google_connected,
+            'has_token': has_google_token,
+            'contacts_synced_at': contacts_synced_at,
+            'calendar_synced_at': calendar_synced_at,
+            'google_email': user.google_email if hasattr(user, 'google_email') else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting Google status: {str(e)}")
+        return jsonify({'error': 'Failed to get Google status'}), 500
+
 @google_auth_bp.route('/auth/google', methods=['GET'])
 def google_auth_initiate():
     """Initiate Google OAuth flow"""
@@ -91,11 +122,20 @@ def google_auth_callback():
         # Create JWT token
         access_token = create_access_token(identity=user.id)
         
-        # Redirect to frontend with success and token
-        frontend_url = "https://d2fq8k5py78ii.cloudfront.net/auth/google/callback"
-        redirect_url = f"{frontend_url}?success=true&token={access_token}"
-        
-        return redirect(redirect_url)
+        # Return JSON response instead of redirect
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': str(user.id),
+                'email': user.email,
+                'full_name': user.full_name,
+                'is_approved': user.is_approved,
+                'google_email': user.google_email if hasattr(user, 'google_email') else None,
+                'created_at': user.created_at.isoformat(),
+                'updated_at': user.updated_at.isoformat()
+            },
+            'access_token': access_token
+        })
         
     except Exception as e:
         logger.error(f"Error in Google auth callback: {str(e)}")
