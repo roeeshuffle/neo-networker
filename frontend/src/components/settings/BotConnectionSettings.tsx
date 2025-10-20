@@ -138,9 +138,46 @@ export const BotConnectionSettings: React.FC<BotConnectionSettingsProps> = ({ cu
       return;
     }
 
+    // Phone number validation (dev environment only)
+    const isDev = import.meta.env.DEV || import.meta.env.VITE_NODE_ENV === 'development';
+    if (isDev) {
+      // Remove all non-digit characters for validation
+      const cleanPhone = whatsappPhone.replace(/\D/g, '');
+      
+      // Check if it's a valid format (should be 12-15 digits, starting with country code)
+      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+        toast({
+          title: "Invalid Phone Format",
+          description: "Please enter a valid phone number in the format: 972507123456 (country code + number, no spaces or special characters)",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if it starts with a country code (common ones)
+      const commonCountryCodes = ['1', '7', '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49', '51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66', '81', '82', '84', '86', '90', '91', '92', '93', '94', '95', '98', '212', '213', '216', '218', '220', '221', '222', '223', '224', '225', '226', '227', '228', '229', '230', '231', '232', '233', '234', '235', '236', '237', '238', '239', '240', '241', '242', '243', '244', '245', '246', '248', '249', '250', '251', '252', '253', '254', '255', '256', '257', '258', '260', '261', '262', '263', '264', '265', '266', '267', '268', '269', '290', '291', '297', '298', '299', '350', '351', '352', '353', '354', '355', '356', '357', '358', '359', '370', '371', '372', '373', '374', '375', '376', '377', '378', '380', '381', '382', '383', '385', '386', '387', '389', '420', '421', '423', '500', '501', '502', '503', '504', '505', '506', '507', '508', '509', '590', '591', '592', '593', '594', '595', '596', '597', '598', '599', '670', '672', '673', '674', '675', '676', '677', '678', '679', '680', '681', '682', '683', '684', '685', '686', '687', '688', '689', '690', '691', '692', '850', '852', '853', '855', '856', '880', '886', '960', '961', '962', '963', '964', '965', '966', '967', '968', '970', '971', '972', '973', '974', '975', '976', '977', '992', '993', '994', '995', '996', '998'];
+      
+      let hasValidCountryCode = false;
+      for (const code of commonCountryCodes) {
+        if (cleanPhone.startsWith(code)) {
+          hasValidCountryCode = true;
+          break;
+        }
+      }
+      
+      if (!hasValidCountryCode) {
+        toast({
+          title: "Invalid Country Code",
+          description: "Please enter a valid phone number starting with a country code (e.g., 972 for Israel, 1 for US/Canada, 44 for UK)",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setWhatsappLoading(true);
     try {
-      const { error } = await apiClient.connectWhatsApp(whatsappPhone);
+      const { error } = await apiClient.connectWhatsapp(whatsappPhone);
       if (error) throw error;
 
       toast({
@@ -165,7 +202,7 @@ export const BotConnectionSettings: React.FC<BotConnectionSettingsProps> = ({ cu
   const disconnectWhatsApp = async () => {
     setWhatsappLoading(true);
     try {
-      const { error } = await apiClient.disconnectWhatsApp();
+      const { error } = await apiClient.disconnectWhatsapp();
       if (error) throw error;
 
       toast({
@@ -173,8 +210,23 @@ export const BotConnectionSettings: React.FC<BotConnectionSettingsProps> = ({ cu
         description: "WhatsApp account disconnected successfully!",
       });
       
-      await refreshUser();
-      await checkAllStatus();
+      // Force immediate state update
+      setWhatsappConnected(false);
+      setWhatsappPhone('');
+      
+      // Wait longer before refreshing to ensure backend has processed
+      setTimeout(async () => {
+        await refreshUser();
+        await checkAllStatus();
+        
+        // Double-check: if phone number is still there, force it to be empty
+        const { data: user } = await apiClient.getCurrentUser();
+        if (user?.state_data?.whatsapp_phone_number) {
+          console.warn('WhatsApp phone still in backend, forcing frontend state to empty');
+          setWhatsappConnected(false);
+          setWhatsappPhone('');
+        }
+      }, 5000); // Wait 5 seconds before refreshing
     } catch (error) {
       console.error('Error disconnecting WhatsApp:', error);
       toast({
@@ -293,10 +345,13 @@ export const BotConnectionSettings: React.FC<BotConnectionSettingsProps> = ({ cu
               <div className="space-y-2">
                 <label className="text-sm font-medium">Phone Number</label>
                 <Input
-                  placeholder="Enter your phone number"
+                  placeholder="972507123456"
                   value={whatsappPhone}
                   onChange={(e) => setWhatsappPhone(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter your phone number with country code (e.g., 972507123456 for Israel)
+                </p>
               </div>
               <Button
                 onClick={connectWhatsApp}
