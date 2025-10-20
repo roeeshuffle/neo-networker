@@ -384,22 +384,88 @@ def disconnect_whatsapp():
     """Disconnect WhatsApp from user account"""
     try:
         current_user_id = get_jwt_identity()
+        whatsapp_logger.info(f"🔧 [DISCONNECT] User ID: {current_user_id}")
+        
         user = User.query.get(current_user_id)
         
         if not user or not user.is_approved:
+            whatsapp_logger.error(f"❌ [DISCONNECT] User not found or not approved for ID: {current_user_id}")
             return jsonify({'error': 'Unauthorized'}), 403
         
+        whatsapp_logger.info(f"🔧 [DISCONNECT] Current state_data: {user.state_data}")
+        
+        # Use direct SQL update to ensure the change is persisted
+        from sqlalchemy import text
+        
         if user.state_data:
-            user.state_data.pop('whatsapp_phone_number', None)
-        user.preferred_messaging_platform = 'telegram'  # Fallback to telegram
+            # Create a new state_data dict without whatsapp_phone_number
+            new_state_data = {k: v for k, v in user.state_data.items() if k != 'whatsapp_phone_number'}
+            whatsapp_logger.info(f"🔧 [DISCONNECT] New state_data: {new_state_data}")
+        else:
+            new_state_data = {}
+            
+        # Direct SQL update to ensure persistence
+        sql = text("UPDATE users SET state_data = :state_data, preferred_messaging_platform = :platform WHERE id = :user_id")
+        result = db.session.execute(sql, {
+            'state_data': json.dumps(new_state_data),
+            'platform': 'telegram',
+            'user_id': current_user_id
+        })
         db.session.commit()
         
-        whatsapp_logger.info(f"User {user.email} disconnected WhatsApp")
+        whatsapp_logger.info(f"✅ [DISCONNECT] SQL update successful - {result.rowcount} rows affected")
+        
+        # Verify the change was saved by querying fresh from database
+        db.session.refresh(user)
+        whatsapp_logger.info(f"✅ [DISCONNECT] Verification - User's state_data after refresh: {user.state_data}")
+        
+        whatsapp_logger.info(f"✅ [DISCONNECT] User {user.email} disconnected WhatsApp successfully")
         
         return jsonify({'message': 'WhatsApp disconnected successfully'})
         
     except Exception as e:
-        whatsapp_logger.error(f"Error disconnecting WhatsApp: {e}", exc_info=True)
+        whatsapp_logger.error(f"💥 [DISCONNECT] Error disconnecting WhatsApp: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@whatsapp_bp.route('/whatsapp/test-update', methods=['POST'])
+@jwt_required()
+def test_update():
+    """Test endpoint to verify database updates"""
+    try:
+        current_user_id = get_jwt_identity()
+        whatsapp_logger.info(f"🧪 [TEST] User ID: {current_user_id}")
+        
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        whatsapp_logger.info(f"🧪 [TEST] Current state_data: {user.state_data}")
+        
+        # Test direct SQL update
+        from sqlalchemy import text
+        test_data = {"test": "value", "timestamp": "2025-10-20"}
+        sql = text("UPDATE users SET state_data = :state_data WHERE id = :user_id")
+        result = db.session.execute(sql, {
+            'state_data': json.dumps(test_data),
+            'user_id': current_user_id
+        })
+        db.session.commit()
+        
+        whatsapp_logger.info(f"🧪 [TEST] SQL update result: {result.rowcount} rows affected")
+        
+        # Verify the update
+        db.session.refresh(user)
+        whatsapp_logger.info(f"🧪 [TEST] Updated state_data: {user.state_data}")
+        
+        return jsonify({
+            'message': 'Test update completed',
+            'old_data': user.state_data,
+            'new_data': test_data,
+            'rows_affected': result.rowcount
+        })
+        
+    except Exception as e:
+        whatsapp_logger.error(f"🧪 [TEST] Error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @whatsapp_bp.route('/whatsapp/status', methods=['GET'])

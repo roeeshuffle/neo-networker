@@ -66,10 +66,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiClient.login(email, password);
       
       if (response.data) {
-        const { access_token } = response.data;
+        const { access_token, refresh_token } = response.data;
         
-        // Store token
+        // Store tokens
         localStorage.setItem('auth_token', access_token);
+        if (refresh_token) {
+          localStorage.setItem('refresh_token', refresh_token);
+        }
         apiClient.setToken(access_token);
         setToken(access_token);
         
@@ -89,6 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('refresh_token');
     setToken(null);
     setUser(null);
     apiClient.setToken('');

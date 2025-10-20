@@ -1,7 +1,7 @@
 // API client for Flask backend
 // This replaces the Supabase client with our Flask backend
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5002/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://dkdrn34xpx.us-east-1.awsapprunner.com/api";
 
 interface ApiResponse<T> {
   data: T | null;
@@ -15,6 +15,10 @@ class ApiClient {
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     this.token = localStorage.getItem('auth_token');
+  }
+
+  setToken(token: string) {
+    this.token = token;
   }
 
   private async request<T>(
@@ -50,6 +54,26 @@ class ApiClient {
 
       if (!response.ok) {
         console.log('🔔 API Client: Request failed with status:', response.status);
+        
+        // Handle token expiration
+        if (response.status === 401 && data.error && data.error.includes('expired')) {
+          console.log('🔔 API Client: Token expired, attempting refresh');
+          const refreshSuccess = await this.refreshToken();
+          if (refreshSuccess) {
+            console.log('🔔 API Client: Token refreshed, retrying request');
+            // Retry the request with new token
+            headers['Authorization'] = `Bearer ${this.token}`;
+            const retryResponse = await fetch(url, {
+              ...options,
+              headers,
+            });
+            const retryData = await retryResponse.json();
+            if (retryResponse.ok) {
+              return { data: retryData, error: null };
+            }
+          }
+        }
+        
         return { data: null, error: data };
       }
 
@@ -78,6 +102,44 @@ class ApiClient {
   async logout() {
     this.token = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+  }
+
+  async refreshToken(): Promise<boolean> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        console.log('🔔 API Client: No refresh token available');
+        return false;
+      }
+
+      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.token = data.access_token;
+        localStorage.setItem('auth_token', data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token);
+        }
+        console.log('🔔 API Client: Token refreshed successfully');
+        return true;
+      } else {
+        console.log('🔔 API Client: Token refresh failed');
+        this.logout();
+        return false;
+      }
+    } catch (error) {
+      console.log('🔔 API Client: Token refresh error:', error);
+      this.logout();
+      return false;
+    }
   }
 
   async getCurrentUser() {
@@ -339,11 +401,6 @@ class ApiClient {
     return this.request('/health');
   }
 
-  // Set auth token
-  setToken(token: string) {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
-  }
 
   // Check if user is authenticated
   // User Group methods

@@ -4,19 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import hashlib
 from dal.models import User
 from dal.database import db
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 auth_bp = Blueprint('auth', __name__)
-
-@auth_bp.after_request
-def after_request(response):
-    """Add CORS headers to all auth responses"""
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
 
 @auth_bp.route('/register', methods=['POST', 'OPTIONS'])
 def register():
@@ -116,6 +107,8 @@ def login():
         print("🔍 LOGIN DEBUG: User is approved, creating access token")
         # Create access token
         access_token = create_access_token(identity=user.id)
+        # Also create refresh token (optional, for future use)
+        refresh_token = create_access_token(identity=user.id, expires_delta=timedelta(days=30))
         print("🔍 LOGIN DEBUG: Access token created successfully")
         
         print("🔍 LOGIN DEBUG: Converting user to dict")
@@ -125,7 +118,8 @@ def login():
         print("🔍 LOGIN DEBUG: Login successful, returning response")
         return jsonify({
             'user': user_dict,
-            'access_token': access_token
+            'access_token': access_token,
+            'refresh_token': refresh_token  # Include refresh token
         })
         
     except Exception as e:
@@ -133,6 +127,37 @@ def login():
         print(f"❌ LOGIN ERROR TYPE: {type(e).__name__}")
         import traceback
         print(f"❌ LOGIN ERROR TRACEBACK: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    """Refresh access token using refresh token"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user or not user.is_approved:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Create new access token
+        access_token = create_access_token(identity=str(user.id))
+        
+        return jsonify({
+            'access_token': access_token,
+            'user': {
+                'id': str(user.id),
+                'email': user.email,
+                'full_name': user.full_name,
+                'is_approved': user.is_approved,
+                'telegram_id': user.telegram_id,
+                'created_at': user.created_at.isoformat(),
+                'updated_at': user.updated_at.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        auth_logger.error(f"Error refreshing token: {e}")
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/me', methods=['GET'])
